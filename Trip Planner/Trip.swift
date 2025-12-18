@@ -17,10 +17,11 @@ struct Trip: Identifiable, Hashable, Codable {
     var imageName: String
     var latitude: Double?
     var longitude: Double?
+    var mapSpan: Double?  // Stores the appropriate zoom level for the destination
     var days: [TripDay]
     var coverImageData: Data?
     
-    init(id: UUID = UUID(), name: String, destination: String, startDate: Date, endDate: Date, notes: String = "", imageName: String = "airplane", latitude: Double? = nil, longitude: Double? = nil, days: [TripDay] = [], coverImageData: Data? = nil) {
+    init(id: UUID = UUID(), name: String, destination: String, startDate: Date, endDate: Date, notes: String = "", imageName: String = "airplane", latitude: Double? = nil, longitude: Double? = nil, mapSpan: Double? = nil, days: [TripDay] = [], coverImageData: Data? = nil) {
         self.id = id
         self.name = name
         self.destination = destination
@@ -30,6 +31,7 @@ struct Trip: Identifiable, Hashable, Codable {
         self.imageName = imageName
         self.latitude = latitude
         self.longitude = longitude
+        self.mapSpan = mapSpan
         self.days = days
         self.coverImageData = coverImageData
     }

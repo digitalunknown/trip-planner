@@ -16,8 +16,9 @@ struct NewTripView: View {
     @State private var destination = ""
     @State private var latitude: Double?
     @State private var longitude: Double?
+    @State private var mapSpan: Double?
     @State private var startDate = Date()
-    @State private var endDate = Date().addingTimeInterval(86400 * 7)
+    @State private var endDate = Date().addingTimeInterval(86400 * 4) // 5 days total
     @State private var coverImage: UIImage?
     @State private var showImagePicker = false
     
@@ -45,6 +46,7 @@ struct NewTripView: View {
                         text: $destination,
                         latitude: $latitude,
                         longitude: $longitude,
+                        mapSpan: $mapSpan,
                         resultTypes: .address
                     )
                 }
@@ -111,6 +113,7 @@ struct NewTripView: View {
                             endDate: endDate,
                             latitude: latitude,
                             longitude: longitude,
+                            mapSpan: mapSpan,
                             coverImageData: coverImage?.jpegData(compressionQuality: 0.8)
                         )
                         tripStore.addTrip(newTrip)

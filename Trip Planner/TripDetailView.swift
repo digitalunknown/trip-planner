@@ -10,34 +10,6 @@ import MapKit
 import UniformTypeIdentifiers
 import Combine
 
-struct CircleButton: View {
-    let icon: String
-    var action: () -> Void = {}
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        Circle()
-                            .fill(.white.opacity(0.1))
-                    }
-                    .overlay {
-                        Circle()
-                            .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-                    }
-                
-                Image(systemName: icon)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            .frame(width: 36, height: 36)
-        }
-        .buttonStyle(.plain)
-        .contentShape(Circle())
-    }
-}
-
 // Enable swipe-back gesture when back button is hidden
 struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -91,10 +63,27 @@ struct TripDetailView: View {
     @State private var newEventPhoto: UIImage?
     @State private var selectedDayID: UUID?
     @State private var editingEvent: EventItem?
-    @State private var mapRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 38.7223, longitude: -9.1393),
-        span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18)
-    )
+    @State private var mapRegion: MKCoordinateRegion
+    
+    init(trip: Binding<Trip>) {
+        self._trip = trip
+        // Initialize map region directly from trip data to avoid jump
+        let initialRegion: MKCoordinateRegion
+        if let lat = trip.wrappedValue.latitude, let lon = trip.wrappedValue.longitude {
+            let span = trip.wrappedValue.mapSpan ?? 0.1
+            initialRegion = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
+            )
+        } else {
+            // Default world view
+            initialRegion = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 20, longitude: 0),
+                span: MKCoordinateSpan(latitudeDelta: 120, longitudeDelta: 120)
+            )
+        }
+        self._mapRegion = State(initialValue: initialRegion)
+    }
     
     var eventAnnotations: [EventAnnotation] {
         tripDays.flatMap { day in
@@ -112,9 +101,11 @@ struct TripDetailView: View {
     
     var appropriateMapRegion: MKCoordinateRegion {
         if let lat = trip.latitude, let lon = trip.longitude {
+            // Use the stored mapSpan from location search, or default to city level
+            let span = trip.mapSpan ?? 0.1
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
+                span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
             )
         } else if !eventAnnotations.isEmpty {
             let coordinates = eventAnnotations.map { $0.coordinate }
@@ -128,18 +119,19 @@ struct TripDetailView: View {
                 longitude: (minLon + maxLon) / 2
             )
             let span = MKCoordinateSpan(
-                latitudeDelta: (maxLat - minLat) * 1.3,
-                longitudeDelta: (maxLon - minLon) * 1.3
+                latitudeDelta: max((maxLat - minLat) * 1.3, 0.05),
+                longitudeDelta: max((maxLon - minLon) * 1.3, 0.05)
             )
             return MKCoordinateRegion(center: center, span: span)
         } else {
+            // Default world view
             return MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 38.7223, longitude: -9.1393),
-                span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18)
+                center: CLLocationCoordinate2D(latitude: 20, longitude: 0),
+                span: MKCoordinateSpan(latitudeDelta: 120, longitudeDelta: 120)
             )
         }
     }
-
+    
     var body: some View {
         GeometryReader { geo in
             let totalHeight = geo.size.height
@@ -156,11 +148,12 @@ struct TripDetailView: View {
                             ZStack {
                                 Circle()
                                     .fill(annotation.color)
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "mappin.circle.fill")
-                                    .font(.title2)
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: annotation.event.icon)
+                                    .font(.system(size: 16, weight: .semibold))
                                     .foregroundStyle(.white)
                             }
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                         }
                     }
                 }
@@ -191,20 +184,37 @@ struct TripDetailView: View {
         .enableSwipeBack()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                CircleButton(icon: "chevron.left") {
+                Button {
                     dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .fontWeight(.medium)
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 12) {
-                    CircleButton(icon: "gearshape") {
+                    Button {
                         isPresentingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .fontWeight(.medium)
                     }
-                    CircleButton(icon: "plus") {
+                    Button {
                         prepareNewEventDefaults()
                         isPresentingAdd = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.medium)
                     }
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
             }
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
@@ -222,6 +232,7 @@ struct TripDetailView: View {
                 location: $trip.destination,
                 latitude: $trip.latitude,
                 longitude: $trip.longitude,
+                mapSpan: $trip.mapSpan,
                 startDate: $trip.startDate,
                 endDate: $trip.endDate,
                 coverImageData: $trip.coverImageData,
@@ -259,15 +270,20 @@ struct TripDetailView: View {
         }
         .onAppear {
             initializeTripDays()
-            mapRegion = appropriateMapRegion
+            // Map region is computed automatically via currentMapRegion binding
         }
         .onChange(of: trip.latitude) { _, _ in
-            withAnimation {
+            withAnimation(.easeInOut(duration: 0.5)) {
                 mapRegion = appropriateMapRegion
             }
         }
         .onChange(of: trip.longitude) { _, _ in
-            withAnimation {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                mapRegion = appropriateMapRegion
+            }
+        }
+        .onChange(of: trip.mapSpan) { _, _ in
+            withAnimation(.easeInOut(duration: 0.5)) {
                 mapRegion = appropriateMapRegion
             }
         }
@@ -302,9 +318,6 @@ private extension TripDetailView {
                             day: day,
                             columnWidth: columnWidth,
                             columnHeight: geo.size.height - 24,
-                            onDrop: { event, target in
-                                move(event: event, to: day.id, before: target)
-                            },
                             onTap: { event in startEditing(event: event, day: day) },
                             onEdit: { event in startEditing(event: event, day: day) },
                             onDelete: { event in deleteEvent(event) },
@@ -494,8 +507,10 @@ private extension TripDetailView {
         
         if let lat = newEventLatitude, let lon = newEventLongitude {
             withAnimation {
-                mapRegion.center = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                mapRegion.span = MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                mapRegion = MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
             }
         }
     }
@@ -526,6 +541,17 @@ private extension TripDetailView {
             newEventStart = startDate
             newEventEnd = endDate
         }
+        
+        // Move map to event location if available
+        if let lat = event.latitude, let lon = event.longitude {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                mapRegion = MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                )
+            }
+        }
+        
         isPresentingAdd = true
     }
     
@@ -584,14 +610,11 @@ struct DayColumn: View {
     let day: TripDay
     let columnWidth: CGFloat
     let columnHeight: CGFloat
-    let onDrop: (EventItem, EventItem?) -> Void
     let onTap: (EventItem) -> Void
     let onEdit: (EventItem) -> Void
     let onDelete: (EventItem) -> Void
     let onAddEvent: () -> Void
     let showEmptyPlaceholder: Bool
-    
-    @State private var dropTargetID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -618,7 +641,7 @@ struct DayColumn: View {
             }
 
             ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
                     if day.events.isEmpty && showEmptyPlaceholder {
                         // Empty state placeholder - only on first day when trip has no events
                         Button {
@@ -637,71 +660,27 @@ struct DayColumn: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .padding(.bottom, 12)
                     }
                     
-                    ForEach(Array(day.events.enumerated()), id: \.element.id) { index, event in
-                        VStack(spacing: 0) {
-                            // Drop indicator line above card
-                            if dropTargetID == event.id {
-                                dropIndicator
+                    ForEach(day.events.sorted { $0.startTimeMinutes < $1.startTimeMinutes }) { event in
+                        EventCard(event: event)
+                            .onTapGesture { onTap(event) }
+                            .contextMenu {
+                                Button {
+                                    onEdit(event)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                
+                                Button(role: .destructive) {
+                                    onDelete(event)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
-                            
-                            EventCard(event: event)
-                                .onTapGesture { onTap(event) }
-                                .contextMenu {
-                                    Button {
-                                        onEdit(event)
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                    }
-                                    
-                                    Button(role: .destructive) {
-                                        onDelete(event)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                                .draggable(event) {
-                                    EventCard(event: event)
-                                        .frame(width: columnWidth - 28)
-                                        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 12)
-                                }
-                                .dropDestination(for: EventItem.self) { items, _ in
-                                    dropTargetID = nil
-                                    guard let first = items.first, first.id != event.id else { return false }
-                                    onDrop(first, event)
-                                    return true
-                                } isTargeted: { isTargeted in
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        dropTargetID = isTargeted ? event.id : nil
-                                    }
-                                }
-                        }
-                        .padding(.bottom, 12)
                     }
-
-                    // Drop zone at the end of list
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(height: 40)
-                        .frame(maxWidth: .infinity)
-                        .overlay {
-                            if dropTargetID == UUID(uuidString: "00000000-0000-0000-0000-000000000000") {
-                                dropIndicator
-                                    .padding(.top, -20)
-                            }
-                        }
-                        .dropDestination(for: EventItem.self) { items, _ in
-                            dropTargetID = nil
-                            guard let first = items.first else { return false }
-                            onDrop(first, nil)
-                            return true
-                        } isTargeted: { isTargeted in
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                dropTargetID = isTargeted ? UUID(uuidString: "00000000-0000-0000-0000-000000000000") : nil
-                            }
-                        }
+                    
+                    Spacer(minLength: 20)
                 }
                 .padding(14)
             }
@@ -713,21 +692,6 @@ struct DayColumn: View {
                 .strokeBorder(Color.white.opacity(0.08))
         }
         .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
-    }
-    
-    private var dropIndicator: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(Color.accentColor)
-                .frame(width: 8, height: 8)
-            Rectangle()
-                .fill(Color.accentColor)
-                .frame(height: 2)
-            Circle()
-                .fill(Color.accentColor)
-                .frame(width: 8, height: 8)
-        }
-        .padding(.vertical, 4)
     }
 }
 
@@ -764,7 +728,7 @@ struct EventCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                Label(event.time, systemImage: "clock")
+                Text(event.time)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -826,6 +790,7 @@ struct TripSettingsSheet: View {
     @Binding var location: String
     @Binding var latitude: Double?
     @Binding var longitude: Double?
+    @Binding var mapSpan: Double?
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var coverImageData: Data?
@@ -854,6 +819,7 @@ struct TripSettingsSheet: View {
                         text: $location,
                         latitude: $latitude,
                         longitude: $longitude,
+                        mapSpan: $mapSpan,
                         resultTypes: .address
                     )
                 }
@@ -966,27 +932,37 @@ struct AddEventSheet: View {
     }
 
     private let iconOptions: [String] = [
-        "mappin.and.ellipse",
+        // Transportation
         "airplane",
-        "airplane.departure",
-        "bed.double.fill",
-        "wineglass.fill",
-        "mountain.2.fill",
-        "photo.on.rectangle.angled",
-        "building.columns",
-        "bus",
         "car.fill",
-        "train.side.front.car",
-        "ferry.fill",
+        "bus.fill",
         "tram.fill",
-        "suitcase.fill",
-        "bag.fill",
-        "beach.umbrella.fill",
-        "camera.fill",
-        "fork.knife",
-        "sunset.fill",
+        "ferry.fill",
         "bicycle",
-        "music.note"
+        "figure.walk",
+        // Food & Drink
+        "fork.knife",
+        "cup.and.saucer.fill",
+        "wineglass.fill",
+        "cart.fill",
+        // Lodging
+        "bed.double.fill",
+        "house.fill",
+        "building.2.fill",
+        // Nature & Outdoors
+        "mountain.2.fill",
+        "water.waves",
+        "leaf.fill",
+        "sun.max.fill",
+        "beach.umbrella.fill",
+        // Activities & Sightseeing
+        "camera.fill",
+        "ticket.fill",
+        "theatermasks.fill",
+        "figure.hiking",
+        // Landmarks & Places
+        "building.columns.fill",
+        "mappin.and.ellipse"
     ]
     
     private func deleteEvent() {
@@ -1267,6 +1243,7 @@ struct LocationSearchField: View {
     @Binding var text: String
     @Binding var latitude: Double?
     @Binding var longitude: Double?
+    @Binding var mapSpan: Double?
     var resultTypes: MKLocalSearchCompleter.ResultType
     var searchRegion: MKCoordinateRegion?
     
@@ -1276,11 +1253,13 @@ struct LocationSearchField: View {
     init(text: Binding<String>, 
          latitude: Binding<Double?>, 
          longitude: Binding<Double?>,
+         mapSpan: Binding<Double?> = .constant(nil),
          resultTypes: MKLocalSearchCompleter.ResultType = .pointOfInterest,
          searchRegion: MKCoordinateRegion? = nil) {
         self._text = text
         self._latitude = latitude
         self._longitude = longitude
+        self._mapSpan = mapSpan
         self.resultTypes = resultTypes
         self.searchRegion = searchRegion
         self._completer = StateObject(wrappedValue: LocationSearchCompleter(
@@ -1360,12 +1339,17 @@ struct LocationSearchField: View {
         let search = MKLocalSearch(request: searchRequest)
         
         search.start { response, error in
-            guard let coordinate = response?.mapItems.first?.placemark.coordinate else {
+            guard let response = response,
+                  let coordinate = response.mapItems.first?.placemark.coordinate else {
                 return
             }
             
             self.latitude = coordinate.latitude
             self.longitude = coordinate.longitude
+            
+            // Capture the bounding region span for appropriate zoom level
+            let span = max(response.boundingRegion.span.latitudeDelta, response.boundingRegion.span.longitudeDelta)
+            self.mapSpan = span
         }
     }
 }
@@ -1423,6 +1407,16 @@ struct EventItem: Identifiable, Hashable, Codable, Transferable {
     var photoData: Data?
 
     var accentColor: Color { accent.color }
+    
+    /// Extracts start time in minutes from midnight for sorting
+    var startTimeMinutes: Int {
+        let components = time.split(separator: "–").first?.trimmingCharacters(in: .whitespaces) ?? ""
+        let parts = components.split(separator: ":").compactMap { Int($0) }
+        if parts.count >= 2 {
+            return parts[0] * 60 + parts[1]
+        }
+        return 0
+    }
 
     static var transferRepresentation: some TransferRepresentation {
         CodableRepresentation(contentType: .eventItem)

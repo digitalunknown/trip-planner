@@ -11,7 +11,8 @@ import MapKit
 struct TripCardView: View {
     let trip: Trip
     
-    @State private var imageScale: CGFloat = 1.0
+    // Shared start time for synced animations across all cards
+    private static let animationStart = Date()
     
     private var mapRegion: MKCoordinateRegion {
         if let lat = trip.latitude, let lon = trip.longitude {
@@ -46,22 +47,22 @@ struct TripCardView: View {
         ZStack {
             // Background - Image or Map
             if let imageData = trip.coverImageData, let uiImage = UIImage(data: imageData) {
-                GeometryReader { geo in
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .scaleEffect(imageScale)
-                        .frame(width: geo.size.width, height: 280)
-                        .clipped()
-                }
-                .frame(height: 280)
-                .onAppear {
-                    withAnimation(
-                        .easeInOut(duration: 12)
-                        .repeatForever(autoreverses: true)
-                    ) {
-                        imageScale = 1.15
+                TimelineView(.animation) { timeline in
+                    let elapsed = timeline.date.timeIntervalSince(Self.animationStart)
+                    // Create a smooth oscillation: scale from 1.0 to 1.15 over 12 seconds, then back
+                    let phase = elapsed.truncatingRemainder(dividingBy: 24) // Full cycle is 24 seconds
+                    let normalizedPhase = phase < 12 ? phase / 12 : (24 - phase) / 12
+                    let scale = 1.0 + (0.15 * normalizedPhase)
+                    
+                    GeometryReader { geo in
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                            .scaleEffect(scale)
+                            .frame(width: geo.size.width, height: 280)
+                            .clipped()
                     }
+                    .frame(height: 280)
                 }
             } else {
                 // Always show map (uses coordinates if available, otherwise world view)

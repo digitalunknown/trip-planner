@@ -71,13 +71,20 @@ struct MyTripsView: View {
             }
             .sheet(item: $editingTrip) { trip in
                 if let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) {
-                    EditTripView(trip: Binding(
-                        get: { tripStore.trips[index] },
-                        set: { newValue in
-                            tripStore.trips[index] = newValue
-                            tripStore.save()
+                    EditTripView(
+                        trip: Binding(
+                            get: { tripStore.trips[index] },
+                            set: { newValue in
+                                tripStore.trips[index] = newValue
+                                tripStore.save()
+                            }
+                        ),
+                        onDelete: {
+                            withAnimation {
+                                tripStore.deleteTrip(trip)
+                            }
                         }
-                    ))
+                    )
                 }
             }
             .sheet(isPresented: $showImagePicker) {
@@ -154,38 +161,57 @@ struct MyTripsView: View {
     }
     
     private var tripListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 20) {
-                ForEach(tripStore.trips) { trip in
-                    Button {
-                        navigationPath.append(trip.id)
-                    } label: {
-                        TripCardView(trip: trip)
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button {
-                            tripForImagePicker = trip
-                            showImagePicker = true
-                        } label: {
-                            Label("Add Image", systemImage: "photo.badge.plus")
-                        }
-                        
-                        Button {
-                            editingTrip = trip
-                        } label: {
-                            Label("Edit Trip", systemImage: "pencil")
-                        }
-                        
-                        Divider()
-                        
-                        Button(role: .destructive) {
-                            withAnimation {
-                                tripStore.deleteTrip(trip)
+        let sortedTrips = tripStore.trips.sorted { $0.startDate < $1.startDate }
+        let groupedTrips = Dictionary(grouping: sortedTrips) { trip in
+            Calendar.current.component(.year, from: trip.startDate)
+        }
+        let sortedYears = groupedTrips.keys.sorted()
+        
+        return ScrollView {
+            LazyVStack(spacing: 20, pinnedViews: []) {
+                ForEach(sortedYears, id: \.self) { year in
+                    Section {
+                        ForEach(groupedTrips[year] ?? []) { trip in
+                            Button {
+                                navigationPath.append(trip.id)
+                            } label: {
+                                TripCardView(trip: trip)
                             }
-                        } label: {
-                            Label("Delete Trip", systemImage: "trash")
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    tripForImagePicker = trip
+                                    showImagePicker = true
+                                } label: {
+                                    Label("Add Image", systemImage: "photo.badge.plus")
+                                }
+                                
+                                Button {
+                                    editingTrip = trip
+                                } label: {
+                                    Label("Edit Trip", systemImage: "pencil")
+                                }
+                                
+                                Divider()
+                                
+                                Button(role: .destructive) {
+                                    withAnimation {
+                                        tripStore.deleteTrip(trip)
+                                    }
+                                } label: {
+                                    Label("Delete Trip", systemImage: "trash")
+                                }
+                            }
                         }
+                    } header: {
+                        HStack {
+                            Text(String(year))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                        }
+                        .padding(.top, year == sortedYears.first ? 0 : 8)
                     }
                 }
             }
@@ -236,15 +262,18 @@ struct TripImagePicker: UIViewControllerRepresentable {
 struct EditTripView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var trip: Trip
+    var onDelete: () -> Void
     
     @State private var name: String = ""
     @State private var destination: String = ""
     @State private var latitude: Double?
     @State private var longitude: Double?
+    @State private var mapSpan: Double?
     @State private var startDate: Date = Date()
     @State private var endDate: Date = Date()
     @State private var coverImage: UIImage?
     @State private var showImagePicker = false
+    @State private var showDeleteConfirmation = false
     
     var body: some View {
         NavigationStack {
@@ -266,6 +295,7 @@ struct EditTripView: View {
                         text: $destination,
                         latitude: $latitude,
                         longitude: $longitude,
+                        mapSpan: $mapSpan,
                         resultTypes: .address
                     )
                 }
@@ -313,6 +343,27 @@ struct EditTripView: View {
                         }
                     }
                 }
+                
+                Section {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Delete Trip")
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .confirmationDialog("Delete Trip", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete this trip? This action cannot be undone.")
             }
             .navigationTitle("Edit Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -340,12 +391,14 @@ struct EditTripView: View {
                 destination = trip.destination
                 latitude = trip.latitude
                 longitude = trip.longitude
+                mapSpan = trip.mapSpan
                 startDate = trip.startDate
                 endDate = trip.endDate
                 if let imageData = trip.coverImageData {
                     coverImage = UIImage(data: imageData)
                 }
             }
+            .presentationDetents([.large])
         }
     }
     
@@ -354,6 +407,7 @@ struct EditTripView: View {
         trip.destination = destination
         trip.latitude = latitude
         trip.longitude = longitude
+        trip.mapSpan = mapSpan
         trip.startDate = startDate
         trip.endDate = endDate
         trip.coverImageData = coverImage?.jpegData(compressionQuality: 0.8)
