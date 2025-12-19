@@ -9,6 +9,8 @@ import SwiftUI
 import MapKit
 
 struct TripCardView: View {
+    @Environment(\.appAccentColor) private var accentColor
+    
     let trip: Trip
     
     // Shared start time for synced animations across all cards
@@ -16,9 +18,10 @@ struct TripCardView: View {
     
     private var mapRegion: MKCoordinateRegion {
         if let lat = trip.latitude, let lon = trip.longitude {
+            let span = trip.mapSpan ?? 0.1
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+                span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
             )
         }
         return MKCoordinateRegion(
@@ -100,7 +103,7 @@ struct TripCardView: View {
                     .padding(.vertical, 6)
                     .background(
                         isUrgent 
-                            ? (trip.daysUntilTrip == 0 ? AnyShapeStyle(.green) : AnyShapeStyle(.orange))
+                            ? (trip.daysUntilTrip == 0 ? AnyShapeStyle(accentColor) : AnyShapeStyle(accentColor))
                             : AnyShapeStyle(.ultraThinMaterial)
                     )
                     .clipShape(Capsule())

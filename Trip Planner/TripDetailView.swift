@@ -64,6 +64,16 @@ struct TripDetailView: View {
     @State private var selectedDayID: UUID?
     @State private var editingEvent: EventItem?
     @State private var mapRegion: MKCoordinateRegion
+    @State private var showMap = false
+    
+    @State private var isPresentingReminder = false
+    @State private var newReminderText: String = ""
+    @State private var editingReminder: ReminderItem?
+    
+    @State private var isPresentingChecklist = false
+    @State private var editingChecklist: ChecklistItem?
+    @State private var checklistTitle: String = ""
+    @State private var checklistDraftItems: [ChecklistEntry] = []
     
     init(trip: Binding<Trip>) {
         self._trip = trip
@@ -140,21 +150,30 @@ struct TripDetailView: View {
             let kanbanHeight = totalHeight - mapHeight - handleHeight
             
             VStack(spacing: 0) {
-                Map(coordinateRegion: $mapRegion, interactionModes: .all, annotationItems: eventAnnotations) { annotation in
-                    MapAnnotation(coordinate: annotation.coordinate) {
-                        Button {
-                            openEventFromMarker(annotation.event)
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(annotation.color)
-                                    .frame(width: 36, height: 36)
-                                Image(systemName: annotation.event.icon)
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(.white)
+                ZStack {
+                    Map(coordinateRegion: $mapRegion, interactionModes: .all, annotationItems: eventAnnotations) { annotation in
+                        MapAnnotation(coordinate: annotation.coordinate) {
+                            Button {
+                                openEventFromMarker(annotation.event)
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(annotation.color)
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: annotation.event.icon)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
+                                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                             }
-                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                         }
+                    }
+                    .opacity(showMap ? 1 : 0)
+                    
+                    // Hide the Map's initial camera snap (“jump”) by fading in after first layout.
+                    if !showMap {
+                        Rectangle()
+                            .fill(Color(.systemBackground))
                     }
                 }
                 .frame(height: mapHeight)
@@ -182,39 +201,62 @@ struct TripDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .enableSwipeBack()
+        .toolbar(.hidden, for: .tabBar)
+        .tint(.primary)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .topBarLeading) {
                 Button {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
                         .fontWeight(.medium)
+                        .foregroundStyle(.primary)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial)
-                .clipShape(Capsule())
+                // Force non-accent toolbar color even when TabView tint is customized.
+                .tint(.primary)
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 12) {
-                    Button {
-                        isPresentingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .fontWeight(.medium)
-                    }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    isPresentingSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                }
+                .tint(.primary)
+                
+                Menu {
                     Button {
                         prepareNewEventDefaults()
                         isPresentingAdd = true
                     } label: {
-                        Image(systemName: "plus")
-                            .fontWeight(.medium)
+                        Label("Event", systemImage: "calendar.badge.plus")
                     }
+                    
+                    Button {
+                        if selectedDayID == nil { selectedDayID = tripDays.first?.id }
+                        newReminderText = ""
+                        editingReminder = nil
+                        isPresentingReminder = true
+                    } label: {
+                        Label("Reminder", systemImage: "lightbulb")
+                    }
+                    
+                    Button {
+                        if selectedDayID == nil { selectedDayID = tripDays.first?.id }
+                        checklistTitle = ""
+                        checklistDraftItems = []
+                        editingChecklist = nil
+                        isPresentingChecklist = true
+                    } label: {
+                        Label("Checklist", systemImage: "checklist.checked")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.ultraThinMaterial)
-                .clipShape(Capsule())
+                .tint(.primary)
             }
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
@@ -238,8 +280,12 @@ struct TripDetailView: View {
                 coverImageData: $trip.coverImageData,
                 onApply: updateTripDaysForDates
             )
+            .tint(.primary)
         }
-        .sheet(isPresented: $isPresentingAdd) {
+        .sheet(isPresented: $isPresentingAdd, onDismiss: {
+            // Keep edit state consistent; prevents accidental "add" after an edit auto-save.
+            editingEvent = nil
+        }) {
             AddEventSheet(
                 title: $newEventTitle,
                 location: $newEventLocation,
@@ -266,26 +312,64 @@ struct TripDetailView: View {
                 onDelete: deleteCurrentEvent,
                 isEditing: editingEvent != nil
             )
+            .tint(.primary)
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $isPresentingReminder) {
+            AddReminderSheet(
+                reminderText: $newReminderText,
+                selectedDayID: $selectedDayID,
+                days: tripDays,
+                isEditing: editingReminder != nil,
+                onAdd: addReminder
+            )
+            .tint(.primary)
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $isPresentingChecklist) {
+            ChecklistSheet(
+                title: $checklistTitle,
+                items: $checklistDraftItems,
+                selectedDayID: $selectedDayID,
+                days: tripDays,
+                isEditing: editingChecklist != nil,
+                onSave: saveChecklist
+            )
+            .tint(.primary)
+            .presentationDetents([.large])
+        }
+        .onChange(of: isPresentingReminder) { _, isPresented in
+            if !isPresented {
+                editingReminder = nil
+                newReminderText = ""
+            }
+        }
+        .onChange(of: isPresentingChecklist) { _, isPresented in
+            if !isPresented {
+                editingChecklist = nil
+                checklistTitle = ""
+                checklistDraftItems = []
+            }
         }
         .onAppear {
             initializeTripDays()
-            // Map region is computed automatically via currentMapRegion binding
+            // Fade the map in after first layout pass to avoid visible “jump”.
+            showMap = false
+            DispatchQueue.main.async {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showMap = true
+                }
+            }
         }
         .onChange(of: trip.latitude) { _, _ in
-            withAnimation(.easeInOut(duration: 0.5)) {
-                mapRegion = appropriateMapRegion
-            }
+            // Avoid animating region changes during initial load; Map’s own update is smoother.
+            mapRegion = appropriateMapRegion
         }
         .onChange(of: trip.longitude) { _, _ in
-            withAnimation(.easeInOut(duration: 0.5)) {
-                mapRegion = appropriateMapRegion
-            }
+            mapRegion = appropriateMapRegion
         }
         .onChange(of: trip.mapSpan) { _, _ in
-            withAnimation(.easeInOut(duration: 0.5)) {
-                mapRegion = appropriateMapRegion
-            }
+            mapRegion = appropriateMapRegion
         }
         .onChange(of: tripDays) { _, newDays in
             trip.days = newDays
@@ -321,6 +405,10 @@ private extension TripDetailView {
                             onTap: { event in startEditing(event: event, day: day) },
                             onEdit: { event in startEditing(event: event, day: day) },
                             onDelete: { event in deleteEvent(event) },
+                            onTapReminder: { reminder in startEditingReminder(reminder, day: day) },
+                            onDeleteReminder: { reminder in deleteReminder(reminder) },
+                            onTapChecklist: { checklist in startEditingChecklist(checklist, day: day) },
+                            onDeleteChecklist: { checklist in deleteChecklist(checklist) },
                             onAddEvent: {
                                 selectedDayID = day.id
                                 prepareNewEventDefaults()
@@ -415,6 +503,8 @@ private extension TripDetailView {
                     id: existing.id,
                     date: date,
                     events: existing.events,
+                    reminders: existing.reminders,
+                    checklists: existing.checklists,
                     label: existing.label,
                     order: offset + 1,
                     weatherIcon: existing.weatherIcon,
@@ -426,6 +516,8 @@ private extension TripDetailView {
                     id: UUID(),
                     date: date,
                     events: [],
+                    reminders: [],
+                    checklists: [],
                     label: "Day \(offset + 1)",
                     order: offset + 1,
                     weatherIcon: "cloud.sun.fill",
@@ -462,16 +554,14 @@ private extension TripDetailView {
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short
-        let timeText = "\(formatter.string(from: newEventStart)) – \(formatter.string(from: newEventEnd))"
+        let hasEndTime = abs(newEventEnd.timeIntervalSince(newEventStart)) >= 60
+        let timeText = hasEndTime
+            ? "\(formatter.string(from: newEventStart)) – \(formatter.string(from: newEventEnd))"
+            : "\(formatter.string(from: newEventStart))"
         
         let photoData = newEventPhoto?.jpegData(compressionQuality: 0.8)
 
         if let editingEvent {
-            if let sourceIndex = tripDays.firstIndex(where: { $0.events.contains(editingEvent) }),
-               let eventIdx = tripDays[sourceIndex].events.firstIndex(of: editingEvent) {
-                tripDays[sourceIndex].events.remove(at: eventIdx)
-            }
-
             let updated = EventItem(
                 id: editingEvent.id,
                 title: newEventTitle.isEmpty ? "Untitled" : newEventTitle,
@@ -485,8 +575,12 @@ private extension TripDetailView {
                 photoData: photoData
             )
 
+            // Idempotent update: remove existing instances (by id) then re-insert once.
+            for idx in tripDays.indices {
+                tripDays[idx].events.removeAll { $0.id == editingEvent.id }
+            }
             tripDays[dayIndex].events.append(updated)
-            self.editingEvent = nil
+            self.editingEvent = updated
             return
         }
 
@@ -514,6 +608,89 @@ private extension TripDetailView {
             }
         }
     }
+    
+    func addReminder() {
+        guard let dayID = selectedDayID,
+              let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
+        
+        let trimmed = newReminderText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        if let editingReminder {
+            // Remove existing instances by id across all days, then insert once.
+            for idx in tripDays.indices {
+                tripDays[idx].reminders.removeAll { $0.id == editingReminder.id }
+            }
+            let updated = ReminderItem(id: editingReminder.id, text: trimmed, createdAt: editingReminder.createdAt)
+            tripDays[dayIndex].reminders.insert(updated, at: 0)
+            self.editingReminder = updated
+        } else {
+            let reminder = ReminderItem(id: UUID(), text: trimmed, createdAt: Date())
+            tripDays[dayIndex].reminders.insert(reminder, at: 0)
+        }
+    }
+    
+    func saveChecklist() {
+        guard let dayID = selectedDayID,
+              let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
+        
+        let trimmedTitle = checklistTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedItems = checklistDraftItems
+            .map { ChecklistEntry(id: $0.id, text: $0.text.trimmingCharacters(in: .whitespacesAndNewlines), isDone: $0.isDone) }
+            .filter { !$0.text.isEmpty }
+        
+        guard !trimmedTitle.isEmpty else { return }
+        
+        if let editingChecklist {
+            // Remove existing instances by id across all days, then re-insert once.
+            for idx in tripDays.indices {
+                tripDays[idx].checklists.removeAll { $0.id == editingChecklist.id }
+            }
+            let updated = ChecklistItem(
+                id: editingChecklist.id,
+                title: trimmedTitle,
+                items: normalizedItems,
+                createdAt: editingChecklist.createdAt
+            )
+            tripDays[dayIndex].checklists.insert(updated, at: 0)
+            self.editingChecklist = updated
+        } else {
+            let checklist = ChecklistItem(
+                id: UUID(),
+                title: trimmedTitle,
+                items: normalizedItems,
+                createdAt: Date()
+            )
+            tripDays[dayIndex].checklists.insert(checklist, at: 0)
+        }
+    }
+    
+    func startEditingChecklist(_ checklist: ChecklistItem, day: TripDay) {
+        selectedDayID = day.id
+        checklistTitle = checklist.title
+        checklistDraftItems = checklist.items
+        editingChecklist = checklist
+        isPresentingChecklist = true
+    }
+    
+    func deleteChecklist(_ checklist: ChecklistItem) {
+        for idx in tripDays.indices {
+            tripDays[idx].checklists.removeAll { $0.id == checklist.id }
+        }
+    }
+    
+    func startEditingReminder(_ reminder: ReminderItem, day: TripDay) {
+        selectedDayID = day.id
+        newReminderText = reminder.text
+        editingReminder = reminder
+        isPresentingReminder = true
+    }
+    
+    func deleteReminder(_ reminder: ReminderItem) {
+        for idx in tripDays.indices {
+            tripDays[idx].reminders.removeAll { $0.id == reminder.id }
+        }
+    }
 
     func startEditing(event: EventItem, day: TripDay) {
         editingEvent = event
@@ -532,14 +709,27 @@ private extension TripDetailView {
             newEventPhoto = nil
         }
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let components = event.time.split(separator: "–").map { $0.trimmingCharacters(in: .whitespaces) }
-        if components.count == 2,
-           let startDate = formatter.date(from: components[0]),
-           let endDate = formatter.date(from: components[1]) {
-            newEventStart = startDate
-            newEventEnd = endDate
+        // Parse either "start – end" or "start" (no end time)
+        let parts = event.time.split(separator: "–").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        
+        let short = DateFormatter()
+        short.dateStyle = .none
+        short.timeStyle = .short
+        
+        let hhmm = DateFormatter()
+        hhmm.dateFormat = "HH:mm"
+        
+        func parse(_ s: String) -> Date? {
+            short.date(from: s) ?? hhmm.date(from: s)
+        }
+        
+        if let start = parts.first.flatMap({ parse($0) }) {
+            newEventStart = start
+            if parts.count >= 2, let end = parse(parts[1]), end > start {
+                newEventEnd = end
+            } else {
+                newEventEnd = start
+            }
         }
         
         // Move map to event location if available
@@ -613,8 +803,14 @@ struct DayColumn: View {
     let onTap: (EventItem) -> Void
     let onEdit: (EventItem) -> Void
     let onDelete: (EventItem) -> Void
+    let onTapReminder: (ReminderItem) -> Void
+    let onDeleteReminder: (ReminderItem) -> Void
+    let onTapChecklist: (ChecklistItem) -> Void
+    let onDeleteChecklist: (ChecklistItem) -> Void
     let onAddEvent: () -> Void
     let showEmptyPlaceholder: Bool
+    
+    @State private var weatherMode: WeatherPillMode = .conditions
 
     var body: some View {
         VStack(spacing: 0) {
@@ -628,12 +824,12 @@ struct DayColumn: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .overlay(alignment: .topTrailing) {
-                HStack(spacing: 6) {
-                    Image(systemName: day.weatherIcon)
-                        .font(.caption)
-                    Text("\(day.temperatureF)°F")
-                        .font(.caption.weight(.semibold))
-                }
+                WeatherPill(
+                    mode: $weatherMode,
+                    fallbackIcon: day.weatherIcon,
+                    fallbackTempF: day.temperatureF,
+                    dayDate: day.date
+                )
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(.thinMaterial, in: Capsule())
@@ -660,6 +856,51 @@ struct DayColumn: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                    }
+                    
+                    // Reminders always show at the top and have no time.
+                    if !day.reminders.isEmpty {
+                        VStack(spacing: 8) {
+                            ForEach(day.reminders) { reminder in
+                                ReminderCard(text: reminder.text)
+                                    .onTapGesture { onTapReminder(reminder) }
+                                    .contextMenu {
+                                        Button {
+                                            onTapReminder(reminder)
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        
+                                        Button(role: .destructive) {
+                                            onDeleteReminder(reminder)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                            }
+                        }
+                    }
+                    
+                    if !day.checklists.isEmpty {
+                        VStack(spacing: 10) {
+                            ForEach(day.checklists) { checklist in
+                                ChecklistCard(checklist: checklist)
+                                    .onTapGesture { onTapChecklist(checklist) }
+                                    .contextMenu {
+                                        Button {
+                                            onTapChecklist(checklist)
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        
+                                        Button(role: .destructive) {
+                                            onDeleteChecklist(checklist)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                            }
+                        }
                     }
                     
                     ForEach(day.events.sorted { $0.startTimeMinutes < $1.startTimeMinutes }) { event in
@@ -692,6 +933,191 @@ struct DayColumn: View {
                 .strokeBorder(Color.white.opacity(0.08))
         }
         .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
+    }
+}
+
+enum WeatherPillMode: Int, CaseIterable {
+    case conditions
+    case sunrise
+    case sunset
+}
+
+struct WeatherPill: View {
+    @Binding var mode: WeatherPillMode
+    let fallbackIcon: String
+    let fallbackTempF: Int
+    let dayDate: Date
+    
+    private var timeFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f
+    }
+    
+    private var sunrise: Date? {
+        Calendar.current.date(bySettingHour: 6, minute: 30, second: 0, of: dayDate)
+    }
+    
+    private var sunset: Date? {
+        Calendar.current.date(bySettingHour: 19, minute: 45, second: 0, of: dayDate)
+    }
+    
+    var body: some View {
+        Group {
+            switch mode {
+            case .conditions:
+                HStack(spacing: 6) {
+                    Image(systemName: fallbackIcon)
+                        .font(.caption)
+                    Text("\(fallbackTempF)°F")
+                        .font(.caption.weight(.semibold))
+                }
+            case .sunrise:
+                HStack(spacing: 6) {
+                    Image(systemName: "sunrise.fill")
+                        .font(.caption)
+                    Text(sunrise.map { timeFormatter.string(from: $0) } ?? "—")
+                        .font(.caption.weight(.semibold))
+                }
+            case .sunset:
+                HStack(spacing: 6) {
+                    Image(systemName: "sunset.fill")
+                        .font(.caption)
+                    Text(sunset.map { timeFormatter.string(from: $0) } ?? "—")
+                        .font(.caption.weight(.semibold))
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            switch mode {
+            case .conditions: mode = .sunrise
+            case .sunrise: mode = .sunset
+            case .sunset: mode = .conditions
+            }
+        }
+    }
+}
+
+struct ReminderCard: View {
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "lightbulb")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+struct ChecklistCard: View {
+    let checklist: ChecklistItem
+    
+    private var completedText: String {
+        let done = checklist.items.filter(\.isDone).count
+        return "\(done)/\(checklist.items.count)"
+    }
+    
+    var body: some View {
+        let headerColor = Color(hex: 0xF9C842)
+        let listBgColor = Color(hex: 0xFAE78B)
+        let lineColor = Color(hex: 0xF9D767)
+        let textColor = Color(hex: 0x523E0E)
+        
+        let previewItems = Array(checklist.items.prefix(3))
+        
+        VStack(spacing: 0) {
+            // Header (square corners; outer rounding applied by the card clip)
+            ZStack {
+                Rectangle()
+                    .fill(headerColor)
+                
+                HStack(alignment: .firstTextBaseline) {
+                    Text(checklist.title)
+                        .font(.subheadline.weight(.semibold)) // match event card title style
+                        .foregroundStyle(textColor)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    Text(completedText)
+                        .font(.subheadline.weight(.semibold)) // match event card title style
+                        .foregroundStyle(textColor)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .frame(maxWidth: .infinity)
+            
+            // List preview (top 3 items) - square rows and 1px lines
+            VStack(spacing: 0) {
+                ForEach(0..<3, id: \.self) { idx in
+                    let text = idx < previewItems.count ? previewItems[idx].text : ""
+                    let isDone = idx < previewItems.count ? previewItems[idx].isDone : false
+                    
+                    ZStack {
+                        Rectangle()
+                            .fill(listBgColor)
+                        
+                        HStack(spacing: 10) {
+                            if idx < previewItems.count {
+                                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(textColor.opacity(isDone ? 0.85 : 0.55))
+                            } else {
+                                Image(systemName: "circle")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(textColor.opacity(0.0))
+                            }
+                            
+                            Text(text)
+                                .font(.subheadline)
+                                .foregroundStyle(textColor)
+                                .lineLimit(1)
+                                .strikethrough(isDone, color: textColor.opacity(0.6))
+                            
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 11)
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    if idx < 2 {
+                        Rectangle()
+                            .fill(lineColor)
+                            .frame(height: 1)
+                    }
+                }
+            }
+        }
+        // Match EventCard corner radius.
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(textColor.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+private extension Color {
+    init(hex: UInt32) {
+        let r = Double((hex >> 16) & 0xFF) / 255.0
+        let g = Double((hex >> 8) & 0xFF) / 255.0
+        let b = Double(hex & 0xFF) / 255.0
+        self.init(red: r, green: g, blue: b)
     }
 }
 
@@ -886,6 +1312,7 @@ struct TripSettingsSheet: View {
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $coverImage)
+                    .tint(.primary)
             }
             .onAppear {
                 if let imageData = coverImageData {
@@ -921,6 +1348,7 @@ struct AddEventSheet: View {
     var isEditing: Bool = false
     
     @State private var showImagePicker = false
+    @State private var hasEndTime = true
     
     private var durationString: String? {
         let interval = endTime.timeIntervalSince(startTime)
@@ -1002,7 +1430,19 @@ struct AddEventSheet: View {
                         }
                     }
                     DatePicker("From", selection: $startTime, displayedComponents: .hourAndMinute)
-                    DatePicker("To", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                    
+                    Toggle("Add end time", isOn: $hasEndTime)
+                        .onChange(of: hasEndTime) { _, newValue in
+                            if !newValue {
+                                endTime = startTime
+                            } else if endTime <= startTime {
+                                endTime = startTime.addingTimeInterval(60 * 60)
+                            }
+                        }
+                    
+                    if hasEndTime {
+                        DatePicker("To", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                    }
                     if let durationText = durationString {
                         Text("Duration: \(durationText)")
                             .font(.footnote)
@@ -1096,6 +1536,15 @@ struct AddEventSheet: View {
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $photo)
+                    .tint(.primary)
+            }
+            .onAppear {
+                hasEndTime = endTime > startTime
+            }
+            .onChange(of: startTime) { _, newValue in
+                if !hasEndTime {
+                    endTime = newValue
+                }
             }
             .onChange(of: title) { _, _ in if isEditing { onAdd() } }
             .onChange(of: location) { _, _ in if isEditing { onAdd() } }
@@ -1106,6 +1555,154 @@ struct AddEventSheet: View {
             .onChange(of: startTime) { _, _ in if isEditing { onAdd() } }
             .onChange(of: endTime) { _, _ in if isEditing { onAdd() } }
             .onChange(of: selectedDayID) { _, _ in if isEditing { onAdd() } }
+        }
+    }
+}
+
+struct AddReminderSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var reminderText: String
+    @Binding var selectedDayID: UUID?
+    let days: [TripDay]
+    var isEditing: Bool = false
+    var onAdd: () -> Void
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Day", selection: $selectedDayID) {
+                        ForEach(days) { day in
+                            Text(day.displayTitle)
+                                .tag(Optional(day.id))
+                        }
+                    }
+                }
+                
+                Section("Reminder") {
+                    HStack {
+                        TextField("Add a reminder", text: $reminderText)
+                        if !reminderText.isEmpty {
+                            Button {
+                                reminderText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .navigationTitle(isEditing ? "Edit Reminder" : "Add Reminder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(isEditing ? "Save" : "Add") {
+                        onAdd()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(reminderText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
+                }
+            }
+        }
+    }
+}
+
+struct ChecklistSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    @Binding var title: String
+    @Binding var items: [ChecklistEntry]
+    @Binding var selectedDayID: UUID?
+    let days: [TripDay]
+    var isEditing: Bool = false
+    var onSave: () -> Void
+    
+    @State private var newItemText: String = ""
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Day", selection: $selectedDayID) {
+                        ForEach(days) { day in
+                            Text(day.displayTitle)
+                                .tag(Optional(day.id))
+                        }
+                    }
+                }
+                
+                Section("Checklist") {
+                    HStack {
+                        TextField("Title", text: $title)
+                        if !title.isEmpty {
+                            Button {
+                                title = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                
+                Section("Items") {
+                    ForEach($items) { $item in
+                        HStack(spacing: 12) {
+                            Button {
+                                let wasDone = item.isDone
+                                item.isDone.toggle()
+                                if !wasDone, item.isDone {
+                                    Haptics.bump()
+                                }
+                            } label: {
+                                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(item.isDone ? .green : .secondary)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            TextField("Item", text: $item.text)
+                        }
+                    }
+                    .onDelete { offsets in
+                        items.remove(atOffsets: offsets)
+                    }
+                    
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(.secondary)
+                        TextField("Add item", text: $newItemText)
+                        Button("Add") {
+                            let t = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !t.isEmpty else { return }
+                            items.append(ChecklistEntry(id: UUID(), text: t, isDone: false))
+                            newItemText = ""
+                        }
+                        .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+            .navigationTitle(isEditing ? "Edit Checklist" : "New Checklist")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(isEditing ? "Save" : "Create") {
+                        onSave()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
+                }
+            }
         }
     }
 }
@@ -1300,7 +1897,8 @@ struct LocationSearchField: View {
                         Button {
                             selectLocation(result)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
                                 Text(result.title)
                                     .font(.body)
                                     .foregroundStyle(.primary)
@@ -1309,9 +1907,13 @@ struct LocationSearchField: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
+                                }
+                                Spacer(minLength: 0)
                             }
+                            .contentShape(Rectangle())
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 16)
                         }
                         .buttonStyle(.plain)
                         
@@ -1320,8 +1922,6 @@ struct LocationSearchField: View {
                         }
                     }
                 }
-                .padding(.horizontal, -16)
-                .padding(.horizontal, 16)
             } else if showingResults && completer.results.isEmpty && !text.isEmpty {
                 Text("No results")
                     .font(.caption)
@@ -1410,11 +2010,28 @@ struct EventItem: Identifiable, Hashable, Codable, Transferable {
     
     /// Extracts start time in minutes from midnight for sorting
     var startTimeMinutes: Int {
-        let components = time.split(separator: "–").first?.trimmingCharacters(in: .whitespaces) ?? ""
-        let parts = components.split(separator: ":").compactMap { Int($0) }
-        if parts.count >= 2 {
-            return parts[0] * 60 + parts[1]
+        let startText = time
+            .split(separator: "–")
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        
+        // 1) Try parsing localized short time (what we save from the picker)
+        let short = DateFormatter()
+        short.dateStyle = .none
+        short.timeStyle = .short
+        if let date = short.date(from: startText) {
+            let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+            return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
         }
+        
+        // 2) Fallback: support legacy "HH:mm"
+        let hhmm = DateFormatter()
+        hhmm.dateFormat = "HH:mm"
+        if let date = hhmm.date(from: startText) {
+            let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+            return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        }
+        
         return 0
     }
 
@@ -1427,6 +2044,8 @@ struct TripDay: Identifiable, Hashable, Codable {
     let id: UUID
     let date: Date
     var events: [EventItem]
+    var reminders: [ReminderItem]
+    var checklists: [ChecklistItem]
     let label: String
     let order: Int
     let weatherIcon: String
@@ -1447,6 +2066,67 @@ struct TripDay: Identifiable, Hashable, Codable {
     }
 
     var dayBadge: String { "Day \(order)" }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, date, events, reminders, checklists, label, order, weatherIcon, temperatureF
+    }
+    
+    init(id: UUID, date: Date, events: [EventItem], reminders: [ReminderItem] = [], checklists: [ChecklistItem] = [], label: String, order: Int, weatherIcon: String, temperatureF: Int) {
+        self.id = id
+        self.date = date
+        self.events = events
+        self.reminders = reminders
+        self.checklists = checklists
+        self.label = label
+        self.order = order
+        self.weatherIcon = weatherIcon
+        self.temperatureF = temperatureF
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        date = try c.decode(Date.self, forKey: .date)
+        events = try c.decode([EventItem].self, forKey: .events)
+        reminders = try c.decodeIfPresent([ReminderItem].self, forKey: .reminders) ?? []
+        checklists = try c.decodeIfPresent([ChecklistItem].self, forKey: .checklists) ?? []
+        label = try c.decode(String.self, forKey: .label)
+        order = try c.decode(Int.self, forKey: .order)
+        weatherIcon = try c.decode(String.self, forKey: .weatherIcon)
+        temperatureF = try c.decode(Int.self, forKey: .temperatureF)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(date, forKey: .date)
+        try c.encode(events, forKey: .events)
+        try c.encode(reminders, forKey: .reminders)
+        try c.encode(checklists, forKey: .checklists)
+        try c.encode(label, forKey: .label)
+        try c.encode(order, forKey: .order)
+        try c.encode(weatherIcon, forKey: .weatherIcon)
+        try c.encode(temperatureF, forKey: .temperatureF)
+    }
+}
+
+struct ReminderItem: Identifiable, Hashable, Codable {
+    let id: UUID
+    var text: String
+    var createdAt: Date
+}
+
+struct ChecklistItem: Identifiable, Hashable, Codable {
+    let id: UUID
+    var title: String
+    var items: [ChecklistEntry]
+    var createdAt: Date
+}
+
+struct ChecklistEntry: Identifiable, Hashable, Codable {
+    let id: UUID
+    var text: String
+    var isDone: Bool
 }
 
 enum EventAccent: String, Codable, CaseIterable, Hashable {

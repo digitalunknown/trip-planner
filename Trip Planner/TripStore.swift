@@ -11,30 +11,50 @@ import SwiftUI
 @Observable
 class TripStore {
     var trips: [Trip] = []
+    private let ioQueue = DispatchQueue(label: "TripStore.ioQueue", qos: .utility)
     
-    private static let saveKey = "SavedTrips"
+    private var saveURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("TripPlanner", isDirectory: true)
+        return dir.appendingPathComponent("SavedTrips.json")
+    }
     
     init() {
         load()
     }
     
     func save() {
-        do {
-            let data = try JSONEncoder().encode(trips)
-            UserDefaults.standard.set(data, forKey: Self.saveKey)
-        } catch {
-            print("Failed to save trips: \(error)")
+        // Snapshot the value so we don't access self.trips off-thread.
+        let snapshot = trips
+        let url = saveURL
+        
+        ioQueue.async {
+            do {
+                let dir = url.deletingLastPathComponent()
+                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                let data = try encoder.encode(snapshot)
+                
+                try data.write(to: url, options: [.atomic])
+            } catch {
+                print("Failed to save trips: \(error)")
+            }
         }
     }
     
     func load() {
-        guard let data = UserDefaults.standard.data(forKey: Self.saveKey) else {
+        let url = saveURL
+        guard let data = try? Data(contentsOf: url) else {
             trips = []
             return
         }
         
         do {
-            trips = try JSONDecoder().decode([Trip].self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            trips = try decoder.decode([Trip].self, from: data)
         } catch {
             print("Failed to load trips: \(error)")
             trips = []

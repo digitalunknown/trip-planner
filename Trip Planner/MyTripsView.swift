@@ -13,6 +13,7 @@ struct MyTripsView: View {
     @State private var showingNewTrip = false
     @State private var showingSettings = false
     @State private var navigationPath = NavigationPath()
+    @State private var pendingNewTripID: UUID?
     @State private var editingTrip: Trip?
     @State private var tripForImagePicker: Trip?
     @State private var showImagePicker = false
@@ -42,32 +43,31 @@ struct MyTripsView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Image(systemName: "gearshape")
-                                .fontWeight(.medium)
-                        }
-                        
-                        Button {
-                            showingNewTrip = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .fontWeight(.medium)
-                        }
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .fontWeight(.medium)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
+                    
+                    Button {
+                        showingNewTrip = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.medium)
+                    }
                 }
             }
             .sheet(isPresented: $showingNewTrip) {
-                NewTripView(tripStore: tripStore)
+                NewTripView(tripStore: tripStore) { newTripID in
+                    // Defer navigation until the sheet is fully dismissed.
+                    pendingNewTripID = newTripID
+                }
+                .tint(.primary)
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
+                    .tint(.primary)
             }
             .sheet(item: $editingTrip) { trip in
                 if let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) {
@@ -85,10 +85,12 @@ struct MyTripsView: View {
                             }
                         }
                     )
+                    .tint(.primary)
                 }
             }
             .sheet(isPresented: $showImagePicker) {
                 TripImagePicker(image: $selectedImage)
+                    .tint(.primary)
             }
             .onChange(of: selectedImage) { _, newImage in
                 if let image = newImage,
@@ -100,7 +102,16 @@ struct MyTripsView: View {
                     tripForImagePicker = nil
                 }
             }
+            .onChange(of: showingNewTrip) { _, isPresented in
+                // When the new-trip sheet is dismissed, navigate if we have a pending trip id.
+                if !isPresented, let id = pendingNewTripID {
+                    pendingNewTripID = nil
+                    navigationPath.append(id)
+                }
+            }
         }
+        // Ensure this navigation stack (and its destinations) never inherits the tab bar's orange tint.
+        .tint(.primary)
     }
     
     private var emptyStateView: some View {
@@ -179,6 +190,14 @@ struct MyTripsView: View {
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
+                                Button {
+                                    navigationPath.append(trip.id)
+                                } label: {
+                                    Label("View Trip", systemImage: "arrow.right.circle")
+                                }
+                                
+                                Divider()
+                                
                                 Button {
                                     tripForImagePicker = trip
                                     showImagePicker = true

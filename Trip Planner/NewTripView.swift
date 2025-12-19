@@ -11,6 +11,7 @@ import MapKit
 struct NewTripView: View {
     @Environment(\.dismiss) private var dismiss
     var tripStore: TripStore
+    var onCreated: (UUID) -> Void = { _ in }
     
     @State private var name = ""
     @State private var destination = ""
@@ -117,6 +118,7 @@ struct NewTripView: View {
                             coverImageData: coverImage?.jpegData(compressionQuality: 0.8)
                         )
                         tripStore.addTrip(newTrip)
+                        onCreated(newTrip.id)
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -125,6 +127,7 @@ struct NewTripView: View {
             }
             .sheet(isPresented: $showImagePicker) {
                 TripImagePicker(image: $coverImage)
+                    .tint(.primary)
             }
         }
     }
