@@ -160,11 +160,11 @@ struct TrackerItemCard: View {
         HStack(spacing: 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.secondary.opacity(0.10))
+                    .fill(isVisited ? accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
 
                 Image(systemName: iconSystemName)
                     .font(.title3)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isVisited ? accentColor : .secondary)
             }
             .frame(width: 40, height: 40)
 
@@ -182,7 +182,7 @@ struct TrackerItemCard: View {
 
             Spacer(minLength: 0)
 
-            Image(systemName: isVisited ? "checkmark.circle.fill" : "circle")
+            Image(systemName: isVisited ? "checkmark.square.fill" : "square")
                 .font(.title3)
                 .foregroundStyle(isVisited ? accentColor : Color.secondary)
         }

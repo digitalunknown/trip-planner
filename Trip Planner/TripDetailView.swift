@@ -1023,6 +1023,8 @@ struct ReminderCard: View {
 }
 
 struct ChecklistCard: View {
+    @Environment(\.appAccentColor) private var accentColor
+    
     let checklist: ChecklistItem
     
     private var completedText: String {
@@ -1073,11 +1075,11 @@ struct ChecklistCard: View {
                         
                         HStack(spacing: 10) {
                             if idx < previewItems.count {
-                                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                                Image(systemName: isDone ? "checkmark.square.fill" : "square")
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(textColor.opacity(isDone ? 0.85 : 0.55))
+                                    .foregroundStyle(isDone ? accentColor : textColor.opacity(0.55))
                             } else {
-                                Image(systemName: "circle")
+                                Image(systemName: "square")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(textColor.opacity(0.0))
                             }
@@ -1615,6 +1617,7 @@ struct AddReminderSheet: View {
 
 struct ChecklistSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var accentColor
     
     @Binding var title: String
     @Binding var items: [ChecklistEntry]
@@ -1624,67 +1627,103 @@ struct ChecklistSheet: View {
     var onSave: () -> Void
     
     @State private var newItemText: String = ""
+    @FocusState private var focusedItemID: UUID?
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Picker("Day", selection: $selectedDayID) {
-                        ForEach(days) { day in
-                            Text(day.displayTitle)
-                                .tag(Optional(day.id))
-                        }
-                    }
-                }
-                
-                Section("Checklist") {
-                    HStack {
-                        TextField("Title", text: $title)
-                        if !title.isEmpty {
-                            Button {
-                                title = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
+            ScrollViewReader { proxy in
+                Form {
+                    Section {
+                        Picker("Day", selection: $selectedDayID) {
+                            ForEach(days) { day in
+                                Text(day.displayTitle)
+                                    .tag(Optional(day.id))
                             }
-                            .buttonStyle(.plain)
                         }
-                    }
-                }
-                
-                Section("Items") {
-                    ForEach($items) { $item in
-                        HStack(spacing: 12) {
-                            Button {
-                                let wasDone = item.isDone
-                                item.isDone.toggle()
-                                if !wasDone, item.isDone {
-                                    Haptics.bump()
-                                }
-                            } label: {
-                                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(item.isDone ? .green : .secondary)
-                            }
-                            .buttonStyle(.plain)
-                            
-                            TextField("Item", text: $item.text)
-                        }
-                    }
-                    .onDelete { offsets in
-                        items.remove(atOffsets: offsets)
                     }
                     
-                    HStack(spacing: 12) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(.secondary)
-                        TextField("Add item", text: $newItemText)
-                        Button("Add") {
-                            let t = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !t.isEmpty else { return }
-                            items.append(ChecklistEntry(id: UUID(), text: t, isDone: false))
-                            newItemText = ""
+                    Section("Checklist") {
+                        HStack {
+                            TextField("Title", text: $title)
+                            if !title.isEmpty {
+                                Button {
+                                    title = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    
+                    Section("Items") {
+                        ForEach($items) { $item in
+                            let itemID = item.id
+                            HStack(spacing: 12) {
+                                Button {
+                                    let wasDone = item.isDone
+                                    item.isDone.toggle()
+                                    if !wasDone, item.isDone {
+                                        Haptics.bump()
+                                    }
+                                } label: {
+                                    Image(systemName: item.isDone ? "checkmark.square.fill" : "square")
+                                        .foregroundStyle(item.isDone ? accentColor : .secondary)
+                                }
+                                .buttonStyle(.plain)
+                                
+                                TextField("Item", text: $item.text)
+                                    .focused($focusedItemID, equals: itemID)
+                                
+                                if focusedItemID == itemID {
+                                    Button {
+                                        if let idx = items.firstIndex(where: { $0.id == itemID }) {
+                                            if focusedItemID == itemID { focusedItemID = nil }
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                items.remove(at: idx)
+                                            }
+                                        }
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .id(itemID)
+                        }
+                        .onDelete { offsets in
+                            items.remove(atOffsets: offsets)
+                        }
+                        
+                        HStack(spacing: 12) {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(.secondary)
+                            TextField("Add item", text: $newItemText)
+                            Button("Add") {
+                                let t = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard !t.isEmpty else { return }
+                                let newID = UUID()
+                                items.append(ChecklistEntry(id: newID, text: t, isDone: false))
+                                newItemText = ""
+                                DispatchQueue.main.async {
+                                    focusedItemID = newID
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        proxy.scrollTo(newID, anchor: .center)
+                                    }
+                                }
+                            }
+                            .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                }
+                .onChange(of: focusedItemID) { _, newValue in
+                    guard let id = newValue else { return }
+                    DispatchQueue.main.async {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            proxy.scrollTo(id, anchor: .center)
+                        }
                     }
                 }
             }
