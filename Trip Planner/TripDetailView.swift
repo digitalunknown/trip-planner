@@ -75,6 +75,24 @@ struct TripDetailView: View {
     @State private var editingChecklist: ChecklistItem?
     @State private var checklistTitle: String = ""
     @State private var checklistDraftItems: [ChecklistEntry] = []
+
+    @State private var isPresentingFlight = false
+    @State private var editingFlight: FlightItem?
+    @State private var flightFromName: String = ""
+    @State private var flightFromCode: String = ""
+    @State private var flightFromCity: String = ""
+    @State private var flightFromLatitude: Double?
+    @State private var flightFromLongitude: Double?
+    @State private var flightToName: String = ""
+    @State private var flightToCode: String = ""
+    @State private var flightToCity: String = ""
+    @State private var flightToLatitude: Double?
+    @State private var flightToLongitude: Double?
+    @State private var flightNumber: String = ""
+    @State private var flightNotes: String = ""
+    @State private var flightAccent: EventAccent = .sky
+    @State private var flightStartTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
+    @State private var flightEndTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     
     @State private var isEdgeSwipingBack: Bool = false
     
@@ -116,14 +134,8 @@ struct TripDetailView: View {
     }
     
     var appropriateMapRegion: MKCoordinateRegion {
-        if let lat = trip.latitude, let lon = trip.longitude {
-            // Use the stored mapSpan from location search, or default to city level
-            let span = trip.mapSpan ?? 0.1
-            return MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
-            )
-        } else if !eventAnnotations.isEmpty {
+        // If we have markers, default the map to fit them (more useful than a generic destination zoom).
+        if !eventAnnotations.isEmpty {
             let coordinates = eventAnnotations.map { $0.coordinate }
             let minLat = coordinates.map { $0.latitude }.min() ?? 0
             let maxLat = coordinates.map { $0.latitude }.max() ?? 0
@@ -134,11 +146,24 @@ struct TripDetailView: View {
                 latitude: (minLat + maxLat) / 2,
                 longitude: (minLon + maxLon) / 2
             )
+            
+            // Tighter padding than before to reduce overlap.
+            // Also allow a smaller minimum span for city-level clusters.
+            let latSpread = maxLat - minLat
+            let lonSpread = maxLon - minLon
+            let padding: Double = 1.12
             let span = MKCoordinateSpan(
-                latitudeDelta: max((maxLat - minLat) * 1.3, 0.05),
-                longitudeDelta: max((maxLon - minLon) * 1.3, 0.05)
+                latitudeDelta: max(latSpread * padding, 0.012),
+                longitudeDelta: max(lonSpread * padding, 0.012)
             )
             return MKCoordinateRegion(center: center, span: span)
+        } else if let lat = trip.latitude, let lon = trip.longitude {
+            // Use the stored mapSpan from location search, or default to city level
+            let span = trip.mapSpan ?? 0.1
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
+            )
         } else {
             // Default world view
             return MKCoordinateRegion(
@@ -376,6 +401,8 @@ struct TripDetailView: View {
         }
         .onAppear {
             initializeTripDays()
+            // Prefer fitting markers if any exist.
+            mapRegion = appropriateMapRegion
             // Fade the map in after first layout pass to avoid visible “jump”.
             showMap = false
             DispatchQueue.main.async {
@@ -1327,16 +1354,17 @@ struct TripSettingsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    LiquidGlassIconButton(
+                        systemName: "checkmark",
+                        isEnabled: !(name.isEmpty || location.isEmpty)
+                    ) {
                         coverImageData = coverImage?.jpegData(compressionQuality: 0.8)
                         onApply()
                         dismiss()
                     }
-                    .fontWeight(.semibold)
-                    .disabled(name.isEmpty || location.isEmpty)
                 }
             }
             .sheet(isPresented: $showImagePicker) {
@@ -1576,8 +1604,11 @@ struct AddEventSheet: View {
             .navigationTitle(isEditing ? "Edit Activity" : "Add Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                ToolbarItem(placement: .topBarLeading) {
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    LiquidGlassIconButton(systemName: "checkmark") {
                         onAdd()
                         dismiss()
                     }
@@ -1659,15 +1690,16 @@ struct AddReminderSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(isEditing ? "Save" : "Add") {
+                    LiquidGlassIconButton(
+                        systemName: "checkmark",
+                        isEnabled: !(reminderText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
+                    ) {
                         onAdd()
                         dismiss()
                     }
-                    .fontWeight(.semibold)
-                    .disabled(reminderText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
                 }
             }
         }
@@ -1843,15 +1875,16 @@ struct ChecklistSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(isEditing ? "Save" : "Create") {
+                    LiquidGlassIconButton(
+                        systemName: "checkmark",
+                        isEnabled: !(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
+                    ) {
                         onSave()
                         dismiss()
                     }
-                    .fontWeight(.semibold)
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
                 }
             }
         }

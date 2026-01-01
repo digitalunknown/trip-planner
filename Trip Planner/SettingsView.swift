@@ -55,17 +55,18 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
+                    LiquidGlassIconButton(systemName: "checkmark") { dismiss() }
                 }
             }
         }
         // Sheets don't always inherit the presenter's preferredColorScheme,
         // so apply it here to update immediately when the picker changes.
         .preferredColorScheme(appearanceMode.preferredColorScheme)
+        .tint(.primary)
     }
 }
 

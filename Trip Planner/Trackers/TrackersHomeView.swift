@@ -53,8 +53,11 @@ struct TrackersHomeView: View {
                 .navigationTitle("Add Tracker")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        LiquidGlassIconButton(systemName: "xmark") { showComingSoon = false }
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { showComingSoon = false }
+                        LiquidGlassIconButton(systemName: "checkmark") { showComingSoon = false }
                     }
                 }
             }

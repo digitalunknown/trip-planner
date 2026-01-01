@@ -388,18 +388,17 @@ struct EditTripView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    LiquidGlassIconButton(
+                        systemName: "checkmark",
+                        isEnabled: !(name.isEmpty || destination.isEmpty)
+                    ) {
                         saveTrip()
                         dismiss()
                     }
-                    .fontWeight(.semibold)
-                    .disabled(name.isEmpty || destination.isEmpty)
                 }
             }
             .sheet(isPresented: $showImagePicker) {

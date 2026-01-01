@@ -100,13 +100,11 @@ struct NewTripView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Create") {
+                    LiquidGlassIconButton(systemName: "checkmark", isEnabled: isValid) {
                         let newTrip = Trip(
                             name: name,
                             destination: destination,
@@ -121,8 +119,6 @@ struct NewTripView: View {
                         onCreated(newTrip.id)
                         dismiss()
                     }
-                    .fontWeight(.semibold)
-                    .disabled(!isValid)
                 }
             }
             .sheet(isPresented: $showImagePicker) {
@@ -130,6 +126,7 @@ struct NewTripView: View {
                     .tint(.primary)
             }
         }
+        .tint(.primary)
     }
 }
 
