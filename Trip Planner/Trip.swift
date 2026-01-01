@@ -73,9 +73,9 @@ struct Trip: Identifiable, Hashable, Codable {
                         id: UUID(),
                         date: baseDate,
                         events: [
-                            EventItem(id: UUID(), title: "Brunch at Fauna & Flora", description: "Fresh bowls and coffee with a view of pink buildings.", time: "09:30", location: "Alfama", latitude: nil, longitude: nil, icon: "fork.knife", accent: .pink, photoData: nil),
-                            EventItem(id: UUID(), title: "Castle Walk", description: "Explore Castelo de S. Jorge and the winding streets around it.", time: "11:15", location: "Castelo", latitude: nil, longitude: nil, icon: "building.columns", accent: .orange, photoData: nil),
-                            EventItem(id: UUID(), title: "Sunset at Miradouro", description: "Golden hour photos above the river.", time: "18:45", location: "Miradouro da Graça", latitude: nil, longitude: nil, icon: "sunset.fill", accent: .yellow, photoData: nil)
+                            EventItem(id: UUID(), title: "Brunch at Fauna & Flora", description: "Fresh bowls and coffee with a view of pink buildings.", time: "09:30", location: "Alfama", latitude: nil, longitude: nil, icon: "fork.knife", accent: .lavender, photoData: nil),
+                            EventItem(id: UUID(), title: "Castle Walk", description: "Explore Castelo de S. Jorge and the winding streets around it.", time: "11:15", location: "Castelo", latitude: nil, longitude: nil, icon: "building.columns", accent: .burntOrange, photoData: nil),
+                            EventItem(id: UUID(), title: "Sunset at Miradouro", description: "Golden hour photos above the river.", time: "18:45", location: "Miradouro da Graça", latitude: nil, longitude: nil, icon: "sunset.fill", accent: .gold, photoData: nil)
                         ],
                         label: "Lisbon Arrival",
                         order: 1,
@@ -86,8 +86,8 @@ struct Trip: Identifiable, Hashable, Codable {
                         id: UUID(),
                         date: Calendar.current.date(byAdding: .day, value: 1, to: baseDate) ?? baseDate,
                         events: [
-                            EventItem(id: UUID(), title: "LX Factory", description: "Design shops and coffee under the bridge.", time: "10:00", location: "Alcântara", latitude: nil, longitude: nil, icon: "bag.fill", accent: .purple, photoData: nil),
-                            EventItem(id: UUID(), title: "Bike to Belém", description: "Pastéis de Nata stop and riverside ride.", time: "14:00", location: "Belém", latitude: nil, longitude: nil, icon: "bicycle", accent: .blue, photoData: nil)
+                            EventItem(id: UUID(), title: "LX Factory", description: "Design shops and coffee under the bridge.", time: "10:00", location: "Alcântara", latitude: nil, longitude: nil, icon: "bag.fill", accent: .sand, photoData: nil),
+                            EventItem(id: UUID(), title: "Bike to Belém", description: "Pastéis de Nata stop and riverside ride.", time: "14:00", location: "Belém", latitude: nil, longitude: nil, icon: "bicycle", accent: .sky, photoData: nil)
                         ],
                         label: "Design Day",
                         order: 2,
@@ -98,9 +98,9 @@ struct Trip: Identifiable, Hashable, Codable {
                         id: UUID(),
                         date: Calendar.current.date(byAdding: .day, value: 2, to: baseDate) ?? baseDate,
                         events: [
-                            EventItem(id: UUID(), title: "Train to Cascais", description: "Coastal views on the way to the beaches.", time: "09:15", location: "Cais do Sodré", latitude: nil, longitude: nil, icon: "train.side.front.car", accent: .teal, photoData: nil),
-                            EventItem(id: UUID(), title: "Beach picnic", description: "Relax on Praia da Rainha with pastel de nata.", time: "12:30", location: "Cascais", latitude: nil, longitude: nil, icon: "beach.umbrella.fill", accent: .cyan, photoData: nil),
-                            EventItem(id: UUID(), title: "Seafood dinner", description: "Catch of the day at a local marisqueira.", time: "19:00", location: "Cascais Marina", latitude: nil, longitude: nil, icon: "fork.knife.circle.fill", accent: .mint, photoData: nil)
+                            EventItem(id: UUID(), title: "Train to Cascais", description: "Coastal views on the way to the beaches.", time: "09:15", location: "Cais do Sodré", latitude: nil, longitude: nil, icon: "train.side.front.car", accent: .deepNavy, photoData: nil),
+                            EventItem(id: UUID(), title: "Beach picnic", description: "Relax on Praia da Rainha with pastel de nata.", time: "12:30", location: "Cascais", latitude: nil, longitude: nil, icon: "beach.umbrella.fill", accent: .mint, photoData: nil),
+                            EventItem(id: UUID(), title: "Seafood dinner", description: "Catch of the day at a local marisqueira.", time: "19:00", location: "Cascais Marina", latitude: nil, longitude: nil, icon: "fork.knife.circle.fill", accent: .forest, photoData: nil)
                         ],
                         label: "Coastal Escape",
                         order: 3,

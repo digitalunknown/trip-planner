@@ -8,6 +8,12 @@
 import SwiftUI
 import MapKit
 
+private enum TripStatus: Equatable {
+    case upcoming(daysUntilStart: Int)
+    case inProgress
+    case ended
+}
+
 struct TripCardView: View {
     @Environment(\.appAccentColor) private var accentColor
     
@@ -30,19 +36,34 @@ struct TripCardView: View {
         )
     }
     
+    private var tripStatus: TripStatus {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let start = cal.startOfDay(for: trip.startDate)
+        let end = cal.startOfDay(for: trip.endDate)
+        
+        if today < start { return .upcoming(daysUntilStart: cal.dateComponents([.day], from: today, to: start).day ?? 0) }
+        if today > end { return .ended }
+        return .inProgress
+    }
+    
     private var isUrgent: Bool {
-        trip.daysUntilTrip >= 0 && trip.daysUntilTrip < 5
+        if case let .upcoming(daysUntilStart) = tripStatus {
+            return daysUntilStart >= 0 && daysUntilStart < 5
+        }
+        return false
     }
     
     private var countdownText: String {
-        if trip.daysUntilTrip == 0 {
-            return "Today!"
-        } else if trip.daysUntilTrip == 1 {
-            return "Tomorrow"
-        } else if trip.daysUntilTrip > 0 {
-            return "\(trip.daysUntilTrip) days away"
-        } else {
+        switch tripStatus {
+        case .upcoming(let daysUntilStart):
+            if daysUntilStart == 0 { return "Today!" }
+            if daysUntilStart == 1 { return "Tomorrow" }
+            return "\(max(daysUntilStart, 0)) days away"
+        case .inProgress:
             return "In progress"
+        case .ended:
+            return "Ended"
         }
     }
     
@@ -102,9 +123,7 @@ struct TripCardView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(
-                        isUrgent 
-                            ? (trip.daysUntilTrip == 0 ? AnyShapeStyle(accentColor) : AnyShapeStyle(accentColor))
-                            : AnyShapeStyle(.ultraThinMaterial)
+                        isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(.ultraThinMaterial)
                     )
                     .clipShape(Capsule())
                 }

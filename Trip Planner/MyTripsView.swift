@@ -202,7 +202,7 @@ struct MyTripsView: View {
                                     tripForImagePicker = trip
                                     showImagePicker = true
                                 } label: {
-                                    Label("Add Image", systemImage: "photo.badge.plus")
+                                    Label("Add Cover Image", systemImage: "photo.badge.plus")
                                 }
                                 
                                 Button {

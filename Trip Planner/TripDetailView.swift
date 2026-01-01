@@ -9,6 +9,7 @@ import SwiftUI
 import MapKit
 import UniformTypeIdentifiers
 import Combine
+import UIKit
 
 // Enable swipe-back gesture when back button is hidden
 struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
@@ -57,7 +58,7 @@ struct TripDetailView: View {
     @State private var newEventLongitude: Double?
     @State private var newEventDescription: String = ""
     @State private var newEventIcon: String = "mappin.and.ellipse"
-    @State private var newEventAccent: EventAccent = .blue
+    @State private var newEventAccent: EventAccent = .sky
     @State private var newEventStart: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     @State private var newEventEnd: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(10 * 3600)
     @State private var newEventPhoto: UIImage?
@@ -74,6 +75,8 @@ struct TripDetailView: View {
     @State private var editingChecklist: ChecklistItem?
     @State private var checklistTitle: String = ""
     @State private var checklistDraftItems: [ChecklistEntry] = []
+    
+    @State private var isEdgeSwipingBack: Bool = false
     
     init(trip: Binding<Trip>) {
         self._trip = trip
@@ -98,7 +101,10 @@ struct TripDetailView: View {
     var eventAnnotations: [EventAnnotation] {
         tripDays.flatMap { day in
             day.events.compactMap { event in
-                guard let lat = event.latitude, let lon = event.longitude else { return nil }
+                // No location text or missing coords => no map item
+                guard !event.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                      let lat = event.latitude,
+                      let lon = event.longitude else { return nil }
                 return EventAnnotation(
                     id: event.id,
                     coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
@@ -151,7 +157,11 @@ struct TripDetailView: View {
             
             VStack(spacing: 0) {
                 ZStack {
-                    Map(coordinateRegion: $mapRegion, interactionModes: .all, annotationItems: eventAnnotations) { annotation in
+                    Map(
+                        coordinateRegion: $mapRegion,
+                        interactionModes: isEdgeSwipingBack ? [] : .all,
+                        annotationItems: eventAnnotations
+                    ) { annotation in
                         MapAnnotation(coordinate: annotation.coordinate) {
                             Button {
                                 openEventFromMarker(annotation.event)
@@ -169,6 +179,7 @@ struct TripDetailView: View {
                         }
                     }
                     .opacity(showMap ? 1 : 0)
+                    .allowsHitTesting(!isEdgeSwipingBack)
                     
                     // Hide the Map's initial camera snap (“jump”) by fading in after first layout.
                     if !showMap {
@@ -203,6 +214,18 @@ struct TripDetailView: View {
         .enableSwipeBack()
         .toolbar(.hidden, for: .tabBar)
         .tint(.primary)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 10, coordinateSpace: .global)
+                .onChanged { value in
+                    guard value.startLocation.x < 24, value.translation.width > 0 else { return }
+                    isEdgeSwipingBack = true
+                }
+                .onEnded { _ in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        isEdgeSwipingBack = false
+                    }
+                }
+        )
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
@@ -230,7 +253,7 @@ struct TripDetailView: View {
                         prepareNewEventDefaults()
                         isPresentingAdd = true
                     } label: {
-                        Label("Event", systemImage: "calendar.badge.plus")
+                        Label("Activity", systemImage: "calendar.badge.plus")
                     }
                     
                     Button {
@@ -393,7 +416,7 @@ private extension TripDetailView {
     func kanbanBoard() -> some View {
         GeometryReader { geo in
             let columnWidth = geo.size.width * 0.78
-            let tripHasNoEvents = tripDays.allSatisfy { $0.events.isEmpty }
+            let tripHasNoItems = tripDays.allSatisfy { $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty }
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
@@ -414,13 +437,14 @@ private extension TripDetailView {
                                 prepareNewEventDefaults()
                                 isPresentingAdd = true
                             },
-                            showEmptyPlaceholder: index == 0 && tripHasNoEvents
+                            showEmptyPlaceholder: index == 0 && tripHasNoItems
                         )
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
             }
+            .scrollDisabled(isEdgeSwipingBack)
         }
     }
 }
@@ -453,11 +477,9 @@ private extension TripDetailView {
     }
     
     func initializeTripDays() {
-        if trip.days.isEmpty {
-            updateTripDaysForDates()
-        } else {
-            tripDays = trip.days
-        }
+        // Always normalize against current trip start/end to avoid stale ordering/labels.
+        tripDays = trip.days
+        updateTripDaysForDates()
     }
 
     func move(event: EventItem, to dayID: UUID, before target: EventItem?) {
@@ -505,7 +527,7 @@ private extension TripDetailView {
                     events: existing.events,
                     reminders: existing.reminders,
                     checklists: existing.checklists,
-                    label: existing.label,
+                    label: "Day \(offset + 1)",
                     order: offset + 1,
                     weatherIcon: existing.weatherIcon,
                     temperatureF: existing.temperatureF
@@ -540,11 +562,12 @@ private extension TripDetailView {
         newEventLongitude = nil
         newEventDescription = ""
         newEventIcon = "mappin.and.ellipse"
-        newEventAccent = .blue
+        newEventAccent = .sky
         newEventPhoto = nil
         let base = Calendar.current.startOfDay(for: Date())
         newEventStart = base.addingTimeInterval(9 * 3600)
-        newEventEnd = base.addingTimeInterval(10 * 3600)
+        // Default new activities to "no end time"
+        newEventEnd = newEventStart
     }
 
     func addNewEvent() {
@@ -843,7 +866,7 @@ struct DayColumn: View {
                         Button {
                             onAddEvent()
                         } label: {
-                            Text("Add Event")
+                            Text("Add Activity")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity)
@@ -1023,8 +1046,6 @@ struct ReminderCard: View {
 }
 
 struct ChecklistCard: View {
-    @Environment(\.appAccentColor) private var accentColor
-    
     let checklist: ChecklistItem
     
     private var completedText: String {
@@ -1073,11 +1094,11 @@ struct ChecklistCard: View {
                         Rectangle()
                             .fill(listBgColor)
                         
-                        HStack(spacing: 10) {
+                        HStack(spacing: 6) {
                             if idx < previewItems.count {
                                 Image(systemName: isDone ? "checkmark.square.fill" : "square")
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(isDone ? accentColor : textColor.opacity(0.55))
+                                    .foregroundStyle(textColor.opacity(isDone ? 0.85 : 0.55))
                             } else {
                                 Image(systemName: "square")
                                     .font(.subheadline.weight(.semibold))
@@ -1176,7 +1197,13 @@ struct EventDetailView: View {
             VStack(alignment: .leading, spacing: 18) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(LinearGradient(colors: [event.accentColor.opacity(0.3), .blue.opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(
+                            LinearGradient(
+                                colors: [event.accentColor.opacity(0.35), event.accentColor.opacity(0.12)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                     VStack(alignment: .leading, spacing: 10) {
                         Text(event.title)
                             .font(.title2.weight(.bold))
@@ -1332,6 +1359,7 @@ struct TripSettingsSheet: View {
 
 struct AddEventSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
     @Binding var title: String
     @Binding var location: String
     @Binding var latitude: Double?
@@ -1350,7 +1378,7 @@ struct AddEventSheet: View {
     var isEditing: Bool = false
     
     @State private var showImagePicker = false
-    @State private var hasEndTime = true
+    @State private var hasEndTime = false
     
     private var durationString: String? {
         let interval = endTime.timeIntervalSince(startTime)
@@ -1367,6 +1395,7 @@ struct AddEventSheet: View {
         "car.fill",
         "bus.fill",
         "tram.fill",
+        "train.side.front.car",
         "ferry.fill",
         "bicycle",
         "figure.walk",
@@ -1375,6 +1404,7 @@ struct AddEventSheet: View {
         "cup.and.saucer.fill",
         "wineglass.fill",
         "cart.fill",
+        "mug.fill",
         // Lodging
         "bed.double.fill",
         "house.fill",
@@ -1384,15 +1414,31 @@ struct AddEventSheet: View {
         "water.waves",
         "leaf.fill",
         "sun.max.fill",
+        "sunrise",
+        "sunset",
         "beach.umbrella.fill",
         // Activities & Sightseeing
         "camera.fill",
         "ticket.fill",
         "theatermasks.fill",
+        "movieclapper",
         "figure.hiking",
+        "dumbbell.fill",
+        "trophy.fill",
         // Landmarks & Places
         "building.columns.fill",
-        "mappin.and.ellipse"
+        "mappin.and.ellipse",
+        // Items
+        "duffle.bag.fill",
+        "bag.fill",
+        "creditcard.fill",
+        "airpods.max",
+        "stroller.fill",
+        "drone.fill",
+        "sunglasses.fill",
+        "shoe.fill",
+        "tshirt.fill",
+        "jacket.fill"
     ]
     
     private func deleteEvent() {
@@ -1405,7 +1451,7 @@ struct AddEventSheet: View {
             Form {
                 Section {
                     HStack {
-                        TextField("Event Name", text: $title)
+                        TextField("Activity Name", text: $title)
                         if !title.isEmpty {
                             Button {
                                 title = ""
@@ -1434,6 +1480,7 @@ struct AddEventSheet: View {
                     DatePicker("From", selection: $startTime, displayedComponents: .hourAndMinute)
                     
                     Toggle("Add end time", isOn: $hasEndTime)
+                        .tint(appAccentColor)
                         .onChange(of: hasEndTime) { _, newValue in
                             if !newValue {
                                 endTime = startTime
@@ -1484,7 +1531,7 @@ struct AddEventSheet: View {
                         } label: {
                             HStack {
                                 Image(systemName: "photo.badge.plus")
-                                Text("Add Photo")
+                            Text("Add Image")
                                 Spacer()
                             }
                         }
@@ -1519,14 +1566,14 @@ struct AddEventSheet: View {
                         } label: {
                             HStack {
                                 Spacer()
-                                Text("Delete Event")
+                                Text("Delete Activity")
                                 Spacer()
                             }
                         }
                     }
                 }
             }
-            .navigationTitle(isEditing ? "Edit Event" : "Add Event")
+            .navigationTitle(isEditing ? "Edit Activity" : "Add Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -1541,7 +1588,19 @@ struct AddEventSheet: View {
                     .tint(.primary)
             }
             .onAppear {
-                hasEndTime = endTime > startTime
+                if isEditing {
+                    hasEndTime = endTime > startTime
+                } else {
+                    hasEndTime = false
+                    endTime = startTime
+                }
+            }
+            .onChange(of: hasEndTime) { _, newValue in
+                if !newValue {
+                    endTime = startTime
+                } else if endTime <= startTime {
+                    endTime = startTime.addingTimeInterval(60 * 60)
+                }
             }
             .onChange(of: startTime) { _, newValue in
                 if !hasEndTime {
@@ -1628,6 +1687,8 @@ struct ChecklistSheet: View {
     
     @State private var newItemText: String = ""
     @FocusState private var focusedItemID: UUID?
+    @State private var pendingDeleteItemID: UUID?
+    @State private var didCopyItems: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -1658,32 +1719,37 @@ struct ChecklistSheet: View {
                     }
                     
                     Section("Items") {
-                        ForEach($items) { $item in
+                        ForEach(items) { item in
                             let itemID = item.id
                             HStack(spacing: 12) {
                                 Button {
-                                    let wasDone = item.isDone
-                                    item.isDone.toggle()
-                                    if !wasDone, item.isDone {
-                                        Haptics.bump()
-                                    }
+                                    guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
+                                    let wasDone = items[idx].isDone
+                                    items[idx].isDone.toggle()
+                                    if !wasDone, items[idx].isDone { Haptics.bump() }
                                 } label: {
-                                    Image(systemName: item.isDone ? "checkmark.square.fill" : "square")
-                                        .foregroundStyle(item.isDone ? accentColor : .secondary)
+                                    let isDone = items.first(where: { $0.id == itemID })?.isDone ?? false
+                                    Image(systemName: isDone ? "checkmark.square.fill" : "square")
+                                        .foregroundStyle(isDone ? accentColor : .secondary)
                                 }
                                 .buttonStyle(.plain)
                                 
-                                TextField("Item", text: $item.text)
-                                    .focused($focusedItemID, equals: itemID)
+                                TextField(
+                                    "Item",
+                                    text: Binding(
+                                        get: { items.first(where: { $0.id == itemID })?.text ?? "" },
+                                        set: { newValue in
+                                            guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
+                                            items[idx].text = newValue
+                                        }
+                                    )
+                                )
+                                .focused($focusedItemID, equals: itemID)
                                 
                                 if focusedItemID == itemID {
                                     Button {
-                                        if let idx = items.firstIndex(where: { $0.id == itemID }) {
-                                            if focusedItemID == itemID { focusedItemID = nil }
-                                            withAnimation(.easeInOut(duration: 0.15)) {
-                                                items.remove(at: idx)
-                                            }
-                                        }
+                                        // Defer mutation to keep Form updates stable.
+                                        pendingDeleteItemID = itemID
                                     } label: {
                                         Image(systemName: "xmark.circle.fill")
                                             .foregroundStyle(.secondary)
@@ -1694,7 +1760,9 @@ struct ChecklistSheet: View {
                             .id(itemID)
                         }
                         .onDelete { offsets in
-                            items.remove(atOffsets: offsets)
+                            for offset in offsets.sorted(by: >) where offset < items.count {
+                                items.remove(at: offset)
+                            }
                         }
                         
                         HStack(spacing: 12) {
@@ -1707,23 +1775,67 @@ struct ChecklistSheet: View {
                                 let newID = UUID()
                                 items.append(ChecklistEntry(id: newID, text: t, isDone: false))
                                 newItemText = ""
+                                // Defer focus until after the Form updates to avoid scroll crashes.
                                 DispatchQueue.main.async {
                                     focusedItemID = newID
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        proxy.scrollTo(newID, anchor: .center)
-                                    }
                                 }
                             }
                             .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
                     }
+                    
+                    Section {
+                        Button {
+                            let lines = items
+                                .map { entry -> String in
+                                    let t = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    guard !t.isEmpty else { return "" }
+                                    // Checked items show a checkmark prefix when pasted.
+                                    return entry.isDone ? "✓ \(t)" : t
+                                }
+                                .filter { !$0.isEmpty }
+                            
+                            let payload = lines.joined(separator: "\n")
+                            UIPasteboard.general.string = payload
+                            Haptics.bump()
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                didCopyItems = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    didCopyItems = false
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Label(didCopyItems ? "Copied" : "Copy Items", systemImage: "doc.on.doc")
+                                    .fontWeight(.semibold)
+                                Spacer()
+                            }
+                        }
+                        .disabled(didCopyItems || items.isEmpty)
+                    }
                 }
                 .onChange(of: focusedItemID) { _, newValue in
                     guard let id = newValue else { return }
-                    DispatchQueue.main.async {
+                    // Form + ScrollViewReader can crash if we scroll before the row exists.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        guard items.contains(where: { $0.id == id }) else { return }
                         withAnimation(.easeInOut(duration: 0.2)) {
                             proxy.scrollTo(id, anchor: .center)
                         }
+                    }
+                }
+                .onChange(of: pendingDeleteItemID) { _, newValue in
+                    guard let id = newValue else { return }
+                    // Defer the mutation to the next runloop to keep SwiftUI bindings stable.
+                    DispatchQueue.main.async {
+                        if focusedItemID == id { focusedItemID = nil }
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            items.removeAll(where: { $0.id == id })
+                        }
+                        pendingDeleteItemID = nil
                     }
                 }
             }
@@ -2169,25 +2281,55 @@ struct ChecklistEntry: Identifiable, Hashable, Codable {
 }
 
 enum EventAccent: String, Codable, CaseIterable, Hashable {
-    case red, coral, orange, amber, yellow, lime, green, mint, teal, cyan, blue, indigo, purple, violet, pink
+    case sand
+    case gold
+    case burntOrange
+    case mint
+    case forest
+    case deepNavy
+    case sky
+    case lavender
 
     var color: Color {
         switch self {
-        case .red: return .red
-        case .coral: return Color(red: 1.0, green: 0.5, blue: 0.4)
-        case .orange: return .orange
-        case .amber: return Color(red: 1.0, green: 0.75, blue: 0.0)
-        case .yellow: return .yellow
-        case .lime: return Color(red: 0.6, green: 0.8, blue: 0.2)
-        case .green: return .green
-        case .mint: return .mint
-        case .teal: return .teal
-        case .cyan: return .cyan
-        case .blue: return .blue
-        case .indigo: return .indigo
-        case .purple: return .purple
-        case .violet: return Color(red: 0.55, green: 0.35, blue: 0.85)
-        case .pink: return .pink
+        // Requested palette (8 distinct colors)
+        case .sand: return Color(hex: 0xC0B5A1)
+        case .gold: return Color(hex: 0xF6C00A)
+        case .burntOrange: return Color(hex: 0xD66710)
+        case .mint: return Color(hex: 0x27EAA6)
+        case .forest: return Color(hex: 0x41634A)
+        case .deepNavy: return Color(hex: 0x1B3745)
+        case .sky: return Color(hex: 0x94BAFB)
+        case .lavender: return Color(hex: 0xB2A1FF)
+        }
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        
+        // New values
+        if let v = EventAccent(rawValue: raw) {
+            self = v
+            return
+        }
+        
+        // Back-compat mapping for older saved palettes
+        switch raw {
+        case "yellow":
+            self = .gold
+        case "orange", "amber":
+            self = .burntOrange
+        case "mint", "teal", "cyan", "lime":
+            self = .mint
+        case "green":
+            self = .forest
+        case "blue":
+            self = .sky
+        case "indigo", "purple", "violet", "pink", "coral", "red":
+            self = .lavender
+        default:
+            self = .sky
         }
     }
 }
