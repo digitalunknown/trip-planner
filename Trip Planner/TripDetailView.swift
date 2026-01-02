@@ -64,12 +64,14 @@ struct TripDetailView: View {
     @State private var newEventPhoto: UIImage?
     @State private var selectedDayID: UUID?
     @State private var editingEvent: EventItem?
+    @State private var selectedDayIDsForNewEvent: Set<UUID> = []
     @State private var mapRegion: MKCoordinateRegion
     @State private var showMap = false
     
     @State private var isPresentingReminder = false
     @State private var newReminderText: String = ""
     @State private var editingReminder: ReminderItem?
+    @State private var selectedDayIDsForNewReminder: Set<UUID> = []
     
     @State private var isPresentingChecklist = false
     @State private var editingChecklist: ChecklistItem?
@@ -88,6 +90,10 @@ struct TripDetailView: View {
     @State private var flightToCity: String = ""
     @State private var flightToLatitude: Double?
     @State private var flightToLongitude: Double?
+    @State private var flightFromTerminal: String = ""
+    @State private var flightFromGate: String = ""
+    @State private var flightToTerminal: String = ""
+    @State private var flightToGate: String = ""
     @State private var flightNumber: String = ""
     @State private var flightNotes: String = ""
     @State private var flightAccent: EventAccent = .sky
@@ -95,6 +101,13 @@ struct TripDetailView: View {
     @State private var flightEndTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     
     @State private var isEdgeSwipingBack: Bool = false
+    
+    // Day-column focus tracking (for map focus behavior)
+    @State private var focusedDayID: UUID?
+    @State private var hasUserScrolledDays: Bool = false
+    @State private var displayedDayIDForMarkers: UUID?
+    @State private var markersOpacity: Double = 1.0
+    @State private var pendingMarkerTransition: DispatchWorkItem?
     
     init(trip: Binding<Trip>) {
         self._trip = trip
@@ -125,6 +138,7 @@ struct TripDetailView: View {
                       let lon = event.longitude else { return nil }
                 return EventAnnotation(
                     id: event.id,
+                    dayID: day.id,
                     coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
                     event: event,
                     color: event.accentColor
@@ -151,7 +165,8 @@ struct TripDetailView: View {
             // Also allow a smaller minimum span for city-level clusters.
             let latSpread = maxLat - minLat
             let lonSpread = maxLon - minLon
-            let padding: Double = 1.12
+            // Slightly more padding so clusters aren’t tight/overlapping.
+            let padding: Double = 1.25
             let span = MKCoordinateSpan(
                 latitudeDelta: max(latSpread * padding, 0.012),
                 longitudeDelta: max(lonSpread * padding, 0.012)
@@ -173,6 +188,34 @@ struct TripDetailView: View {
         }
     }
     
+    private func annotations(for dayID: UUID) -> [EventAnnotation] {
+        eventAnnotations.filter { $0.dayID == dayID }
+    }
+    
+    private func regionFitting(_ annotations: [EventAnnotation]) -> MKCoordinateRegion? {
+        guard !annotations.isEmpty else { return nil }
+        let coordinates = annotations.map { $0.coordinate }
+        let minLat = coordinates.map { $0.latitude }.min() ?? 0
+        let maxLat = coordinates.map { $0.latitude }.max() ?? 0
+        let minLon = coordinates.map { $0.longitude }.min() ?? 0
+        let maxLon = coordinates.map { $0.longitude }.max() ?? 0
+        
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+        
+        let latSpread = maxLat - minLat
+        let lonSpread = maxLon - minLon
+        // Slightly more padding so clusters aren’t tight/overlapping.
+        let padding: Double = 1.25
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(latSpread * padding, 0.012),
+            longitudeDelta: max(lonSpread * padding, 0.012)
+        )
+        return MKCoordinateRegion(center: center, span: span)
+    }
+    
     private var mapModes: MapInteractionModes {
         isEdgeSwipingBack ? [] : .all
     }
@@ -181,7 +224,7 @@ struct TripDetailView: View {
         Map(
             coordinateRegion: $mapRegion,
             interactionModes: mapModes,
-            annotationItems: eventAnnotations
+            annotationItems: visibleAnnotations
         ) { annotation in
             MapAnnotation(coordinate: annotation.coordinate) {
                 Button {
@@ -191,16 +234,29 @@ struct TripDetailView: View {
                         Circle()
                             .fill(annotation.color)
                             .frame(width: 36, height: 36)
+                            .overlay(
+                                Circle()
+                                    .stroke(.white.opacity(0.9), lineWidth: 1.5)
+                            )
                         Image(systemName: annotation.event.icon)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                     .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                 }
+                .opacity(markersOpacity)
             }
         }
         .opacity(showMap ? 1 : 0)
         .allowsHitTesting(!isEdgeSwipingBack)
+    }
+    
+    private var visibleAnnotations: [EventAnnotation] {
+        if hasUserScrolledDays, let dayID = displayedDayIDForMarkers {
+            let anns = annotations(for: dayID)
+            return anns.isEmpty ? eventAnnotations : anns
+        }
+        return eventAnnotations
     }
     
     @ViewBuilder
@@ -284,6 +340,8 @@ struct TripDetailView: View {
             
             Menu {
                 Button {
+                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    if let id = selectedDayID { selectedDayIDsForNewEvent = [id] }
                     prepareNewEventDefaults()
                     isPresentingAdd = true
                 } label: {
@@ -291,6 +349,7 @@ struct TripDetailView: View {
                 }
                 
                 Button {
+                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     prepareNewFlightDefaults()
                     isPresentingFlight = true
                 } label: {
@@ -298,16 +357,17 @@ struct TripDetailView: View {
                 }
                 
                 Button {
-                    if selectedDayID == nil { selectedDayID = tripDays.first?.id }
+                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     newReminderText = ""
                     editingReminder = nil
+                    if let id = selectedDayID { selectedDayIDsForNewReminder = [id] }
                     isPresentingReminder = true
                 } label: {
-                    Label("Reminder", systemImage: "lightbulb")
+                    Label("Reminder", systemImage: "pin.fill")
                 }
                 
                 Button {
-                    if selectedDayID == nil { selectedDayID = tripDays.first?.id }
+                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     checklistTitle = ""
                     checklistDraftItems = []
                     editingChecklist = nil
@@ -372,6 +432,7 @@ struct TripDetailView: View {
                     endTime: $newEventEnd,
                     photo: $newEventPhoto,
                     selectedDayID: $selectedDayID,
+                    selectedDayIDs: $selectedDayIDsForNewEvent,
                     days: tripDays,
                     tripLocationRegion: eventSheetTripRegion,
                     onAdd: addNewEvent,
@@ -385,6 +446,7 @@ struct TripDetailView: View {
                 AddReminderSheet(
                     reminderText: $newReminderText,
                     selectedDayID: $selectedDayID,
+                    selectedDayIDs: $selectedDayIDsForNewReminder,
                     days: tripDays,
                     isEditing: editingReminder != nil,
                     onAdd: addReminder
@@ -414,11 +476,15 @@ struct TripDetailView: View {
                     fromCity: $flightFromCity,
                     fromLatitude: $flightFromLatitude,
                     fromLongitude: $flightFromLongitude,
+                    fromTerminal: $flightFromTerminal,
+                    fromGate: $flightFromGate,
                     toName: $flightToName,
                     toCode: $flightToCode,
                     toCity: $flightToCity,
                     toLatitude: $flightToLatitude,
                     toLongitude: $flightToLongitude,
+                    toTerminal: $flightToTerminal,
+                    toGate: $flightToGate,
                     flightNumber: $flightNumber,
                     notes: $flightNotes,
                     accent: $flightAccent,
@@ -464,6 +530,9 @@ struct TripDetailView: View {
             initializeTripDays()
             // Prefer fitting markers if any exist.
             mapRegion = appropriateMapRegion
+            // Initial load: show markers across all days.
+            displayedDayIDForMarkers = nil
+            markersOpacity = 1.0
             // Fade the map in after first layout pass to avoid visible “jump”.
             showMap = false
             DispatchQueue.main.async {
@@ -481,6 +550,37 @@ struct TripDetailView: View {
         }
         .onChange(of: trip.mapSpan) { _, _ in
             mapRegion = appropriateMapRegion
+        }
+        .onChange(of: focusedDayID) { _, newValue in
+            guard hasUserScrolledDays else { return }
+            
+            let targetDayID: UUID? = {
+                guard let dayID = newValue else { return nil }
+                return annotations(for: dayID).isEmpty ? nil : dayID
+            }()
+            
+            // Cross-fade markers when switching days.
+            pendingMarkerTransition?.cancel()
+            withAnimation(.easeInOut(duration: 0.18)) {
+                markersOpacity = 0.0
+            }
+            let work = DispatchWorkItem {
+                displayedDayIDForMarkers = targetDayID
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    markersOpacity = 1.0
+                }
+            }
+            pendingMarkerTransition = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: work)
+            
+            // Update map region.
+            if let dayID = targetDayID, let region = regionFitting(annotations(for: dayID)) {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    mapRegion = region
+                }
+            } else {
+                mapRegion = appropriateMapRegion
+            }
         }
         .onChange(of: tripDays) { _, newDays in
             trip.days = newDays
@@ -505,12 +605,14 @@ private extension TripDetailView {
         GeometryReader { geo in
             let columnWidth = geo.size.width * 0.78
             let tripHasNoItems = tripDays.allSatisfy { $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty && $0.flights.isEmpty }
+            let viewport = CGRect(x: 0, y: 0, width: geo.size.width, height: geo.size.height)
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
                     ForEach(Array(tripDays.enumerated()), id: \.element.id) { index, day in
                         DayColumn(
                             day: day,
+                            totalDays: tripDays.count,
                             columnWidth: columnWidth,
                             columnHeight: geo.size.height - 24,
                             onTap: { event in startEditing(event: event, day: day) },
@@ -524,18 +626,69 @@ private extension TripDetailView {
                             onDeleteFlight: { flight in deleteFlight(flight) },
                             onAddEvent: {
                                 selectedDayID = day.id
+                                selectedDayIDsForNewEvent = [day.id]
                                 prepareNewEventDefaults()
                                 isPresentingAdd = true
                             },
                             showEmptyPlaceholder: index == 0 && tripHasNoItems
+                        )
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .preference(
+                                        key: DayColumnFramesPreferenceKey.self,
+                                        value: [day.id: proxy.frame(in: .named("dayScroll"))]
+                                    )
+                            }
                         )
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
             }
+            .coordinateSpace(name: "dayScroll")
+            .onPreferenceChange(DayColumnFramesPreferenceKey.self) { framesByID in
+                guard hasUserScrolledDays else { return }
+                var bestID: UUID?
+                var bestVisibleWidth: CGFloat = 0
+                
+                for (id, frame) in framesByID {
+                    let visibleFrame = frame.intersection(viewport)
+                    let visibleWidth = max(0, visibleFrame.width)
+                    if visibleWidth > bestVisibleWidth {
+                        bestVisibleWidth = visibleWidth
+                        bestID = id
+                    }
+                }
+                
+                if bestVisibleWidth <= 0 {
+                    if focusedDayID != nil { focusedDayID = nil }
+                    return
+                }
+                
+                if focusedDayID != bestID {
+                    focusedDayID = bestID
+                }
+            }
             .scrollDisabled(isEdgeSwipingBack)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 6)
+                    .onChanged { value in
+                        if !hasUserScrolledDays,
+                           abs(value.translation.width) > abs(value.translation.height) {
+                            hasUserScrolledDays = true
+                        }
+                    }
+            )
         }
+    }
+}
+
+private struct DayColumnFramesPreferenceKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] = [:]
+    
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
 }
 
@@ -647,6 +800,9 @@ private extension TripDetailView {
         if selectedDayID == nil {
             selectedDayID = tripDays.first?.id
         }
+        if let id = selectedDayID {
+            selectedDayIDsForNewEvent = [id]
+        }
         editingEvent = nil
         newEventTitle = ""
         newEventLocation = ""
@@ -699,20 +855,29 @@ private extension TripDetailView {
             return
         }
 
-        let event = EventItem(
-            id: UUID(),
-            title: newEventTitle.isEmpty ? "Untitled" : newEventTitle,
-            description: newEventDescription,
-            time: timeText,
-            location: newEventLocation,
-            latitude: newEventLatitude,
-            longitude: newEventLongitude,
-            icon: newEventIcon,
-            accent: newEventAccent,
-            photoData: photoData
-        )
-
-        tripDays[dayIndex].events.append(event)
+        // Create (possibly across multiple days).
+        let targetDayIDs: [UUID] = {
+            let ids = selectedDayIDsForNewEvent
+            if ids.isEmpty { return [dayID] }
+            return Array(ids)
+        }()
+        
+        for targetID in targetDayIDs {
+            guard let idx = tripDays.firstIndex(where: { $0.id == targetID }) else { continue }
+            let event = EventItem(
+                id: UUID(),
+                title: newEventTitle.isEmpty ? "Untitled" : newEventTitle,
+                description: newEventDescription,
+                time: timeText,
+                location: newEventLocation,
+                latitude: newEventLatitude,
+                longitude: newEventLongitude,
+                icon: newEventIcon,
+                accent: newEventAccent,
+                photoData: photoData
+            )
+            tripDays[idx].events.append(event)
+        }
         
         if let lat = newEventLatitude, let lon = newEventLongitude {
             withAnimation {
@@ -740,8 +905,16 @@ private extension TripDetailView {
             tripDays[dayIndex].reminders.insert(updated, at: 0)
             self.editingReminder = updated
         } else {
-            let reminder = ReminderItem(id: UUID(), text: trimmed, createdAt: Date())
-            tripDays[dayIndex].reminders.insert(reminder, at: 0)
+            let targetDayIDs: [UUID] = {
+                let ids = selectedDayIDsForNewReminder
+                if ids.isEmpty { return [dayID] }
+                return Array(ids)
+            }()
+            for targetID in targetDayIDs {
+                guard let idx = tripDays.firstIndex(where: { $0.id == targetID }) else { continue }
+                let reminder = ReminderItem(id: UUID(), text: trimmed, createdAt: Date())
+                tripDays[idx].reminders.insert(reminder, at: 0)
+            }
         }
     }
     
@@ -897,11 +1070,15 @@ private extension TripDetailView {
         flightFromCity = ""
         flightFromLatitude = nil
         flightFromLongitude = nil
+        flightFromTerminal = ""
+        flightFromGate = ""
         flightToName = ""
         flightToCode = ""
         flightToCity = ""
         flightToLatitude = nil
         flightToLongitude = nil
+        flightToTerminal = ""
+        flightToGate = ""
         flightNumber = ""
         flightNotes = ""
         flightAccent = .sky
@@ -922,11 +1099,15 @@ private extension TripDetailView {
                 fromCity: flightFromCity,
                 fromLatitude: flightFromLatitude,
                 fromLongitude: flightFromLongitude,
+                fromTerminal: flightFromTerminal,
+                fromGate: flightFromGate,
                 toName: flightToName,
                 toCode: flightToCode,
                 toCity: flightToCity,
                 toLatitude: flightToLatitude,
                 toLongitude: flightToLongitude,
+                toTerminal: flightToTerminal,
+                toGate: flightToGate,
                 flightNumber: flightNumber,
                 notes: flightNotes,
                 accent: flightAccent,
@@ -945,11 +1126,15 @@ private extension TripDetailView {
                 fromCity: flightFromCity,
                 fromLatitude: flightFromLatitude,
                 fromLongitude: flightFromLongitude,
+                fromTerminal: flightFromTerminal,
+                fromGate: flightFromGate,
                 toName: flightToName,
                 toCode: flightToCode,
                 toCity: flightToCity,
                 toLatitude: flightToLatitude,
                 toLongitude: flightToLongitude,
+                toTerminal: flightToTerminal,
+                toGate: flightToGate,
                 flightNumber: flightNumber,
                 notes: flightNotes,
                 accent: flightAccent,
@@ -968,11 +1153,15 @@ private extension TripDetailView {
         flightFromCity = flight.fromCity
         flightFromLatitude = flight.fromLatitude
         flightFromLongitude = flight.fromLongitude
+        flightFromTerminal = flight.fromTerminal
+        flightFromGate = flight.fromGate
         flightToName = flight.toName
         flightToCode = flight.toCode
         flightToCity = flight.toCity
         flightToLatitude = flight.toLatitude
         flightToLongitude = flight.toLongitude
+        flightToTerminal = flight.toTerminal
+        flightToGate = flight.toGate
         flightNumber = flight.flightNumber
         flightNotes = flight.notes
         flightAccent = flight.accent
@@ -1022,6 +1211,7 @@ struct ResizeHandle: View {
 
 struct DayColumn: View {
     let day: TripDay
+    let totalDays: Int
     let columnWidth: CGFloat
     let columnHeight: CGFloat
     let onTap: (EventItem) -> Void
@@ -1037,13 +1227,47 @@ struct DayColumn: View {
     let showEmptyPlaceholder: Bool
     
     @State private var weatherMode: WeatherPillMode = .conditions
+    
+    private struct TimedRow: Identifiable {
+        enum Kind {
+            case flight(FlightItem)
+            case activity(EventItem)
+        }
+        
+        let id: String
+        let minutes: Int
+        let kind: Kind
+    }
+    
+    private var timelineRows: [TimedRow] {
+        let flightRows = day.flights.map { flight in
+            let comps = Calendar.current.dateComponents([.hour, .minute], from: flight.startTime)
+            let minutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+            return TimedRow(id: "flight-\(flight.id)", minutes: minutes, kind: .flight(flight))
+        }
+        
+        let activityRows = day.events.map { event in
+            TimedRow(id: "activity-\(event.id)", minutes: event.startTimeMinutes, kind: .activity(event))
+        }
+        
+        return (flightRows + activityRows)
+            .sorted { a, b in
+                if a.minutes != b.minutes { return a.minutes < b.minutes }
+                // Tie-break: flights first, then activities
+                switch (a.kind, b.kind) {
+                case (.flight, .activity): return true
+                case (.activity, .flight): return false
+                default: return a.id < b.id
+                }
+            }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(day.displayTitle)
                     .font(.headline)
-                Text(day.displaySubtitle)
+                Text("Day \(day.order) of \(totalDays)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1106,28 +1330,6 @@ struct DayColumn: View {
                             }
                         }
                     }
-
-                    if !day.flights.isEmpty {
-                        VStack(spacing: 10) {
-                            ForEach(day.flights.sorted { $0.startTime < $1.startTime }) { flight in
-                                FlightCard(flight: flight)
-                                    .onTapGesture { onTapFlight(flight) }
-                                    .contextMenu {
-                                        Button {
-                                            onTapFlight(flight)
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        
-                                        Button(role: .destructive) {
-                                            onDeleteFlight(flight)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
-                            }
-                        }
-                    }
                     
                     if !day.checklists.isEmpty {
                         VStack(spacing: 10) {
@@ -1151,22 +1353,41 @@ struct DayColumn: View {
                         }
                     }
                     
-                    ForEach(day.events.sorted { $0.startTimeMinutes < $1.startTimeMinutes }) { event in
-                        EventCard(event: event)
-                            .onTapGesture { onTap(event) }
-                            .contextMenu {
-                                Button {
-                                    onEdit(event)
-                                } label: {
-                                    Label("Edit", systemImage: "pencil")
+                    ForEach(timelineRows) { row in
+                        switch row.kind {
+                        case .flight(let flight):
+                            FlightCard(flight: flight)
+                                .onTapGesture { onTapFlight(flight) }
+                                .contextMenu {
+                                    Button {
+                                        onTapFlight(flight)
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    
+                                    Button(role: .destructive) {
+                                        onDeleteFlight(flight)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
-                                
-                                Button(role: .destructive) {
-                                    onDelete(event)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                        case .activity(let event):
+                            EventCard(event: event)
+                                .onTapGesture { onTap(event) }
+                                .contextMenu {
+                                    Button {
+                                        onEdit(event)
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    
+                                    Button(role: .destructive) {
+                                        onDelete(event)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
-                            }
+                        }
                     }
                     
                     Spacer(minLength: 20)
@@ -1253,7 +1474,7 @@ struct ReminderCard: View {
     
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "lightbulb")
+            Image(systemName: "pin.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
             
@@ -1387,64 +1608,75 @@ struct FlightCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 12) {
-                airportBlock(
+        VStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
+                airportTopBlock(
                     code: fromCode,
                     city: flight.fromCity,
-                    time: departureText,
                     alignment: .leading
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
                 
-                Spacer(minLength: 0)
-                
                 ZStack {
-                    GeometryReader { geo in
-                        Path { path in
-                            let midY = geo.size.height / 2
-                            path.move(to: CGPoint(x: 0, y: midY))
-                            path.addLine(to: CGPoint(x: geo.size.width, y: midY))
-                        }
-                        .stroke(
-                            Color.secondary.opacity(0.35),
-                            style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 4])
-                        )
-                    }
+                    Capsule(style: .continuous)
+                        .fill(Color.secondary.opacity(0.25))
+                        .frame(height: 3)
                     
                     Image(systemName: "airplane")
+                        // Match activity icon size in other cards.
                         .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(flight.accent.color)
+                        .foregroundStyle(.primary)
                 }
-                .frame(width: 96)
+                .frame(width: 140)
+                .layoutPriority(0)
                 
-                Spacer(minLength: 0)
-                
-                airportBlock(
+                airportTopBlock(
                     code: toCode,
                     city: flight.toCity,
-                    time: arrivalText,
                     alignment: .trailing
                 )
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 .layoutPriority(1)
             }
             
-            if flightNumberText != nil {
-                HStack {
-                    Spacer()
-                    Text(flightNumberText!)
+            HStack(alignment: .lastTextBaseline) {
+                Text(departureText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                
+                Spacer(minLength: 0)
+                
+                if let flightNumberText {
+                    Text(flightNumberText)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
-                    Spacer()
+                } else {
+                    Text(" ")
+                        .font(.subheadline.weight(.semibold))
+                        .hidden()
+                }
+                
+                Spacer(minLength: 0)
+                
+                if let arrivalText {
+                    Text(arrivalText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(" ")
+                        .font(.caption)
+                        .hidden()
                 }
             }
         }
-        .padding(12)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         // Match Activity (EventCard) styling: plain material card, no gradient/stroke.
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
     
-    private func airportBlock(code: String, city: String, time: String?, alignment: HorizontalAlignment) -> some View {
+    private func airportTopBlock(code: String, city: String, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 4) {
             Text(code)
                 .font(.title3.weight(.bold))
@@ -1455,11 +1687,7 @@ struct FlightCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-            if let time {
-                Text(time)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+                .minimumScaleFactor(0.85)
         }
     }
 }
@@ -1701,6 +1929,7 @@ struct AddEventSheet: View {
     @Binding var endTime: Date
     @Binding var photo: UIImage?
     @Binding var selectedDayID: UUID?
+    @Binding var selectedDayIDs: Set<UUID>
     let days: [TripDay]
     let tripLocationRegion: MKCoordinateRegion?
     var onAdd: () -> Void
@@ -1801,11 +2030,15 @@ struct AddEventSheet: View {
                 }
 
                 Section("Timing") {
-                    Picker("Day", selection: $selectedDayID) {
-                        ForEach(days) { day in
-                            Text(day.displayTitle)
-                                .tag(Optional(day.id))
+                    if isEditing {
+                        Picker("Day", selection: $selectedDayID) {
+                            ForEach(days) { day in
+                                Text(day.displayTitle)
+                                    .tag(Optional(day.id))
+                            }
                         }
+                    } else {
+                        multiDayMenuRow(title: "Days", days: days, selected: $selectedDayIDs)
                     }
                     DatePicker("From", selection: $startTime, displayedComponents: .hourAndMinute)
                     
@@ -1951,12 +2184,58 @@ struct AddEventSheet: View {
             .onChange(of: selectedDayID) { _, _ in if isEditing { onAdd() } }
         }
     }
+    
+    private func multiDayMenuRow(title: String, days: [TripDay], selected: Binding<Set<UUID>>) -> some View {
+        Menu {
+            ForEach(days) { day in
+                let isSelected = selected.wrappedValue.contains(day.id)
+                Button {
+                    var set = selected.wrappedValue
+                    if isSelected {
+                        // Keep at least one day selected.
+                        if set.count > 1 { set.remove(day.id) }
+                    } else {
+                        set.insert(day.id)
+                    }
+                    selected.wrappedValue = set
+                } label: {
+                    HStack {
+                        Text(day.displayTitle)
+                        Spacer()
+                        if isSelected {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(multiDaySummary(days: days, selected: selected.wrappedValue))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+    
+    private func multiDaySummary(days: [TripDay], selected: Set<UUID>) -> String {
+        if selected.isEmpty { return "Select days" }
+        if selected.count == days.count { return "All days" }
+        if selected.count == 1, let only = selected.first, let day = days.first(where: { $0.id == only }) {
+            return day.displayTitle
+        }
+        return "\(selected.count) days"
+    }
 }
 
 struct AddReminderSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var reminderText: String
     @Binding var selectedDayID: UUID?
+    @Binding var selectedDayIDs: Set<UUID>
     let days: [TripDay]
     var isEditing: Bool = false
     var onAdd: () -> Void
@@ -1965,11 +2244,15 @@ struct AddReminderSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Day", selection: $selectedDayID) {
-                        ForEach(days) { day in
-                            Text(day.displayTitle)
-                                .tag(Optional(day.id))
+                    if isEditing {
+                        Picker("Day", selection: $selectedDayID) {
+                            ForEach(days) { day in
+                                Text(day.displayTitle)
+                                    .tag(Optional(day.id))
+                            }
                         }
+                    } else {
+                        multiDayMenuRow(title: "Days", days: days, selected: $selectedDayIDs)
                     }
                 }
                 
@@ -1997,7 +2280,11 @@ struct AddReminderSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     LiquidGlassIconButton(
                         systemName: "checkmark",
-                        isEnabled: !(reminderText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
+                        isEnabled: {
+                            let textOK = !reminderText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            if isEditing { return textOK && selectedDayID != nil }
+                            return textOK && !selectedDayIDs.isEmpty
+                        }()
                     ) {
                         onAdd()
                         dismiss()
@@ -2005,6 +2292,51 @@ struct AddReminderSheet: View {
                 }
             }
         }
+    }
+    
+    private func multiDayMenuRow(title: String, days: [TripDay], selected: Binding<Set<UUID>>) -> some View {
+        Menu {
+            ForEach(days) { day in
+                let isSelected = selected.wrappedValue.contains(day.id)
+                Button {
+                    var set = selected.wrappedValue
+                    if isSelected {
+                        // Keep at least one day selected.
+                        if set.count > 1 { set.remove(day.id) }
+                    } else {
+                        set.insert(day.id)
+                    }
+                    selected.wrappedValue = set
+                } label: {
+                    HStack {
+                        Text(day.displayTitle)
+                        Spacer()
+                        if isSelected {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(multiDaySummary(days: days, selected: selected.wrappedValue))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+    
+    private func multiDaySummary(days: [TripDay], selected: Set<UUID>) -> String {
+        if selected.isEmpty { return "Select days" }
+        if selected.count == days.count { return "All days" }
+        if selected.count == 1, let only = selected.first, let day = days.first(where: { $0.id == only }) {
+            return day.displayTitle
+        }
+        return "\(selected.count) days"
     }
 }
 
@@ -2202,12 +2534,16 @@ struct AddFlightSheet: View {
     @Binding var fromCity: String
     @Binding var fromLatitude: Double?
     @Binding var fromLongitude: Double?
+    @Binding var fromTerminal: String
+    @Binding var fromGate: String
     
     @Binding var toName: String
     @Binding var toCode: String
     @Binding var toCity: String
     @Binding var toLatitude: Double?
     @Binding var toLongitude: Double?
+    @Binding var toTerminal: String
+    @Binding var toGate: String
     
     @Binding var flightNumber: String
     @Binding var notes: String
@@ -2222,8 +2558,6 @@ struct AddFlightSheet: View {
     var onSave: () -> Void
     var onDelete: (() -> Void)?
     
-    @State private var hasEndTime: Bool = false
-    
     var body: some View {
         NavigationStack {
             Form {
@@ -2236,45 +2570,38 @@ struct AddFlightSheet: View {
                     }
                 }
                 
-                Section("Route") {
+                Section("Departure") {
                     AirportSearchField(
-                        title: "From airport",
+                        title: "Location",
                         name: $fromName,
                         code: $fromCode,
                         city: $fromCity,
                         latitude: $fromLatitude,
                         longitude: $fromLongitude
                     )
+                    airportCodeField(title: "Airport code", code: $fromCode)
+                    clearableTextField(title: "Terminal", text: $fromTerminal, capitalization: .characters)
+                    clearableTextField(title: "Gate", text: $fromGate, capitalization: .characters)
+                    DatePicker("Time", selection: $startTime, displayedComponents: .hourAndMinute)
+                }
+                
+                Section("Arrival") {
                     AirportSearchField(
-                        title: "To airport",
+                        title: "Location",
                         name: $toName,
                         code: $toCode,
                         city: $toCity,
                         latitude: $toLatitude,
                         longitude: $toLongitude
                     )
-                    
-                    HStack {
-                        TextField("Flight number", text: $flightNumber)
-                        if !flightNumber.isEmpty {
-                            Button {
-                                flightNumber = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
+                    airportCodeField(title: "Airport code", code: $toCode)
+                    clearableTextField(title: "Terminal", text: $toTerminal, capitalization: .characters)
+                    clearableTextField(title: "Gate", text: $toGate, capitalization: .characters)
+                    DatePicker("Time", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
                 }
                 
-                Section("Timing") {
-                    DatePicker("Departure", selection: $startTime, displayedComponents: .hourAndMinute)
-                    Toggle("Add arrival time", isOn: $hasEndTime)
-                        .tint(appAccentColor)
-                    if hasEndTime {
-                        DatePicker("Arrival", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
-                    }
+                Section("Flight number") {
+                    clearableTextField(title: "Flight number", text: $flightNumber, capitalization: .characters)
                 }
                 
                 Section("Visuals") {
@@ -2318,23 +2645,59 @@ struct AddFlightSheet: View {
                 }
             }
             .onAppear {
-                hasEndTime = endTime > startTime
-                if !hasEndTime { endTime = startTime }
-            }
-            .onChange(of: hasEndTime) { _, newValue in
-                if !newValue {
-                    endTime = startTime
-                } else if endTime <= startTime {
-                    endTime = startTime.addingTimeInterval(60 * 60)
-                }
+                if endTime < startTime { endTime = startTime }
             }
             .onChange(of: startTime) { _, newValue in
-                if !hasEndTime {
-                    endTime = newValue
-                }
+                if endTime < newValue { endTime = newValue }
             }
         }
         .tint(.primary)
+    }
+    
+    private func airportCodeField(title: String, code: Binding<String>) -> some View {
+        HStack {
+            TextField(title, text: code)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .onChange(of: code.wrappedValue) { _, newValue in
+                    let cleaned = newValue
+                        .uppercased()
+                        .filter { $0.isLetter }
+                    code.wrappedValue = String(cleaned.prefix(3))
+                }
+            
+            if !code.wrappedValue.isEmpty {
+                Button {
+                    code.wrappedValue = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    
+    private func clearableTextField(
+        title: String,
+        text: Binding<String>,
+        capitalization: TextInputAutocapitalization? = nil
+    ) -> some View {
+        HStack {
+            TextField(title, text: text)
+                .textInputAutocapitalization(capitalization)
+                .autocorrectionDisabled()
+            
+            if !text.wrappedValue.isEmpty {
+                Button {
+                    text.wrappedValue = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 
@@ -2639,6 +3002,8 @@ struct AirportSearchField: View {
     @StateObject private var completer: LocationSearchCompleter
     @State private var showingResults = false
     @State private var resolvedCodes: [MKLocalSearchCompletion: String] = [:]
+    @State private var failedCodeResolutions: Set<MKLocalSearchCompletion> = []
+    @State private var inFlightCodeResolutions: Set<MKLocalSearchCompletion> = []
     
     private var filteredResults: [MKLocalSearchCompletion] {
         completer.results.filter(isAirportCompletion)
@@ -2708,6 +3073,7 @@ struct AirportSearchField: View {
                     ForEach(filteredResults, id: \.self) { result in
                         let code = codeForDisplay(result)
                         let airportName = stripLeadingCode(from: result.title)
+                        let isResolvingCode = code.isEmpty && !failedCodeResolutions.contains(result)
                         Button {
                             selectAirport(result)
                         } label: {
@@ -2724,12 +3090,12 @@ struct AirportSearchField: View {
                                 }
                                 Spacer(minLength: 0)
                                 
-                                if code.isEmpty {
+                                if isResolvingCode {
                                     ProgressView()
                                         .scaleEffect(0.8)
                                         .tint(.secondary)
                                 } else {
-                                    Text(code)
+                                    Text(code.isEmpty ? "—" : code)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 10)
@@ -2743,7 +3109,6 @@ struct AirportSearchField: View {
                             .padding(.horizontal, 16)
                         }
                         .buttonStyle(.plain)
-                        .disabled(code.isEmpty)
                         
                         if result != filteredResults.last {
                             Divider()
@@ -2757,6 +3122,8 @@ struct AirportSearchField: View {
             for result in Array(newValue.prefix(8)) {
                 if !isAirportCompletion(result) { continue }
                 if !airportCodeCandidate(for: result).isEmpty { continue }
+                if failedCodeResolutions.contains(result) { continue }
+                if inFlightCodeResolutions.contains(result) { continue }
                 if (resolvedCodes[result] ?? "").isEmpty {
                     resolveCodeForResult(result)
                 }
@@ -2783,9 +3150,9 @@ struct AirportSearchField: View {
             }
             
             let placemark = first.placemark
-            latitude = placemark.coordinate.latitude
-            longitude = placemark.coordinate.longitude
-            city = placemark.locality ?? placemark.administrativeArea ?? result.subtitle
+            let lat = placemark.coordinate.latitude
+            let lon = placemark.coordinate.longitude
+            let resolvedCity = placemark.locality ?? placemark.administrativeArea ?? result.subtitle
             
             // Try to extract a code from any returned map item / placemark text.
             let codeFromItems: String = items
@@ -2804,9 +3171,17 @@ struct AirportSearchField: View {
                 .first { !$0.isEmpty } ?? ""
             
             let chosenCode = !initialCode.isEmpty ? initialCode : codeFromItems
-            guard !chosenCode.isEmpty else { return }
-            code = chosenCode
-            name = "\(chosenCode) - \(airportName)"
+            
+            DispatchQueue.main.async {
+                latitude = lat
+                longitude = lon
+                city = resolvedCity
+                
+                // Code is optional; user can type it manually.
+                if !chosenCode.isEmpty {
+                    code = chosenCode
+                }
+            }
         }
     }
     
@@ -2856,17 +3231,27 @@ struct AirportSearchField: View {
     }
     
     private func resolveCodeForResult(_ result: MKLocalSearchCompletion) {
+        inFlightCodeResolutions.insert(result)
         let request = MKLocalSearch.Request(completion: result)
         let search = MKLocalSearch(request: request)
-        search.start { response, _ in
+        search.start { response, error in
             let items = response?.mapItems ?? []
             let found: String = items
                 .compactMap { item in
                     airportCodeCandidate(fromText: [item.name, item.placemark.title].compactMap { $0 }.joined(separator: " "))
                 }
                 .first(where: { !$0.isEmpty }) ?? ""
-            if !found.isEmpty {
-                resolvedCodes[result] = found
+            DispatchQueue.main.async {
+                inFlightCodeResolutions.remove(result)
+                if !found.isEmpty {
+                    resolvedCodes[result] = found
+                } else {
+                    // Mark as failed so we stop showing a spinner / retrying forever.
+                    failedCodeResolutions.insert(result)
+                    if let error {
+                        print("Airport code resolve error: \(error.localizedDescription)")
+                    }
+                }
             }
         }
     }
@@ -2876,6 +3261,7 @@ struct AirportSearchField: View {
 
 struct EventAnnotation: Identifiable {
     let id: UUID
+    let dayID: UUID
     let coordinate: CLLocationCoordinate2D
     let event: EventItem
     let color: Color
@@ -3028,12 +3414,16 @@ struct FlightItem: Identifiable, Hashable, Codable {
     var fromCity: String
     var fromLatitude: Double?
     var fromLongitude: Double?
+    var fromTerminal: String
+    var fromGate: String
     
     var toName: String
     var toCode: String
     var toCity: String
     var toLatitude: Double?
     var toLongitude: Double?
+    var toTerminal: String
+    var toGate: String
     
     var flightNumber: String
     var notes: String
@@ -3043,6 +3433,13 @@ struct FlightItem: Identifiable, Hashable, Codable {
     
     var hasEndTime: Bool { endTime > startTime }
     
+    enum CodingKeys: String, CodingKey {
+        case id
+        case fromName, fromCode, fromCity, fromLatitude, fromLongitude, fromTerminal, fromGate
+        case toName, toCode, toCity, toLatitude, toLongitude, toTerminal, toGate
+        case flightNumber, notes, accent, startTime, endTime
+    }
+    
     init(
         id: UUID = UUID(),
         fromName: String = "",
@@ -3050,11 +3447,15 @@ struct FlightItem: Identifiable, Hashable, Codable {
         fromCity: String = "",
         fromLatitude: Double? = nil,
         fromLongitude: Double? = nil,
+        fromTerminal: String = "",
+        fromGate: String = "",
         toName: String = "",
         toCode: String = "",
         toCity: String = "",
         toLatitude: Double? = nil,
         toLongitude: Double? = nil,
+        toTerminal: String = "",
+        toGate: String = "",
         flightNumber: String = "",
         notes: String = "",
         accent: EventAccent = .sky,
@@ -3067,16 +3468,74 @@ struct FlightItem: Identifiable, Hashable, Codable {
         self.fromCity = fromCity
         self.fromLatitude = fromLatitude
         self.fromLongitude = fromLongitude
+        self.fromTerminal = fromTerminal
+        self.fromGate = fromGate
         self.toName = toName
         self.toCode = toCode
         self.toCity = toCity
         self.toLatitude = toLatitude
         self.toLongitude = toLongitude
+        self.toTerminal = toTerminal
+        self.toGate = toGate
         self.flightNumber = flightNumber
         self.notes = notes
         self.accent = accent
         self.startTime = startTime
         self.endTime = endTime
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        
+        fromName = try c.decode(String.self, forKey: .fromName)
+        fromCode = try c.decode(String.self, forKey: .fromCode)
+        fromCity = try c.decode(String.self, forKey: .fromCity)
+        fromLatitude = try c.decodeIfPresent(Double.self, forKey: .fromLatitude)
+        fromLongitude = try c.decodeIfPresent(Double.self, forKey: .fromLongitude)
+        fromTerminal = try c.decodeIfPresent(String.self, forKey: .fromTerminal) ?? ""
+        fromGate = try c.decodeIfPresent(String.self, forKey: .fromGate) ?? ""
+        
+        toName = try c.decode(String.self, forKey: .toName)
+        toCode = try c.decode(String.self, forKey: .toCode)
+        toCity = try c.decode(String.self, forKey: .toCity)
+        toLatitude = try c.decodeIfPresent(Double.self, forKey: .toLatitude)
+        toLongitude = try c.decodeIfPresent(Double.self, forKey: .toLongitude)
+        toTerminal = try c.decodeIfPresent(String.self, forKey: .toTerminal) ?? ""
+        toGate = try c.decodeIfPresent(String.self, forKey: .toGate) ?? ""
+        
+        flightNumber = try c.decode(String.self, forKey: .flightNumber)
+        notes = try c.decode(String.self, forKey: .notes)
+        accent = try c.decode(EventAccent.self, forKey: .accent)
+        startTime = try c.decode(Date.self, forKey: .startTime)
+        endTime = try c.decode(Date.self, forKey: .endTime)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        
+        try c.encode(fromName, forKey: .fromName)
+        try c.encode(fromCode, forKey: .fromCode)
+        try c.encode(fromCity, forKey: .fromCity)
+        try c.encode(fromLatitude, forKey: .fromLatitude)
+        try c.encode(fromLongitude, forKey: .fromLongitude)
+        try c.encode(fromTerminal, forKey: .fromTerminal)
+        try c.encode(fromGate, forKey: .fromGate)
+        
+        try c.encode(toName, forKey: .toName)
+        try c.encode(toCode, forKey: .toCode)
+        try c.encode(toCity, forKey: .toCity)
+        try c.encode(toLatitude, forKey: .toLatitude)
+        try c.encode(toLongitude, forKey: .toLongitude)
+        try c.encode(toTerminal, forKey: .toTerminal)
+        try c.encode(toGate, forKey: .toGate)
+        
+        try c.encode(flightNumber, forKey: .flightNumber)
+        try c.encode(notes, forKey: .notes)
+        try c.encode(accent, forKey: .accent)
+        try c.encode(startTime, forKey: .startTime)
+        try c.encode(endTime, forKey: .endTime)
     }
 }
 
