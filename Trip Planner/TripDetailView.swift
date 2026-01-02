@@ -173,219 +173,280 @@ struct TripDetailView: View {
         }
     }
     
-    var body: some View {
+    private var mapModes: MapInteractionModes {
+        isEdgeSwipingBack ? [] : .all
+    }
+    
+    private var mapLayer: some View {
+        Map(
+            coordinateRegion: $mapRegion,
+            interactionModes: mapModes,
+            annotationItems: eventAnnotations
+        ) { annotation in
+            MapAnnotation(coordinate: annotation.coordinate) {
+                Button {
+                    openEventFromMarker(annotation.event)
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(annotation.color)
+                            .frame(width: 36, height: 36)
+                        Image(systemName: annotation.event.icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                    .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                }
+            }
+        }
+        .opacity(showMap ? 1 : 0)
+        .allowsHitTesting(!isEdgeSwipingBack)
+    }
+    
+    @ViewBuilder
+    private var mapPlaceholder: some View {
+        if !showMap {
+            Rectangle()
+                .fill(Color(.systemBackground))
+        }
+    }
+    
+    private func dragHandle(mapHeight: CGFloat, totalHeight: CGFloat, handleHeight: CGFloat) -> some View {
+        ResizeHandle()
+            .frame(height: handleHeight)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        let newRatio = (mapHeight + value.translation.height) / totalHeight
+                        splitRatio = min(max(newRatio, 0.2), 0.8)
+                    }
+            )
+    }
+
+    private var mainLayout: some View {
         GeometryReader { geo in
             let totalHeight = geo.size.height
-            let mapHeight = totalHeight * splitRatio
             let handleHeight: CGFloat = 24
+            let mapHeight = totalHeight * splitRatio
             let kanbanHeight = totalHeight - mapHeight - handleHeight
             
             VStack(spacing: 0) {
                 ZStack {
-                    Map(
-                        coordinateRegion: $mapRegion,
-                        interactionModes: isEdgeSwipingBack ? [] : .all,
-                        annotationItems: eventAnnotations
-                    ) { annotation in
-                        MapAnnotation(coordinate: annotation.coordinate) {
-                            Button {
-                                openEventFromMarker(annotation.event)
-                            } label: {
-                                ZStack {
-                                    Circle()
-                                        .fill(annotation.color)
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: annotation.event.icon)
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                }
-                                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-                            }
-                        }
-                    }
-                    .opacity(showMap ? 1 : 0)
-                    .allowsHitTesting(!isEdgeSwipingBack)
-                    
-                    // Hide the Map's initial camera snap (“jump”) by fading in after first layout.
-                    if !showMap {
-                        Rectangle()
-                            .fill(Color(.systemBackground))
-                    }
+                    mapLayer
+                    mapPlaceholder
                 }
                 .frame(height: mapHeight)
                 .ignoresSafeArea(edges: .top)
                 
-                // Drag handle
-                ResizeHandle()
-                    .frame(height: handleHeight)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                let newRatio = (mapHeight + value.translation.height) / totalHeight
-                                // Clamp between 20% and 80%
-                                splitRatio = min(max(newRatio, 0.2), 0.8)
-                            }
-                    )
+                dragHandle(mapHeight: mapHeight, totalHeight: totalHeight, handleHeight: handleHeight)
                 
                 kanbanBoard()
                     .frame(height: kanbanHeight)
             }
         }
-        .background(backgroundGradient)
-        .ignoresSafeArea(edges: .top)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .enableSwipeBack()
-        .toolbar(.hidden, for: .tabBar)
-        .tint(.primary)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 10, coordinateSpace: .global)
-                .onChanged { value in
-                    guard value.startLocation.x < 24, value.translation.width > 0 else { return }
-                    isEdgeSwipingBack = true
-                }
-                .onEnded { _ in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        isEdgeSwipingBack = false
-                    }
-                }
-        )
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .fontWeight(.medium)
-                        .foregroundStyle(.primary)
-                }
-                // Force non-accent toolbar color even when TabView tint is customized.
-                .tint(.primary)
+    }
+    
+    private var edgeSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 10, coordinateSpace: .global)
+            .onChanged { value in
+                guard value.startLocation.x < 24, value.translation.width > 0 else { return }
+                isEdgeSwipingBack = true
             }
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    isPresentingSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                        .fontWeight(.medium)
-                        .foregroundStyle(.primary)
+            .onEnded { _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    isEdgeSwipingBack = false
                 }
-                .tint(.primary)
+            }
+    }
+    
+    @ToolbarContentBuilder
+    private var tripDetailToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+            }
+            // Force non-accent toolbar color even when TabView tint is customized.
+            .tint(.primary)
+        }
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button {
+                isPresentingSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+            }
+            .tint(.primary)
+            
+            Menu {
+                Button {
+                    prepareNewEventDefaults()
+                    isPresentingAdd = true
+                } label: {
+                    Label("Activity", systemImage: "calendar.badge.plus")
+                }
                 
-                Menu {
-                    Button {
-                        prepareNewEventDefaults()
-                        isPresentingAdd = true
-                    } label: {
-                        Label("Activity", systemImage: "calendar.badge.plus")
-                    }
-                    
-                    Button {
-                        if selectedDayID == nil { selectedDayID = tripDays.first?.id }
-                        newReminderText = ""
-                        editingReminder = nil
-                        isPresentingReminder = true
-                    } label: {
-                        Label("Reminder", systemImage: "lightbulb")
-                    }
-                    
-                    Button {
-                        if selectedDayID == nil { selectedDayID = tripDays.first?.id }
-                        checklistTitle = ""
-                        checklistDraftItems = []
-                        editingChecklist = nil
-                        isPresentingChecklist = true
-                    } label: {
-                        Label("Checklist", systemImage: "checklist.checked")
-                    }
+                Button {
+                    prepareNewFlightDefaults()
+                    isPresentingFlight = true
                 } label: {
-                    Image(systemName: "plus")
-                        .fontWeight(.medium)
-                        .foregroundStyle(.primary)
+                    Label("Flight", systemImage: "airplane")
                 }
+                
+                Button {
+                    if selectedDayID == nil { selectedDayID = tripDays.first?.id }
+                    newReminderText = ""
+                    editingReminder = nil
+                    isPresentingReminder = true
+                } label: {
+                    Label("Reminder", systemImage: "lightbulb")
+                }
+                
+                Button {
+                    if selectedDayID == nil { selectedDayID = tripDays.first?.id }
+                    checklistTitle = ""
+                    checklistDraftItems = []
+                    editingChecklist = nil
+                    isPresentingChecklist = true
+                } label: {
+                    Label("Checklist", systemImage: "checklist.checked")
+                }
+            } label: {
+                Image(systemName: "plus")
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+            }
+            .tint(.primary)
+        }
+        ToolbarItem(placement: .principal) {
+            VStack(spacing: 2) {
+                Text(tripName)
+                    .font(.headline.weight(.semibold))
+                Text(tripDateRangeText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var eventSheetTripRegion: MKCoordinateRegion? {
+        guard let lat = trip.latitude, let lon = trip.longitude else { return nil }
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+            span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
+        )
+    }
+    
+    private func applySheets<V: View>(to view: V) -> some View {
+        view
+            .sheet(isPresented: $isPresentingSettings) {
+                TripSettingsSheet(
+                    name: $trip.name,
+                    location: $trip.destination,
+                    latitude: $trip.latitude,
+                    longitude: $trip.longitude,
+                    mapSpan: $trip.mapSpan,
+                    startDate: $trip.startDate,
+                    endDate: $trip.endDate,
+                    coverImageData: $trip.coverImageData,
+                    onApply: updateTripDaysForDates
+                )
                 .tint(.primary)
             }
-            ToolbarItem(placement: .principal) {
-                VStack(spacing: 2) {
-                    Text(tripName)
-                        .font(.headline.weight(.semibold))
-                    Text(tripDateRangeText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            .sheet(isPresented: $isPresentingAdd, onDismiss: {
+                editingEvent = nil
+            }) {
+                AddEventSheet(
+                    title: $newEventTitle,
+                    location: $newEventLocation,
+                    latitude: $newEventLatitude,
+                    longitude: $newEventLongitude,
+                    description: $newEventDescription,
+                    icon: $newEventIcon,
+                    accent: $newEventAccent,
+                    startTime: $newEventStart,
+                    endTime: $newEventEnd,
+                    photo: $newEventPhoto,
+                    selectedDayID: $selectedDayID,
+                    days: tripDays,
+                    tripLocationRegion: eventSheetTripRegion,
+                    onAdd: addNewEvent,
+                    onDelete: deleteCurrentEvent,
+                    isEditing: editingEvent != nil
+                )
+                .tint(.primary)
+                .presentationDetents([.medium, .large])
             }
-        }
-        .sheet(isPresented: $isPresentingSettings) {
-            TripSettingsSheet(
-                name: $trip.name,
-                location: $trip.destination,
-                latitude: $trip.latitude,
-                longitude: $trip.longitude,
-                mapSpan: $trip.mapSpan,
-                startDate: $trip.startDate,
-                endDate: $trip.endDate,
-                coverImageData: $trip.coverImageData,
-                onApply: updateTripDaysForDates
-            )
+            .sheet(isPresented: $isPresentingReminder) {
+                AddReminderSheet(
+                    reminderText: $newReminderText,
+                    selectedDayID: $selectedDayID,
+                    days: tripDays,
+                    isEditing: editingReminder != nil,
+                    onAdd: addReminder
+                )
+                .tint(.primary)
+                .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $isPresentingChecklist) {
+                ChecklistSheet(
+                    title: $checklistTitle,
+                    items: $checklistDraftItems,
+                    selectedDayID: $selectedDayID,
+                    days: tripDays,
+                    isEditing: editingChecklist != nil,
+                    onSave: saveChecklist
+                )
+                .tint(.primary)
+                .presentationDetents([.large])
+            }
+            .sheet(isPresented: $isPresentingFlight, onDismiss: {
+                editingFlight = nil
+            }) {
+                let deleteHandler: (() -> Void)? = (editingFlight != nil) ? { deleteCurrentFlight() } : nil
+                AddFlightSheet(
+                    fromName: $flightFromName,
+                    fromCode: $flightFromCode,
+                    fromCity: $flightFromCity,
+                    fromLatitude: $flightFromLatitude,
+                    fromLongitude: $flightFromLongitude,
+                    toName: $flightToName,
+                    toCode: $flightToCode,
+                    toCity: $flightToCity,
+                    toLatitude: $flightToLatitude,
+                    toLongitude: $flightToLongitude,
+                    flightNumber: $flightNumber,
+                    notes: $flightNotes,
+                    accent: $flightAccent,
+                    startTime: $flightStartTime,
+                    endTime: $flightEndTime,
+                    selectedDayID: $selectedDayID,
+                    days: tripDays,
+                    isEditing: editingFlight != nil,
+                    onSave: saveFlight,
+                    onDelete: deleteHandler
+                )
+                .tint(.primary)
+                .presentationDetents([.medium, .large])
+            }
+    }
+    
+    var body: some View {
+        applySheets(to: mainLayout)
+            .background(backgroundGradient)
+            .ignoresSafeArea(edges: .top)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .enableSwipeBack()
+            .toolbar(.hidden, for: .tabBar)
             .tint(.primary)
-        }
-        .sheet(isPresented: $isPresentingAdd, onDismiss: {
-            // Keep edit state consistent; prevents accidental "add" after an edit auto-save.
-            editingEvent = nil
-        }) {
-            AddEventSheet(
-                title: $newEventTitle,
-                location: $newEventLocation,
-                latitude: $newEventLatitude,
-                longitude: $newEventLongitude,
-                description: $newEventDescription,
-                icon: $newEventIcon,
-                accent: $newEventAccent,
-                startTime: $newEventStart,
-                endTime: $newEventEnd,
-                photo: $newEventPhoto,
-                selectedDayID: $selectedDayID,
-                days: tripDays,
-                tripLocationRegion: trip.latitude != nil && trip.longitude != nil 
-                    ? MKCoordinateRegion(
-                        center: CLLocationCoordinate2D(
-                            latitude: trip.latitude!,
-                            longitude: trip.longitude!
-                        ),
-                        span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
-                    )
-                    : nil,
-                onAdd: addNewEvent,
-                onDelete: deleteCurrentEvent,
-                isEditing: editingEvent != nil
-            )
-            .tint(.primary)
-            .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $isPresentingReminder) {
-            AddReminderSheet(
-                reminderText: $newReminderText,
-                selectedDayID: $selectedDayID,
-                days: tripDays,
-                isEditing: editingReminder != nil,
-                onAdd: addReminder
-            )
-            .tint(.primary)
-            .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $isPresentingChecklist) {
-            ChecklistSheet(
-                title: $checklistTitle,
-                items: $checklistDraftItems,
-                selectedDayID: $selectedDayID,
-                days: tripDays,
-                isEditing: editingChecklist != nil,
-                onSave: saveChecklist
-            )
-            .tint(.primary)
-            .presentationDetents([.large])
-        }
+            .simultaneousGesture(edgeSwipeGesture)
+            .toolbar { tripDetailToolbar }
         .onChange(of: isPresentingReminder) { _, isPresented in
             if !isPresented {
                 editingReminder = nil
@@ -443,7 +504,7 @@ private extension TripDetailView {
     func kanbanBoard() -> some View {
         GeometryReader { geo in
             let columnWidth = geo.size.width * 0.78
-            let tripHasNoItems = tripDays.allSatisfy { $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty }
+            let tripHasNoItems = tripDays.allSatisfy { $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty && $0.flights.isEmpty }
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
@@ -459,6 +520,8 @@ private extension TripDetailView {
                             onDeleteReminder: { reminder in deleteReminder(reminder) },
                             onTapChecklist: { checklist in startEditingChecklist(checklist, day: day) },
                             onDeleteChecklist: { checklist in deleteChecklist(checklist) },
+                            onTapFlight: { flight in startEditingFlight(flight, day: day) },
+                            onDeleteFlight: { flight in deleteFlight(flight) },
                             onAddEvent: {
                                 selectedDayID = day.id
                                 prepareNewEventDefaults()
@@ -554,6 +617,7 @@ private extension TripDetailView {
                     events: existing.events,
                     reminders: existing.reminders,
                     checklists: existing.checklists,
+                    flights: existing.flights,
                     label: "Day \(offset + 1)",
                     order: offset + 1,
                     weatherIcon: existing.weatherIcon,
@@ -567,6 +631,7 @@ private extension TripDetailView {
                     events: [],
                     reminders: [],
                     checklists: [],
+                    flights: [],
                     label: "Day \(offset + 1)",
                     order: offset + 1,
                     weatherIcon: "cloud.sun.fill",
@@ -821,6 +886,115 @@ private extension TripDetailView {
             }
         }
     }
+
+    func prepareNewFlightDefaults() {
+        if selectedDayID == nil {
+            selectedDayID = tripDays.first?.id
+        }
+        editingFlight = nil
+        flightFromName = ""
+        flightFromCode = ""
+        flightFromCity = ""
+        flightFromLatitude = nil
+        flightFromLongitude = nil
+        flightToName = ""
+        flightToCode = ""
+        flightToCity = ""
+        flightToLatitude = nil
+        flightToLongitude = nil
+        flightNumber = ""
+        flightNotes = ""
+        flightAccent = .sky
+        let base = Calendar.current.startOfDay(for: Date())
+        flightStartTime = base.addingTimeInterval(9 * 3600)
+        flightEndTime = flightStartTime
+    }
+
+    func saveFlight() {
+        guard let dayID = selectedDayID,
+              let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
+
+        if let editingFlight {
+            let updated = FlightItem(
+                id: editingFlight.id,
+                fromName: flightFromName,
+                fromCode: flightFromCode,
+                fromCity: flightFromCity,
+                fromLatitude: flightFromLatitude,
+                fromLongitude: flightFromLongitude,
+                toName: flightToName,
+                toCode: flightToCode,
+                toCity: flightToCity,
+                toLatitude: flightToLatitude,
+                toLongitude: flightToLongitude,
+                flightNumber: flightNumber,
+                notes: flightNotes,
+                accent: flightAccent,
+                startTime: flightStartTime,
+                endTime: flightEndTime
+            )
+            if let idx = tripDays[dayIndex].flights.firstIndex(where: { $0.id == editingFlight.id }) {
+                tripDays[dayIndex].flights[idx] = updated
+            } else {
+                tripDays[dayIndex].flights.insert(updated, at: 0)
+            }
+        } else {
+            let flight = FlightItem(
+                fromName: flightFromName,
+                fromCode: flightFromCode,
+                fromCity: flightFromCity,
+                fromLatitude: flightFromLatitude,
+                fromLongitude: flightFromLongitude,
+                toName: flightToName,
+                toCode: flightToCode,
+                toCity: flightToCity,
+                toLatitude: flightToLatitude,
+                toLongitude: flightToLongitude,
+                flightNumber: flightNumber,
+                notes: flightNotes,
+                accent: flightAccent,
+                startTime: flightStartTime,
+                endTime: flightEndTime
+            )
+            tripDays[dayIndex].flights.insert(flight, at: 0)
+        }
+    }
+
+    func startEditingFlight(_ flight: FlightItem, day: TripDay) {
+        selectedDayID = day.id
+        editingFlight = flight
+        flightFromName = flight.fromName
+        flightFromCode = flight.fromCode
+        flightFromCity = flight.fromCity
+        flightFromLatitude = flight.fromLatitude
+        flightFromLongitude = flight.fromLongitude
+        flightToName = flight.toName
+        flightToCode = flight.toCode
+        flightToCity = flight.toCity
+        flightToLatitude = flight.toLatitude
+        flightToLongitude = flight.toLongitude
+        flightNumber = flight.flightNumber
+        flightNotes = flight.notes
+        flightAccent = flight.accent
+        flightStartTime = flight.startTime
+        flightEndTime = flight.endTime
+        isPresentingFlight = true
+    }
+
+    func deleteFlight(_ flight: FlightItem) {
+        for dayIndex in tripDays.indices {
+            if let idx = tripDays[dayIndex].flights.firstIndex(where: { $0.id == flight.id }) {
+                tripDays[dayIndex].flights.remove(at: idx)
+                break
+            }
+        }
+    }
+
+    func deleteCurrentFlight() {
+        guard let editingFlight else { return }
+        deleteFlight(editingFlight)
+        self.editingFlight = nil
+    }
 }
 
 // MARK: - Supporting Views
@@ -857,6 +1031,8 @@ struct DayColumn: View {
     let onDeleteReminder: (ReminderItem) -> Void
     let onTapChecklist: (ChecklistItem) -> Void
     let onDeleteChecklist: (ChecklistItem) -> Void
+    let onTapFlight: (FlightItem) -> Void
+    let onDeleteFlight: (FlightItem) -> Void
     let onAddEvent: () -> Void
     let showEmptyPlaceholder: Bool
     
@@ -888,7 +1064,7 @@ struct DayColumn: View {
 
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 10) {
-                    if day.events.isEmpty && showEmptyPlaceholder {
+                    if day.events.isEmpty && day.reminders.isEmpty && day.checklists.isEmpty && day.flights.isEmpty && showEmptyPlaceholder {
                         // Empty state placeholder - only on first day when trip has no events
                         Button {
                             onAddEvent()
@@ -923,6 +1099,28 @@ struct DayColumn: View {
                                         
                                         Button(role: .destructive) {
                                             onDeleteReminder(reminder)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                            }
+                        }
+                    }
+
+                    if !day.flights.isEmpty {
+                        VStack(spacing: 10) {
+                            ForEach(day.flights.sorted { $0.startTime < $1.startTime }) { flight in
+                                FlightCard(flight: flight)
+                                    .onTapGesture { onTapFlight(flight) }
+                                    .contextMenu {
+                                        Button {
+                                            onTapFlight(flight)
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        
+                                        Button(role: .destructive) {
+                                            onDeleteFlight(flight)
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
@@ -1159,6 +1357,110 @@ struct ChecklistCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(textColor.opacity(0.08), lineWidth: 1)
         )
+    }
+}
+
+struct FlightCard: View {
+    let flight: FlightItem
+    
+    private var fromCode: String { flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased().isEmpty ? "—" : flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+    private var toCode: String { flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased().isEmpty ? "—" : flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+    
+    private var departureText: String {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f.string(from: flight.startTime)
+    }
+    
+    private var arrivalText: String? {
+        guard flight.hasEndTime else { return nil }
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f.string(from: flight.endTime)
+    }
+    
+    private var flightNumberText: String? {
+        let t = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t.uppercased()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                airportBlock(
+                    code: fromCode,
+                    city: flight.fromCity,
+                    time: departureText,
+                    alignment: .leading
+                )
+                .layoutPriority(1)
+                
+                Spacer(minLength: 0)
+                
+                ZStack {
+                    GeometryReader { geo in
+                        Path { path in
+                            let midY = geo.size.height / 2
+                            path.move(to: CGPoint(x: 0, y: midY))
+                            path.addLine(to: CGPoint(x: geo.size.width, y: midY))
+                        }
+                        .stroke(
+                            Color.secondary.opacity(0.35),
+                            style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 4])
+                        )
+                    }
+                    
+                    Image(systemName: "airplane")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(flight.accent.color)
+                }
+                .frame(width: 96)
+                
+                Spacer(minLength: 0)
+                
+                airportBlock(
+                    code: toCode,
+                    city: flight.toCity,
+                    time: arrivalText,
+                    alignment: .trailing
+                )
+                .layoutPriority(1)
+            }
+            
+            if flightNumberText != nil {
+                HStack {
+                    Spacer()
+                    Text(flightNumberText!)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                }
+            }
+        }
+        .padding(12)
+        // Match Activity (EventCard) styling: plain material card, no gradient/stroke.
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func airportBlock(code: String, city: String, time: String?, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 4) {
+            Text(code)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : city)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            if let time {
+                Text(time)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 
@@ -1891,6 +2193,151 @@ struct ChecklistSheet: View {
     }
 }
 
+struct AddFlightSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
+    
+    @Binding var fromName: String
+    @Binding var fromCode: String
+    @Binding var fromCity: String
+    @Binding var fromLatitude: Double?
+    @Binding var fromLongitude: Double?
+    
+    @Binding var toName: String
+    @Binding var toCode: String
+    @Binding var toCity: String
+    @Binding var toLatitude: Double?
+    @Binding var toLongitude: Double?
+    
+    @Binding var flightNumber: String
+    @Binding var notes: String
+    @Binding var accent: EventAccent
+    @Binding var startTime: Date
+    @Binding var endTime: Date
+    
+    @Binding var selectedDayID: UUID?
+    let days: [TripDay]
+    
+    var isEditing: Bool
+    var onSave: () -> Void
+    var onDelete: (() -> Void)?
+    
+    @State private var hasEndTime: Bool = false
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Day", selection: $selectedDayID) {
+                        ForEach(days) { day in
+                            Text(day.displayTitle)
+                                .tag(Optional(day.id))
+                        }
+                    }
+                }
+                
+                Section("Route") {
+                    AirportSearchField(
+                        title: "From airport",
+                        name: $fromName,
+                        code: $fromCode,
+                        city: $fromCity,
+                        latitude: $fromLatitude,
+                        longitude: $fromLongitude
+                    )
+                    AirportSearchField(
+                        title: "To airport",
+                        name: $toName,
+                        code: $toCode,
+                        city: $toCity,
+                        latitude: $toLatitude,
+                        longitude: $toLongitude
+                    )
+                    
+                    HStack {
+                        TextField("Flight number", text: $flightNumber)
+                        if !flightNumber.isEmpty {
+                            Button {
+                                flightNumber = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                
+                Section("Timing") {
+                    DatePicker("Departure", selection: $startTime, displayedComponents: .hourAndMinute)
+                    Toggle("Add arrival time", isOn: $hasEndTime)
+                        .tint(appAccentColor)
+                    if hasEndTime {
+                        DatePicker("Arrival", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                    }
+                }
+                
+                Section("Visuals") {
+                    ColorChips(selection: $accent)
+                }
+                
+                Section("Notes") {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 90)
+                }
+                
+                if isEditing {
+                    Section {
+                        Button(role: .destructive) {
+                            onDelete?()
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("Delete Flight")
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(isEditing ? "Edit Flight" : "Add Flight")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    LiquidGlassIconButton(
+                        systemName: "checkmark",
+                        isEnabled: selectedDayID != nil && (!fromName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !toName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    ) {
+                        onSave()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                hasEndTime = endTime > startTime
+                if !hasEndTime { endTime = startTime }
+            }
+            .onChange(of: hasEndTime) { _, newValue in
+                if !newValue {
+                    endTime = startTime
+                } else if endTime <= startTime {
+                    endTime = startTime.addingTimeInterval(60 * 60)
+                }
+            }
+            .onChange(of: startTime) { _, newValue in
+                if !hasEndTime {
+                    endTime = newValue
+                }
+            }
+        }
+        .tint(.primary)
+    }
+}
+
 // Icon grid selection
 struct IconCarousel: View {
     let items: [String]
@@ -2141,6 +2588,7 @@ struct LocationSearchField: View {
 class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
     @Published var results: [MKLocalSearchCompletion] = []
     private let completer: MKLocalSearchCompleter
+    private let pointOfInterestCategories: [MKPointOfInterestCategory]?
     
     var searchQuery: String = "" {
         didSet {
@@ -2148,11 +2596,19 @@ class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchComplete
         }
     }
     
-    init(resultTypes: MKLocalSearchCompleter.ResultType = .pointOfInterest, searchRegion: MKCoordinateRegion? = nil) {
+    init(
+        resultTypes: MKLocalSearchCompleter.ResultType = .pointOfInterest,
+        searchRegion: MKCoordinateRegion? = nil,
+        pointOfInterestCategories: [MKPointOfInterestCategory]? = nil
+    ) {
         completer = MKLocalSearchCompleter()
+        self.pointOfInterestCategories = pointOfInterestCategories
         super.init()
         completer.delegate = self
         completer.resultTypes = resultTypes
+        if let cats = pointOfInterestCategories {
+            completer.pointOfInterestFilter = MKPointOfInterestFilter(including: cats)
+        }
         if let region = searchRegion {
             completer.region = region
         }
@@ -2166,6 +2622,253 @@ class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchComplete
     
     func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
         print("Location search error: \(error.localizedDescription)")
+    }
+}
+
+// MARK: - Airport Search
+
+struct AirportSearchField: View {
+    let title: String
+    @Binding var name: String
+    @Binding var code: String
+    @Binding var city: String
+    @Binding var latitude: Double?
+    @Binding var longitude: Double?
+    var searchRegion: MKCoordinateRegion?
+    
+    @StateObject private var completer: LocationSearchCompleter
+    @State private var showingResults = false
+    @State private var resolvedCodes: [MKLocalSearchCompletion: String] = [:]
+    
+    private var filteredResults: [MKLocalSearchCompletion] {
+        completer.results.filter(isAirportCompletion)
+    }
+    
+    private func codeForDisplay(_ result: MKLocalSearchCompletion) -> String {
+        let direct = airportCodeCandidate(for: result)
+        if !direct.isEmpty { return direct }
+        return resolvedCodes[result] ?? ""
+    }
+    
+    init(
+        title: String,
+        name: Binding<String>,
+        code: Binding<String>,
+        city: Binding<String>,
+        latitude: Binding<Double?>,
+        longitude: Binding<Double?>,
+        searchRegion: MKCoordinateRegion? = nil
+    ) {
+        self.title = title
+        self._name = name
+        self._code = code
+        self._city = city
+        self._latitude = latitude
+        self._longitude = longitude
+        self.searchRegion = searchRegion
+        self._completer = StateObject(
+            wrappedValue: LocationSearchCompleter(
+                resultTypes: .pointOfInterest,
+                searchRegion: searchRegion,
+                pointOfInterestCategories: [.airport]
+            )
+        )
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                TextField(title, text: $name)
+                    .onChange(of: name) { _, newValue in
+                        completer.searchQuery = newValue
+                        showingResults = !newValue.isEmpty
+                    }
+                
+                if !name.isEmpty {
+                    Button {
+                        name = ""
+                        code = ""
+                        city = ""
+                        latitude = nil
+                        longitude = nil
+                        showingResults = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            if showingResults && !filteredResults.isEmpty {
+                Divider()
+                    .padding(.top, 8)
+                
+                VStack(spacing: 0) {
+                    ForEach(filteredResults, id: \.self) { result in
+                        let code = codeForDisplay(result)
+                        let airportName = stripLeadingCode(from: result.title)
+                        Button {
+                            selectAirport(result)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(code.isEmpty ? airportName : "\(code) - \(airportName)")
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                    if !result.subtitle.isEmpty {
+                                        Text(result.subtitle)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer(minLength: 0)
+                                
+                                if code.isEmpty {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .tint(.secondary)
+                                } else {
+                                    Text(code)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(.thinMaterial, in: Capsule())
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 16)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(code.isEmpty)
+                        
+                        if result != filteredResults.last {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: completer.results) { _, newValue in
+            // Resolve codes for the first few visible results.
+            for result in Array(newValue.prefix(8)) {
+                if !isAirportCompletion(result) { continue }
+                if !airportCodeCandidate(for: result).isEmpty { continue }
+                if (resolvedCodes[result] ?? "").isEmpty {
+                    resolveCodeForResult(result)
+                }
+            }
+        }
+    }
+    
+    private func selectAirport(_ result: MKLocalSearchCompletion) {
+        let airportName = stripLeadingCode(from: result.title)
+        name = airportName
+        showingResults = false
+        let initialCode = codeForDisplay(result)
+        
+        let request = MKLocalSearch.Request(completion: result)
+        let search = MKLocalSearch(request: request)
+        search.start { response, _ in
+            guard let response else { return }
+            let items = response.mapItems
+            guard let first = items.first else { return }
+            
+            // If MapKit can identify this POI category, require airport to reduce false positives.
+            if let poi = first.pointOfInterestCategory, poi != .airport, initialCode.isEmpty {
+                return
+            }
+            
+            let placemark = first.placemark
+            latitude = placemark.coordinate.latitude
+            longitude = placemark.coordinate.longitude
+            city = placemark.locality ?? placemark.administrativeArea ?? result.subtitle
+            
+            // Try to extract a code from any returned map item / placemark text.
+            let codeFromItems: String = items
+                .compactMap { mapItem in
+                    let pm = mapItem.placemark
+                    return airportCodeCandidate(fromText: [
+                        mapItem.name,
+                        pm.name,
+                        pm.title,
+                        result.title,
+                        result.subtitle
+                    ]
+                    .compactMap { $0 }
+                    .joined(separator: " "))
+                }
+                .first { !$0.isEmpty } ?? ""
+            
+            let chosenCode = !initialCode.isEmpty ? initialCode : codeFromItems
+            guard !chosenCode.isEmpty else { return }
+            code = chosenCode
+            name = "\(chosenCode) - \(airportName)"
+        }
+    }
+    
+    private func isAirportCompletion(_ result: MKLocalSearchCompletion) -> Bool {
+        let combined = "\(result.title) \(result.subtitle)".uppercased()
+        if !airportCodeCandidate(for: result).isEmpty { return true }
+        // Heuristics to reduce non-airport POIs.
+        return combined.contains("AIRPORT") || combined.contains("AEROPORT") || combined.contains("AEROPUERTO") || combined.contains("INTL")
+    }
+    
+    private func airportCodeCandidate(for result: MKLocalSearchCompletion) -> String {
+        airportCodeCandidate(fromText: "\(result.title) \(result.subtitle)")
+    }
+    
+    private func airportCodeCandidate(fromText text: String) -> String {
+        let combined = text.uppercased()
+        
+        // Common format: "Some Airport (SFO)"
+        if let range = combined.range(of: #"\(([A-Z]{3})\)"#, options: .regularExpression) {
+            let match = String(combined[range])
+            return match.replacingOccurrences(of: "(", with: "").replacingOccurrences(of: ")", with: "")
+        }
+        
+        // Prefix format: "SFO - Some Airport"
+        if let range = combined.range(of: #"^([A-Z]{3})\s*[-–]\s*"#, options: .regularExpression) {
+            let prefix = String(combined[range])
+            let letters = prefix.filter { $0.isLetter }
+            if letters.count == 3 { return letters }
+        }
+        
+        // "IATA: SFO"
+        if let range = combined.range(of: #"\bIATA[:\s]+([A-Z]{3})\b"#, options: .regularExpression) {
+            let match = String(combined[range])
+            let letters = match.filter { $0.isLetter }
+            if letters.count >= 3 { return String(letters.suffix(3)) }
+        }
+        
+        return ""
+    }
+    
+    private func stripLeadingCode(from title: String) -> String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = trimmed.range(of: #"^[A-Z]{3}\s*[-–]\s*"#, options: .regularExpression) {
+            return String(trimmed[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return trimmed
+    }
+    
+    private func resolveCodeForResult(_ result: MKLocalSearchCompletion) {
+        let request = MKLocalSearch.Request(completion: result)
+        let search = MKLocalSearch(request: request)
+        search.start { response, _ in
+            let items = response?.mapItems ?? []
+            let found: String = items
+                .compactMap { item in
+                    airportCodeCandidate(fromText: [item.name, item.placemark.title].compactMap { $0 }.joined(separator: " "))
+                }
+                .first(where: { !$0.isEmpty }) ?? ""
+            if !found.isEmpty {
+                resolvedCodes[result] = found
+            }
+        }
     }
 }
 
@@ -2230,6 +2933,7 @@ struct TripDay: Identifiable, Hashable, Codable {
     var events: [EventItem]
     var reminders: [ReminderItem]
     var checklists: [ChecklistItem]
+    var flights: [FlightItem]
     let label: String
     let order: Int
     let weatherIcon: String
@@ -2252,15 +2956,16 @@ struct TripDay: Identifiable, Hashable, Codable {
     var dayBadge: String { "Day \(order)" }
     
     enum CodingKeys: String, CodingKey {
-        case id, date, events, reminders, checklists, label, order, weatherIcon, temperatureF
+        case id, date, events, reminders, checklists, flights, label, order, weatherIcon, temperatureF
     }
     
-    init(id: UUID, date: Date, events: [EventItem], reminders: [ReminderItem] = [], checklists: [ChecklistItem] = [], label: String, order: Int, weatherIcon: String, temperatureF: Int) {
+    init(id: UUID, date: Date, events: [EventItem], reminders: [ReminderItem] = [], checklists: [ChecklistItem] = [], flights: [FlightItem] = [], label: String, order: Int, weatherIcon: String, temperatureF: Int) {
         self.id = id
         self.date = date
         self.events = events
         self.reminders = reminders
         self.checklists = checklists
+        self.flights = flights
         self.label = label
         self.order = order
         self.weatherIcon = weatherIcon
@@ -2274,6 +2979,7 @@ struct TripDay: Identifiable, Hashable, Codable {
         events = try c.decode([EventItem].self, forKey: .events)
         reminders = try c.decodeIfPresent([ReminderItem].self, forKey: .reminders) ?? []
         checklists = try c.decodeIfPresent([ChecklistItem].self, forKey: .checklists) ?? []
+        flights = try c.decodeIfPresent([FlightItem].self, forKey: .flights) ?? []
         label = try c.decode(String.self, forKey: .label)
         order = try c.decode(Int.self, forKey: .order)
         weatherIcon = try c.decode(String.self, forKey: .weatherIcon)
@@ -2287,6 +2993,7 @@ struct TripDay: Identifiable, Hashable, Codable {
         try c.encode(events, forKey: .events)
         try c.encode(reminders, forKey: .reminders)
         try c.encode(checklists, forKey: .checklists)
+        try c.encode(flights, forKey: .flights)
         try c.encode(label, forKey: .label)
         try c.encode(order, forKey: .order)
         try c.encode(weatherIcon, forKey: .weatherIcon)
@@ -2311,6 +3018,66 @@ struct ChecklistEntry: Identifiable, Hashable, Codable {
     let id: UUID
     var text: String
     var isDone: Bool
+}
+
+struct FlightItem: Identifiable, Hashable, Codable {
+    let id: UUID
+    
+    var fromName: String
+    var fromCode: String
+    var fromCity: String
+    var fromLatitude: Double?
+    var fromLongitude: Double?
+    
+    var toName: String
+    var toCode: String
+    var toCity: String
+    var toLatitude: Double?
+    var toLongitude: Double?
+    
+    var flightNumber: String
+    var notes: String
+    var accent: EventAccent
+    var startTime: Date
+    var endTime: Date
+    
+    var hasEndTime: Bool { endTime > startTime }
+    
+    init(
+        id: UUID = UUID(),
+        fromName: String = "",
+        fromCode: String = "",
+        fromCity: String = "",
+        fromLatitude: Double? = nil,
+        fromLongitude: Double? = nil,
+        toName: String = "",
+        toCode: String = "",
+        toCity: String = "",
+        toLatitude: Double? = nil,
+        toLongitude: Double? = nil,
+        flightNumber: String = "",
+        notes: String = "",
+        accent: EventAccent = .sky,
+        startTime: Date = Date(),
+        endTime: Date = Date()
+    ) {
+        self.id = id
+        self.fromName = fromName
+        self.fromCode = fromCode
+        self.fromCity = fromCity
+        self.fromLatitude = fromLatitude
+        self.fromLongitude = fromLongitude
+        self.toName = toName
+        self.toCode = toCode
+        self.toCity = toCity
+        self.toLatitude = toLatitude
+        self.toLongitude = toLongitude
+        self.flightNumber = flightNumber
+        self.notes = notes
+        self.accent = accent
+        self.startTime = startTime
+        self.endTime = endTime
+    }
 }
 
 enum EventAccent: String, Codable, CaseIterable, Hashable {

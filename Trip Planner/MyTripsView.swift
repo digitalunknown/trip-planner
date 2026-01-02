@@ -9,6 +9,12 @@ import SwiftUI
 import MapKit
 
 struct MyTripsView: View {
+    private enum TripSegment: String, CaseIterable, Identifiable {
+        case upcoming = "Upcoming"
+        case past = "Past"
+        var id: String { rawValue }
+    }
+    
     @State private var tripStore = TripStore()
     @State private var showingNewTrip = false
     @State private var showingSettings = false
@@ -18,6 +24,8 @@ struct MyTripsView: View {
     @State private var tripForImagePicker: Trip?
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
+    @State private var selectedSegment: TripSegment = .upcoming
+    @State private var segmentSwitchInFlight: Bool = false
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -30,6 +38,7 @@ struct MyTripsView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("My Trips")
+            .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: UUID.self) { tripID in
                 if let index = tripStore.trips.firstIndex(where: { $0.id == tripID }) {
                     TripDetailView(trip: Binding(
@@ -172,69 +181,138 @@ struct MyTripsView: View {
     }
     
     private var tripListView: some View {
-        let sortedTrips = tripStore.trips.sorted { $0.startDate < $1.startDate }
-        let groupedTrips = Dictionary(grouping: sortedTrips) { trip in
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        let filteredTrips: [Trip] = tripStore.trips
+            .filter { trip in
+                let end = calendar.startOfDay(for: trip.endDate)
+                switch selectedSegment {
+                case .upcoming:
+                    return end >= today
+                case .past:
+                    return end < today
+                }
+            }
+            .sorted { $0.startDate < $1.startDate }
+        
+        let groupedTrips = Dictionary(grouping: filteredTrips) { trip in
             Calendar.current.component(.year, from: trip.startDate)
         }
         let sortedYears = groupedTrips.keys.sorted()
         
-        return ScrollView {
-            LazyVStack(spacing: 20, pinnedViews: []) {
-                ForEach(sortedYears, id: \.self) { year in
-                    Section {
-                        ForEach(groupedTrips[year] ?? []) { trip in
-                            Button {
-                                navigationPath.append(trip.id)
-                            } label: {
-                                TripCardView(trip: trip)
+        return ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 20, pinnedViews: []) {
+                    Color.clear
+                        .frame(height: 1)
+                        .id("top")
+                    
+                    Picker("", selection: $selectedSegment) {
+                        ForEach(TripSegment.allCases) { seg in
+                            Text(seg.rawValue).tag(seg)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.top, 4)
+                    .padding(.bottom, 6)
+                    // Ensure the segmented control wins hit-testing above cards.
+                    .zIndex(10)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        TapGesture().onEnded {
+                            // Block card taps immediately to prevent "tap-through" navigation.
+                            segmentSwitchInFlight = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                segmentSwitchInFlight = false
                             }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button {
-                                    navigationPath.append(trip.id)
-                                } label: {
-                                    Label("View Trip", systemImage: "arrow.right.circle")
-                                }
-                                
-                                Divider()
-                                
-                                Button {
-                                    tripForImagePicker = trip
-                                    showImagePicker = true
-                                } label: {
-                                    Label("Add Cover Image", systemImage: "photo.badge.plus")
-                                }
-                                
-                                Button {
-                                    editingTrip = trip
-                                } label: {
-                                    Label("Edit Trip", systemImage: "pencil")
-                                }
-                                
-                                Divider()
-                                
-                                Button(role: .destructive) {
-                                    withAnimation {
-                                        tripStore.deleteTrip(trip)
+                        }
+                    )
+                
+                    if filteredTrips.isEmpty {
+                        ContentUnavailableView(
+                            selectedSegment == .past ? "No Past Trips" : "No Upcoming Trips",
+                            systemImage: selectedSegment == .past ? "clock.arrow.circlepath" : "calendar",
+                            description: Text(selectedSegment == .past ? "Trips you’ve completed will show up here." : "Trips that are coming up (or in progress) will show up here.")
+                        )
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 36)
+                    } else {
+                        ForEach(sortedYears, id: \.self) { year in
+                            Section {
+                                ForEach(groupedTrips[year] ?? []) { trip in
+                                    Button {
+                                        navigationPath.append(trip.id)
+                                    } label: {
+                                        TripCardView(trip: trip)
                                     }
-                                } label: {
-                                    Label("Delete Trip", systemImage: "trash")
+                                    .buttonStyle(.plain)
+                                    // Prevent accidental navigation during a segment switch
+                                    .allowsHitTesting(!segmentSwitchInFlight)
+                                    .contextMenu {
+                                        Button {
+                                            navigationPath.append(trip.id)
+                                        } label: {
+                                            Label("View Trip", systemImage: "arrow.right.circle")
+                                        }
+                                        
+                                        Divider()
+                                        
+                                        Button {
+                                            tripForImagePicker = trip
+                                            showImagePicker = true
+                                        } label: {
+                                            Label("Add Cover Image", systemImage: "photo.badge.plus")
+                                        }
+                                        
+                                        Button {
+                                            editingTrip = trip
+                                        } label: {
+                                            Label("Edit Trip", systemImage: "pencil")
+                                        }
+                                        
+                                        Divider()
+                                        
+                                        Button(role: .destructive) {
+                                            withAnimation {
+                                                tripStore.deleteTrip(trip)
+                                            }
+                                        } label: {
+                                            Label("Delete Trip", systemImage: "trash")
+                                        }
+                                    }
                                 }
+                            } header: {
+                                HStack {
+                                    Text(String(year))
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                }
+                                .padding(.top, year == sortedYears.first ? 0 : 8)
                             }
                         }
-                    } header: {
-                        HStack {
-                            Text(String(year))
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                        }
-                        .padding(.top, year == sortedYears.first ? 0 : 8)
+                    }
+                    
+                    Spacer(minLength: 12)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+            }
+            .onChange(of: selectedSegment) { _, _ in
+                // Keep the segmented control reachable when lists are short.
+                segmentSwitchInFlight = true
+                // Jump (no animation) after the tap completes to avoid tap-through onto cards.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                    withTransaction(Transaction(animation: nil)) {
+                        proxy.scrollTo("top", anchor: .top)
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+                        segmentSwitchInFlight = false
                     }
                 }
             }
-            .padding()
         }
     }
 }
