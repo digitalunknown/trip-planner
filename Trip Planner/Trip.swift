@@ -21,7 +21,31 @@ struct Trip: Identifiable, Hashable, Codable {
     var days: [TripDay]
     var coverImageData: Data?
     
-    init(id: UUID = UUID(), name: String, destination: String, startDate: Date, endDate: Date, notes: String = "", imageName: String = "airplane", latitude: Double? = nil, longitude: Double? = nil, mapSpan: Double? = nil, days: [TripDay] = [], coverImageData: Data? = nil) {
+    // Parked Ideas
+    var showParkedIdeas: Bool
+    var parkedIdeas: [EventItem]
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, destination, startDate, endDate, notes, imageName, latitude, longitude, mapSpan, days, coverImageData
+        case showParkedIdeas, parkedIdeas
+    }
+    
+    init(
+        id: UUID = UUID(),
+        name: String,
+        destination: String,
+        startDate: Date,
+        endDate: Date,
+        notes: String = "",
+        imageName: String = "airplane",
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        mapSpan: Double? = nil,
+        days: [TripDay] = [],
+        coverImageData: Data? = nil,
+        showParkedIdeas: Bool = false,
+        parkedIdeas: [EventItem] = []
+    ) {
         self.id = id
         self.name = name
         self.destination = destination
@@ -34,6 +58,44 @@ struct Trip: Identifiable, Hashable, Codable {
         self.mapSpan = mapSpan
         self.days = days
         self.coverImageData = coverImageData
+        self.showParkedIdeas = showParkedIdeas
+        self.parkedIdeas = parkedIdeas
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        destination = try c.decode(String.self, forKey: .destination)
+        startDate = try c.decode(Date.self, forKey: .startDate)
+        endDate = try c.decode(Date.self, forKey: .endDate)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        imageName = try c.decodeIfPresent(String.self, forKey: .imageName) ?? "airplane"
+        latitude = try c.decodeIfPresent(Double.self, forKey: .latitude)
+        longitude = try c.decodeIfPresent(Double.self, forKey: .longitude)
+        mapSpan = try c.decodeIfPresent(Double.self, forKey: .mapSpan)
+        days = try c.decodeIfPresent([TripDay].self, forKey: .days) ?? []
+        coverImageData = try c.decodeIfPresent(Data.self, forKey: .coverImageData)
+        showParkedIdeas = try c.decodeIfPresent(Bool.self, forKey: .showParkedIdeas) ?? false
+        parkedIdeas = try c.decodeIfPresent([EventItem].self, forKey: .parkedIdeas) ?? []
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(destination, forKey: .destination)
+        try c.encode(startDate, forKey: .startDate)
+        try c.encode(endDate, forKey: .endDate)
+        try c.encode(notes, forKey: .notes)
+        try c.encode(imageName, forKey: .imageName)
+        try c.encode(latitude, forKey: .latitude)
+        try c.encode(longitude, forKey: .longitude)
+        try c.encode(mapSpan, forKey: .mapSpan)
+        try c.encode(days, forKey: .days)
+        try c.encode(coverImageData, forKey: .coverImageData)
+        try c.encode(showParkedIdeas, forKey: .showParkedIdeas)
+        try c.encode(parkedIdeas, forKey: .parkedIdeas)
     }
     
     var formattedDateRange: String {

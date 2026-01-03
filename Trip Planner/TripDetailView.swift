@@ -44,6 +44,12 @@ extension View {
     }
 }
 
+struct DayOption: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let isParkedIdeas: Bool
+}
+
 struct TripDetailView: View {
     @Binding var trip: Trip
     @Environment(\.dismiss) private var dismiss
@@ -64,14 +70,15 @@ struct TripDetailView: View {
     @State private var newEventPhoto: UIImage?
     @State private var selectedDayID: UUID?
     @State private var editingEvent: EventItem?
-    @State private var selectedDayIDsForNewEvent: Set<UUID> = []
-    @State private var mapRegion: MKCoordinateRegion
+    @State private var mapPosition: MapCameraPosition
     @State private var showMap = false
     
     @State private var isPresentingReminder = false
     @State private var newReminderText: String = ""
     @State private var editingReminder: ReminderItem?
-    @State private var selectedDayIDsForNewReminder: Set<UUID> = []
+    
+    // Parked Ideas
+    @State private var parkedIdeas: [EventItem] = []
     
     @State private var isPresentingChecklist = false
     @State private var editingChecklist: ChecklistItem?
@@ -109,6 +116,16 @@ struct TripDetailView: View {
     @State private var markersOpacity: Double = 1.0
     @State private var pendingMarkerTransition: DispatchWorkItem?
     
+    private static let parkedIdeasColumnID = UUID(uuidString: "00000000-0000-0000-0000-000000000999")!
+    
+    private var dayOptions: [DayOption] {
+        var opts = tripDays.map { DayOption(id: $0.id, title: $0.displayTitle, isParkedIdeas: false) }
+        if trip.showParkedIdeas {
+            opts.append(DayOption(id: Self.parkedIdeasColumnID, title: "Parked Ideas", isParkedIdeas: true))
+        }
+        return opts
+    }
+    
     init(trip: Binding<Trip>) {
         self._trip = trip
         // Initialize map region directly from trip data to avoid jump
@@ -126,12 +143,12 @@ struct TripDetailView: View {
                 span: MKCoordinateSpan(latitudeDelta: 120, longitudeDelta: 120)
             )
         }
-        self._mapRegion = State(initialValue: initialRegion)
+        self._mapPosition = State(initialValue: .region(initialRegion))
     }
     
     var eventAnnotations: [EventAnnotation] {
-        tripDays.flatMap { day in
-            day.events.compactMap { event in
+        let dayAnnotations = tripDays.flatMap { day in
+            day.events.compactMap { event -> EventAnnotation? in
                 // No location text or missing coords => no map item
                 guard !event.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                       let lat = event.latitude,
@@ -145,6 +162,21 @@ struct TripDetailView: View {
                 )
             }
         }
+        
+        let parkedAnnotations: [EventAnnotation] = trip.showParkedIdeas ? parkedIdeas.compactMap { event -> EventAnnotation? in
+            guard !event.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  let lat = event.latitude,
+                  let lon = event.longitude else { return nil }
+            return EventAnnotation(
+                id: event.id,
+                dayID: Self.parkedIdeasColumnID,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                event: event,
+                color: event.accentColor
+            )
+        } : []
+        
+        return dayAnnotations + parkedAnnotations
     }
     
     var appropriateMapRegion: MKCoordinateRegion {
@@ -220,31 +252,39 @@ struct TripDetailView: View {
         isEdgeSwipingBack ? [] : .all
     }
     
+    private func setMapRegion(_ region: MKCoordinateRegion, animated: Bool = false, duration: Double = 0.25) {
+        if animated {
+            withAnimation(.easeInOut(duration: duration)) {
+                mapPosition = .region(region)
+            }
+        } else {
+            mapPosition = .region(region)
+        }
+    }
+    
     private var mapLayer: some View {
-        Map(
-            coordinateRegion: $mapRegion,
-            interactionModes: mapModes,
-            annotationItems: visibleAnnotations
-        ) { annotation in
-            MapAnnotation(coordinate: annotation.coordinate) {
-                Button {
-                    openEventFromMarker(annotation.event)
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(annotation.color)
-                            .frame(width: 36, height: 36)
-                            .overlay(
-                                Circle()
-                                    .stroke(.white.opacity(0.9), lineWidth: 1.5)
-                            )
-                        Image(systemName: annotation.event.icon)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
+        Map(position: $mapPosition, interactionModes: mapModes) {
+            ForEach(visibleAnnotations) { annotation in
+                Annotation("", coordinate: annotation.coordinate, anchor: .center) {
+                    Button {
+                        openEventFromMarker(annotation.event)
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(annotation.color)
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Circle()
+                                        .stroke(.white.opacity(0.9), lineWidth: 1.5)
+                                )
+                            Image(systemName: annotation.event.icon)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
-                    .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                    .opacity(markersOpacity)
                 }
-                .opacity(markersOpacity)
             }
         }
         .opacity(showMap ? 1 : 0)
@@ -340,8 +380,13 @@ struct TripDetailView: View {
             
             Menu {
                 Button {
-                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    if let id = selectedDayID { selectedDayIDsForNewEvent = [id] }
+                    let focusedIsParked = trip.showParkedIdeas && focusedDayID == Self.parkedIdeasColumnID
+                    if focusedIsParked {
+                        selectedDayID = Self.parkedIdeasColumnID
+                    } else {
+                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    }
                     prepareNewEventDefaults()
                     isPresentingAdd = true
                 } label: {
@@ -349,7 +394,8 @@ struct TripDetailView: View {
                 }
                 
                 Button {
-                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     prepareNewFlightDefaults()
                     isPresentingFlight = true
                 } label: {
@@ -357,17 +403,18 @@ struct TripDetailView: View {
                 }
                 
                 Button {
-                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     newReminderText = ""
                     editingReminder = nil
-                    if let id = selectedDayID { selectedDayIDsForNewReminder = [id] }
                     isPresentingReminder = true
                 } label: {
                     Label("Reminder", systemImage: "pin.fill")
                 }
                 
                 Button {
-                    selectedDayID = focusedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     checklistTitle = ""
                     checklistDraftItems = []
                     editingChecklist = nil
@@ -413,6 +460,7 @@ struct TripDetailView: View {
                     startDate: $trip.startDate,
                     endDate: $trip.endDate,
                     coverImageData: $trip.coverImageData,
+                    showParkedIdeas: $trip.showParkedIdeas,
                     onApply: updateTripDaysForDates
                 )
                 .tint(.primary)
@@ -432,8 +480,7 @@ struct TripDetailView: View {
                     endTime: $newEventEnd,
                     photo: $newEventPhoto,
                     selectedDayID: $selectedDayID,
-                    selectedDayIDs: $selectedDayIDsForNewEvent,
-                    days: tripDays,
+                    dayOptions: dayOptions,
                     tripLocationRegion: eventSheetTripRegion,
                     onAdd: addNewEvent,
                     onDelete: deleteCurrentEvent,
@@ -446,8 +493,7 @@ struct TripDetailView: View {
                 AddReminderSheet(
                     reminderText: $newReminderText,
                     selectedDayID: $selectedDayID,
-                    selectedDayIDs: $selectedDayIDsForNewReminder,
-                    days: tripDays,
+                    dayOptions: dayOptions,
                     isEditing: editingReminder != nil,
                     onAdd: addReminder
                 )
@@ -459,7 +505,7 @@ struct TripDetailView: View {
                     title: $checklistTitle,
                     items: $checklistDraftItems,
                     selectedDayID: $selectedDayID,
-                    days: tripDays,
+                    dayOptions: dayOptions,
                     isEditing: editingChecklist != nil,
                     onSave: saveChecklist
                 )
@@ -491,7 +537,7 @@ struct TripDetailView: View {
                     startTime: $flightStartTime,
                     endTime: $flightEndTime,
                     selectedDayID: $selectedDayID,
-                    days: tripDays,
+                    dayOptions: dayOptions,
                     isEditing: editingFlight != nil,
                     onSave: saveFlight,
                     onDelete: deleteHandler
@@ -529,7 +575,7 @@ struct TripDetailView: View {
         .onAppear {
             initializeTripDays()
             // Prefer fitting markers if any exist.
-            mapRegion = appropriateMapRegion
+            setMapRegion(appropriateMapRegion, animated: false)
             // Initial load: show markers across all days.
             displayedDayIDForMarkers = nil
             markersOpacity = 1.0
@@ -543,13 +589,13 @@ struct TripDetailView: View {
         }
         .onChange(of: trip.latitude) { _, _ in
             // Avoid animating region changes during initial load; Map’s own update is smoother.
-            mapRegion = appropriateMapRegion
+            setMapRegion(appropriateMapRegion, animated: false)
         }
         .onChange(of: trip.longitude) { _, _ in
-            mapRegion = appropriateMapRegion
+            setMapRegion(appropriateMapRegion, animated: false)
         }
         .onChange(of: trip.mapSpan) { _, _ in
-            mapRegion = appropriateMapRegion
+            setMapRegion(appropriateMapRegion, animated: false)
         }
         .onChange(of: focusedDayID) { _, newValue in
             guard hasUserScrolledDays else { return }
@@ -575,15 +621,23 @@ struct TripDetailView: View {
             
             // Update map region.
             if let dayID = targetDayID, let region = regionFitting(annotations(for: dayID)) {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    mapRegion = region
-                }
+                setMapRegion(region, animated: true, duration: 0.25)
             } else {
-                mapRegion = appropriateMapRegion
+                setMapRegion(appropriateMapRegion, animated: false)
             }
         }
         .onChange(of: tripDays) { _, newDays in
             trip.days = newDays
+        }
+        .onChange(of: parkedIdeas) { _, newValue in
+            trip.parkedIdeas = newValue
+        }
+        .onChange(of: trip.showParkedIdeas) { _, newValue in
+            if !newValue, focusedDayID == Self.parkedIdeasColumnID {
+                focusedDayID = nil
+                displayedDayIDForMarkers = nil
+                markersOpacity = 1.0
+            }
         }
     }
 }
@@ -618,15 +672,26 @@ private extension TripDetailView {
                             onTap: { event in startEditing(event: event, day: day) },
                             onEdit: { event in startEditing(event: event, day: day) },
                             onDelete: { event in deleteEvent(event) },
+                            onMoveEventLeft: { event in moveEvent(event, from: day, direction: -1) },
+                            onMoveEventRight: { event in moveEvent(event, from: day, direction: 1) },
+                            onMoveEventToParked: trip.showParkedIdeas ? { event in moveEventToParked(event, from: day) } : nil,
                             onTapReminder: { reminder in startEditingReminder(reminder, day: day) },
                             onDeleteReminder: { reminder in deleteReminder(reminder) },
+                            onMoveReminderLeft: { reminder in moveReminder(reminder, from: day, direction: -1) },
+                            onMoveReminderRight: { reminder in moveReminder(reminder, from: day, direction: 1) },
+                            onMoveReminderToParked: trip.showParkedIdeas ? { reminder in moveReminderToParked(reminder, from: day) } : nil,
                             onTapChecklist: { checklist in startEditingChecklist(checklist, day: day) },
                             onDeleteChecklist: { checklist in deleteChecklist(checklist) },
+                            onMoveChecklistLeft: { checklist in moveChecklist(checklist, from: day, direction: -1) },
+                            onMoveChecklistRight: { checklist in moveChecklist(checklist, from: day, direction: 1) },
+                            onMoveChecklistToParked: trip.showParkedIdeas ? { checklist in moveChecklistToParked(checklist, from: day) } : nil,
                             onTapFlight: { flight in startEditingFlight(flight, day: day) },
                             onDeleteFlight: { flight in deleteFlight(flight) },
+                            onMoveFlightLeft: { flight in moveFlight(flight, from: day, direction: -1) },
+                            onMoveFlightRight: { flight in moveFlight(flight, from: day, direction: 1) },
+                            onMoveFlightToParked: trip.showParkedIdeas ? { flight in moveFlightToParked(flight, from: day) } : nil,
                             onAddEvent: {
                                 selectedDayID = day.id
-                                selectedDayIDsForNewEvent = [day.id]
                                 prepareNewEventDefaults()
                                 isPresentingAdd = true
                             },
@@ -638,6 +703,32 @@ private extension TripDetailView {
                                     .preference(
                                         key: DayColumnFramesPreferenceKey.self,
                                         value: [day.id: proxy.frame(in: .named("dayScroll"))]
+                                    )
+                            }
+                        )
+                    }
+                    
+                    if trip.showParkedIdeas {
+                        ParkedIdeasColumn(
+                            items: parkedIdeas,
+                            columnWidth: columnWidth,
+                            columnHeight: geo.size.height - 24,
+                            onTap: { event in startEditingParkedIdea(event) },
+                            onDelete: { event in deleteEvent(event) },
+                            onAdd: {
+                                editingEvent = nil
+                                selectedDayID = Self.parkedIdeasColumnID
+                                prepareNewEventDefaults()
+                                isPresentingAdd = true
+                            },
+                            onMoveLeftToLastDay: (tripDays.count > 0) ? { event in moveParkedIdeaLeftToLastDay(event) } : nil
+                        )
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .preference(
+                                        key: DayColumnFramesPreferenceKey.self,
+                                        value: [Self.parkedIdeasColumnID: proxy.frame(in: .named("dayScroll"))]
                                     )
                             }
                         )
@@ -722,6 +813,7 @@ private extension TripDetailView {
     func initializeTripDays() {
         // Always normalize against current trip start/end to avoid stale ordering/labels.
         tripDays = trip.days
+        parkedIdeas = trip.parkedIdeas
         updateTripDaysForDates()
     }
 
@@ -800,9 +892,6 @@ private extension TripDetailView {
         if selectedDayID == nil {
             selectedDayID = tripDays.first?.id
         }
-        if let id = selectedDayID {
-            selectedDayIDsForNewEvent = [id]
-        }
         editingEvent = nil
         newEventTitle = ""
         newEventLocation = ""
@@ -819,9 +908,6 @@ private extension TripDetailView {
     }
 
     func addNewEvent() {
-        guard let dayID = selectedDayID,
-              let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
-
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short
@@ -845,54 +931,59 @@ private extension TripDetailView {
                 accent: newEventAccent,
                 photoData: photoData
             )
-
-            // Idempotent update: remove existing instances (by id) then re-insert once.
+            
+            // Remove existing instances (by id) across days and parked ideas, then re-insert once.
             for idx in tripDays.indices {
                 tripDays[idx].events.removeAll { $0.id == editingEvent.id }
             }
+            parkedIdeas.removeAll { $0.id == editingEvent.id }
+
+            if selectedDayID == Self.parkedIdeasColumnID {
+                parkedIdeas.insert(updated, at: 0)
+                self.editingEvent = updated
+                return
+            }
+            
+            guard let dayID = selectedDayID,
+                  let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
             tripDays[dayIndex].events.append(updated)
             self.editingEvent = updated
             return
         }
-
-        // Create (possibly across multiple days).
-        let targetDayIDs: [UUID] = {
-            let ids = selectedDayIDsForNewEvent
-            if ids.isEmpty { return [dayID] }
-            return Array(ids)
-        }()
         
-        for targetID in targetDayIDs {
-            guard let idx = tripDays.firstIndex(where: { $0.id == targetID }) else { continue }
-            let event = EventItem(
-                id: UUID(),
-                title: newEventTitle.isEmpty ? "Untitled" : newEventTitle,
-                description: newEventDescription,
-                time: timeText,
-                location: newEventLocation,
-                latitude: newEventLatitude,
-                longitude: newEventLongitude,
-                icon: newEventIcon,
-                accent: newEventAccent,
-                photoData: photoData
-            )
+        // Create (single destination).
+        guard let targetID = selectedDayID else { return }
+        
+        let event = EventItem(
+            id: UUID(),
+            title: newEventTitle.isEmpty ? "Untitled" : newEventTitle,
+            description: newEventDescription,
+            time: timeText,
+            location: newEventLocation,
+            latitude: newEventLatitude,
+            longitude: newEventLongitude,
+            icon: newEventIcon,
+            accent: newEventAccent,
+            photoData: photoData
+        )
+        
+        if targetID == Self.parkedIdeasColumnID {
+            parkedIdeas.insert(event, at: 0)
+        } else if let idx = tripDays.firstIndex(where: { $0.id == targetID }) {
             tripDays[idx].events.append(event)
         }
         
         if let lat = newEventLatitude, let lon = newEventLongitude {
             withAnimation {
-                mapRegion = MKCoordinateRegion(
+                setMapRegion(MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
                     span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                )
+                ), animated: false)
             }
         }
     }
     
     func addReminder() {
-        guard let dayID = selectedDayID,
-              let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
-        
         let trimmed = newReminderText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
@@ -902,26 +993,55 @@ private extension TripDetailView {
                 tripDays[idx].reminders.removeAll { $0.id == editingReminder.id }
             }
             let updated = ReminderItem(id: editingReminder.id, text: trimmed, createdAt: editingReminder.createdAt)
+            
+            if selectedDayID == Self.parkedIdeasColumnID {
+                // Convert to parked idea
+                let parked = EventItem(
+                    id: UUID(),
+                    title: trimmed,
+                    description: "",
+                    time: "",
+                    location: "",
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "pin.fill",
+                    accent: .sand,
+                    photoData: nil
+                )
+                parkedIdeas.insert(parked, at: 0)
+                self.editingReminder = updated
+                return
+            }
+            
+            guard let dayID = selectedDayID,
+                  let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
             tripDays[dayIndex].reminders.insert(updated, at: 0)
             self.editingReminder = updated
         } else {
-            let targetDayIDs: [UUID] = {
-                let ids = selectedDayIDsForNewReminder
-                if ids.isEmpty { return [dayID] }
-                return Array(ids)
-            }()
-            for targetID in targetDayIDs {
-                guard let idx = tripDays.firstIndex(where: { $0.id == targetID }) else { continue }
-                let reminder = ReminderItem(id: UUID(), text: trimmed, createdAt: Date())
-                tripDays[idx].reminders.insert(reminder, at: 0)
+            guard let targetID = selectedDayID else { return }
+            if targetID == Self.parkedIdeasColumnID {
+                let parked = EventItem(
+                    id: UUID(),
+                    title: trimmed,
+                    description: "",
+                    time: "",
+                    location: "",
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "pin.fill",
+                    accent: .sand,
+                    photoData: nil
+                )
+                parkedIdeas.insert(parked, at: 0)
+                return
             }
+            guard let idx = tripDays.firstIndex(where: { $0.id == targetID }) else { return }
+            let reminder = ReminderItem(id: UUID(), text: trimmed, createdAt: Date())
+            tripDays[idx].reminders.insert(reminder, at: 0)
         }
     }
     
     func saveChecklist() {
-        guard let dayID = selectedDayID,
-              let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
-        
         let trimmedTitle = checklistTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedItems = checklistDraftItems
             .map { ChecklistEntry(id: $0.id, text: $0.text.trimmingCharacters(in: .whitespacesAndNewlines), isDone: $0.isDone) }
@@ -940,6 +1060,28 @@ private extension TripDetailView {
                 items: normalizedItems,
                 createdAt: editingChecklist.createdAt
             )
+            
+            if selectedDayID == Self.parkedIdeasColumnID {
+                let preview = updated.items.prefix(8).map { ($0.isDone ? "✓ " : "• ") + $0.text }
+                let parked = EventItem(
+                    id: UUID(),
+                    title: updated.title,
+                    description: preview.joined(separator: "\n"),
+                    time: "",
+                    location: "",
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "checklist.checked",
+                    accent: .gold,
+                    photoData: nil
+                )
+                parkedIdeas.insert(parked, at: 0)
+                self.editingChecklist = updated
+                return
+            }
+            
+            guard let dayID = selectedDayID,
+                  let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
             tripDays[dayIndex].checklists.insert(updated, at: 0)
             self.editingChecklist = updated
         } else {
@@ -949,6 +1091,27 @@ private extension TripDetailView {
                 items: normalizedItems,
                 createdAt: Date()
             )
+            
+            if selectedDayID == Self.parkedIdeasColumnID {
+                let preview = checklist.items.prefix(8).map { ($0.isDone ? "✓ " : "• ") + $0.text }
+                let parked = EventItem(
+                    id: UUID(),
+                    title: checklist.title,
+                    description: preview.joined(separator: "\n"),
+                    time: "",
+                    location: "",
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "checklist.checked",
+                    accent: .gold,
+                    photoData: nil
+                )
+                parkedIdeas.insert(parked, at: 0)
+                return
+            }
+            
+            guard let dayID = selectedDayID,
+                  let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
             tripDays[dayIndex].checklists.insert(checklist, at: 0)
         }
     }
@@ -1022,11 +1185,56 @@ private extension TripDetailView {
         
         // Move map to event location if available
         if let lat = event.latitude, let lon = event.longitude {
-            withAnimation(.easeInOut(duration: 0.5)) {
-                mapRegion = MKCoordinateRegion(
+            setMapRegion(
+                MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
                     span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                )
+                ),
+                animated: true,
+                duration: 0.5
+            )
+        }
+        
+        isPresentingAdd = true
+    }
+    
+    func startEditingParkedIdea(_ event: EventItem) {
+        editingEvent = event
+        selectedDayID = Self.parkedIdeasColumnID
+        newEventTitle = event.title
+        newEventLocation = event.location
+        newEventLatitude = event.latitude
+        newEventLongitude = event.longitude
+        newEventDescription = event.description
+        newEventIcon = event.icon
+        newEventAccent = event.accent
+        
+        if let photoData = event.photoData {
+            newEventPhoto = UIImage(data: photoData)
+        } else {
+            newEventPhoto = nil
+        }
+        
+        // Parse either "start – end" or "start" (no end time)
+        let parts = event.time.split(separator: "–").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        
+        let short = DateFormatter()
+        short.dateStyle = .none
+        short.timeStyle = .short
+        
+        let hhmm = DateFormatter()
+        hhmm.dateFormat = "HH:mm"
+        
+        func parse(_ s: String) -> Date? {
+            short.date(from: s) ?? hhmm.date(from: s)
+        }
+        
+        if let start = parts.first.flatMap({ parse($0) }) {
+            newEventStart = start
+            if parts.count >= 2, let end = parse(parts[1]), end > start {
+                newEventEnd = end
+            } else {
+                newEventEnd = start
             }
         }
         
@@ -1034,12 +1242,22 @@ private extension TripDetailView {
     }
     
     func openEventFromMarker(_ event: EventItem) {
-        guard let day = tripDays.first(where: { $0.events.contains(event) }) else { return }
-        startEditing(event: event, day: day)
+        if let day = tripDays.first(where: { $0.events.contains(event) }) {
+            startEditing(event: event, day: day)
+            return
+        }
+        if parkedIdeas.contains(event) {
+            startEditingParkedIdea(event)
+        }
     }
     
     func deleteCurrentEvent() {
         guard let event = editingEvent else { return }
+        if parkedIdeas.contains(where: { $0.id == event.id }) {
+            parkedIdeas.removeAll { $0.id == event.id }
+            editingEvent = nil
+            return
+        }
         
         for dayIndex in tripDays.indices {
             if let eventIndex = tripDays[dayIndex].events.firstIndex(where: { $0.id == event.id }) {
@@ -1052,6 +1270,10 @@ private extension TripDetailView {
     }
     
     func deleteEvent(_ event: EventItem) {
+        if parkedIdeas.contains(event) {
+            parkedIdeas.removeAll { $0.id == event.id }
+            return
+        }
         for dayIndex in tripDays.indices {
             if let eventIndex = tripDays[dayIndex].events.firstIndex(where: { $0.id == event.id }) {
                 tripDays[dayIndex].events.remove(at: eventIndex)
@@ -1088,9 +1310,6 @@ private extension TripDetailView {
     }
 
     func saveFlight() {
-        guard let dayID = selectedDayID,
-              let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
-
         if let editingFlight {
             let updated = FlightItem(
                 id: editingFlight.id,
@@ -1114,11 +1333,45 @@ private extension TripDetailView {
                 startTime: flightStartTime,
                 endTime: flightEndTime
             )
-            if let idx = tripDays[dayIndex].flights.firstIndex(where: { $0.id == editingFlight.id }) {
-                tripDays[dayIndex].flights[idx] = updated
-            } else {
-                tripDays[dayIndex].flights.insert(updated, at: 0)
+            
+            // Remove existing instance (by id) across all days.
+            for idx in tripDays.indices {
+                tripDays[idx].flights.removeAll { $0.id == editingFlight.id }
             }
+            
+            if selectedDayID == Self.parkedIdeasColumnID {
+                // Convert to parked idea
+                let f = DateFormatter()
+                f.dateStyle = .none
+                f.timeStyle = .short
+                let dep = f.string(from: updated.startTime)
+                let arr = updated.hasEndTime ? f.string(from: updated.endTime) : ""
+                let time = arr.isEmpty ? dep : "\(dep) – \(arr)"
+                
+                let from = updated.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let to = updated.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let loc = (!from.isEmpty && !to.isEmpty) ? "\(from) → \(to)" : ""
+                let title = updated.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Flight" : updated.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                
+                let parked = EventItem(
+                    id: UUID(),
+                    title: title,
+                    description: updated.notes,
+                    time: time,
+                    location: loc,
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "airplane",
+                    accent: updated.accent,
+                    photoData: nil
+                )
+                parkedIdeas.insert(parked, at: 0)
+                return
+            }
+            
+            guard let dayID = selectedDayID,
+                  let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
+            tripDays[dayIndex].flights.insert(updated, at: 0)
         } else {
             let flight = FlightItem(
                 fromName: flightFromName,
@@ -1141,6 +1394,39 @@ private extension TripDetailView {
                 startTime: flightStartTime,
                 endTime: flightEndTime
             )
+            
+            if selectedDayID == Self.parkedIdeasColumnID {
+                // Convert to parked idea
+                let f = DateFormatter()
+                f.dateStyle = .none
+                f.timeStyle = .short
+                let dep = f.string(from: flight.startTime)
+                let arr = flight.hasEndTime ? f.string(from: flight.endTime) : ""
+                let time = arr.isEmpty ? dep : "\(dep) – \(arr)"
+                
+                let from = flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let to = flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let loc = (!from.isEmpty && !to.isEmpty) ? "\(from) → \(to)" : ""
+                let title = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Flight" : flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                
+                let parked = EventItem(
+                    id: UUID(),
+                    title: title,
+                    description: flight.notes,
+                    time: time,
+                    location: loc,
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "airplane",
+                    accent: flight.accent,
+                    photoData: nil
+                )
+                parkedIdeas.insert(parked, at: 0)
+                return
+            }
+            
+            guard let dayID = selectedDayID,
+                  let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
             tripDays[dayIndex].flights.insert(flight, at: 0)
         }
     }
@@ -1184,6 +1470,132 @@ private extension TripDetailView {
         deleteFlight(editingFlight)
         self.editingFlight = nil
     }
+
+    // MARK: - Quick move left/right + move to Parked Ideas
+    
+    func moveEvent(_ event: EventItem, from day: TripDay, direction: Int) {
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        let toIndex = fromIndex + direction
+        guard tripDays.indices.contains(toIndex) else { return }
+        
+        tripDays[fromIndex].events.removeAll { $0.id == event.id }
+        tripDays[toIndex].events.append(event)
+    }
+    
+    func moveReminder(_ reminder: ReminderItem, from day: TripDay, direction: Int) {
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        let toIndex = fromIndex + direction
+        guard tripDays.indices.contains(toIndex) else { return }
+        
+        tripDays[fromIndex].reminders.removeAll { $0.id == reminder.id }
+        tripDays[toIndex].reminders.insert(reminder, at: 0)
+    }
+    
+    func moveChecklist(_ checklist: ChecklistItem, from day: TripDay, direction: Int) {
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        let toIndex = fromIndex + direction
+        guard tripDays.indices.contains(toIndex) else { return }
+        
+        tripDays[fromIndex].checklists.removeAll { $0.id == checklist.id }
+        tripDays[toIndex].checklists.insert(checklist, at: 0)
+    }
+    
+    func moveFlight(_ flight: FlightItem, from day: TripDay, direction: Int) {
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        let toIndex = fromIndex + direction
+        guard tripDays.indices.contains(toIndex) else { return }
+        
+        tripDays[fromIndex].flights.removeAll { $0.id == flight.id }
+        tripDays[toIndex].flights.insert(flight, at: 0)
+    }
+    
+    func moveEventToParked(_ event: EventItem, from day: TripDay) {
+        guard trip.showParkedIdeas else { return }
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        tripDays[fromIndex].events.removeAll { $0.id == event.id }
+        parkedIdeas.insert(event, at: 0)
+    }
+    
+    func moveReminderToParked(_ reminder: ReminderItem, from day: TripDay) {
+        guard trip.showParkedIdeas else { return }
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        tripDays[fromIndex].reminders.removeAll { $0.id == reminder.id }
+        
+        let parked = EventItem(
+            id: UUID(),
+            title: reminder.text,
+            description: "",
+            time: "",
+            location: "",
+            latitude: nil,
+            longitude: nil,
+            icon: "pin.fill",
+            accent: .sand,
+            photoData: nil
+        )
+        parkedIdeas.insert(parked, at: 0)
+    }
+    
+    func moveChecklistToParked(_ checklist: ChecklistItem, from day: TripDay) {
+        guard trip.showParkedIdeas else { return }
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        tripDays[fromIndex].checklists.removeAll { $0.id == checklist.id }
+        
+        let preview = checklist.items.prefix(8).map { ($0.isDone ? "✓ " : "• ") + $0.text }
+        let parked = EventItem(
+            id: UUID(),
+            title: checklist.title,
+            description: preview.joined(separator: "\n"),
+            time: "",
+            location: "",
+            latitude: nil,
+            longitude: nil,
+            icon: "checklist.checked",
+            accent: .gold,
+            photoData: nil
+        )
+        parkedIdeas.insert(parked, at: 0)
+    }
+    
+    func moveFlightToParked(_ flight: FlightItem, from day: TripDay) {
+        guard trip.showParkedIdeas else { return }
+        guard let fromIndex = tripDays.firstIndex(where: { $0.id == day.id }) else { return }
+        tripDays[fromIndex].flights.removeAll { $0.id == flight.id }
+        
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        let dep = f.string(from: flight.startTime)
+        let arr = flight.hasEndTime ? f.string(from: flight.endTime) : ""
+        let time = arr.isEmpty ? dep : "\(dep) – \(arr)"
+        
+        let from = flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let to = flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let loc = (!from.isEmpty && !to.isEmpty) ? "\(from) → \(to)" : ""
+        let title = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Flight" : flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        
+        let parked = EventItem(
+            id: UUID(),
+            title: title,
+            description: flight.notes,
+            time: time,
+            location: loc,
+            latitude: nil,
+            longitude: nil,
+            icon: "airplane",
+            accent: flight.accent,
+            photoData: nil
+        )
+        parkedIdeas.insert(parked, at: 0)
+    }
+    
+    func moveParkedIdeaLeftToLastDay(_ event: EventItem) {
+        guard let last = tripDays.last else { return }
+        parkedIdeas.removeAll { $0.id == event.id }
+        if let idx = tripDays.firstIndex(where: { $0.id == last.id }) {
+            tripDays[idx].events.append(event)
+        }
+    }
 }
 
 // MARK: - Supporting Views
@@ -1217,12 +1629,24 @@ struct DayColumn: View {
     let onTap: (EventItem) -> Void
     let onEdit: (EventItem) -> Void
     let onDelete: (EventItem) -> Void
+    let onMoveEventLeft: (EventItem) -> Void
+    let onMoveEventRight: (EventItem) -> Void
+    let onMoveEventToParked: ((EventItem) -> Void)?
     let onTapReminder: (ReminderItem) -> Void
     let onDeleteReminder: (ReminderItem) -> Void
+    let onMoveReminderLeft: (ReminderItem) -> Void
+    let onMoveReminderRight: (ReminderItem) -> Void
+    let onMoveReminderToParked: ((ReminderItem) -> Void)?
     let onTapChecklist: (ChecklistItem) -> Void
     let onDeleteChecklist: (ChecklistItem) -> Void
+    let onMoveChecklistLeft: (ChecklistItem) -> Void
+    let onMoveChecklistRight: (ChecklistItem) -> Void
+    let onMoveChecklistToParked: ((ChecklistItem) -> Void)?
     let onTapFlight: (FlightItem) -> Void
     let onDeleteFlight: (FlightItem) -> Void
+    let onMoveFlightLeft: (FlightItem) -> Void
+    let onMoveFlightRight: (FlightItem) -> Void
+    let onMoveFlightToParked: ((FlightItem) -> Void)?
     let onAddEvent: () -> Void
     let showEmptyPlaceholder: Bool
     
@@ -1315,16 +1739,39 @@ struct DayColumn: View {
                                 ReminderCard(text: reminder.text)
                                     .onTapGesture { onTapReminder(reminder) }
                                     .contextMenu {
+                                        if day.order > 1 {
+                                            Button {
+                                                onMoveReminderLeft(reminder)
+                                            } label: {
+                                                Label("Move Left", systemImage: "arrow.left")
+                                            }
+                                        }
+                                        if day.order < totalDays {
+                                            Button {
+                                                onMoveReminderRight(reminder)
+                                            } label: {
+                                                Label("Move Right", systemImage: "arrow.right")
+                                            }
+                                        }
+                                        if let moveToParked = onMoveReminderToParked {
+                                            Button {
+                                                moveToParked(reminder)
+                                            } label: {
+                                                Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                            }
+                                        }
+                                        Divider()
+                                        
                                         Button {
                                             onTapReminder(reminder)
                                         } label: {
-                                            Label("Edit", systemImage: "pencil")
+                                            Label("Edit Reminder", systemImage: "pencil")
                                         }
                                         
                                         Button(role: .destructive) {
                                             onDeleteReminder(reminder)
                                         } label: {
-                                            Label("Delete", systemImage: "trash")
+                                            Label("Delete Reminder", systemImage: "trash")
                                         }
                                     }
                             }
@@ -1337,16 +1784,39 @@ struct DayColumn: View {
                                 ChecklistCard(checklist: checklist)
                                     .onTapGesture { onTapChecklist(checklist) }
                                     .contextMenu {
+                                        if day.order > 1 {
+                                            Button {
+                                                onMoveChecklistLeft(checklist)
+                                            } label: {
+                                                Label("Move Left", systemImage: "arrow.left")
+                                            }
+                                        }
+                                        if day.order < totalDays {
+                                            Button {
+                                                onMoveChecklistRight(checklist)
+                                            } label: {
+                                                Label("Move Right", systemImage: "arrow.right")
+                                            }
+                                        }
+                                        if let moveToParked = onMoveChecklistToParked {
+                                            Button {
+                                                moveToParked(checklist)
+                                            } label: {
+                                                Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                            }
+                                        }
+                                        Divider()
+                                        
                                         Button {
                                             onTapChecklist(checklist)
                                         } label: {
-                                            Label("Edit", systemImage: "pencil")
+                                            Label("Edit Checklist", systemImage: "pencil")
                                         }
                                         
                                         Button(role: .destructive) {
                                             onDeleteChecklist(checklist)
                                         } label: {
-                                            Label("Delete", systemImage: "trash")
+                                            Label("Delete Checklist", systemImage: "trash")
                                         }
                                     }
                             }
@@ -1359,32 +1829,78 @@ struct DayColumn: View {
                             FlightCard(flight: flight)
                                 .onTapGesture { onTapFlight(flight) }
                                 .contextMenu {
+                                    if day.order > 1 {
+                                        Button {
+                                            onMoveFlightLeft(flight)
+                                        } label: {
+                                            Label("Move Left", systemImage: "arrow.left")
+                                        }
+                                    }
+                                    if day.order < totalDays {
+                                        Button {
+                                            onMoveFlightRight(flight)
+                                        } label: {
+                                            Label("Move Right", systemImage: "arrow.right")
+                                        }
+                                    }
+                                    if let moveToParked = onMoveFlightToParked {
+                                        Button {
+                                            moveToParked(flight)
+                                        } label: {
+                                            Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                        }
+                                    }
+                                    Divider()
+                                    
                                     Button {
                                         onTapFlight(flight)
                                     } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                        Label("Edit Flight", systemImage: "pencil")
                                     }
                                     
                                     Button(role: .destructive) {
                                         onDeleteFlight(flight)
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        Label("Delete Flight", systemImage: "trash")
                                     }
                                 }
                         case .activity(let event):
                             EventCard(event: event)
                                 .onTapGesture { onTap(event) }
                                 .contextMenu {
+                                    if day.order > 1 {
+                                        Button {
+                                            onMoveEventLeft(event)
+                                        } label: {
+                                            Label("Move Left", systemImage: "arrow.left")
+                                        }
+                                    }
+                                    if day.order < totalDays {
+                                        Button {
+                                            onMoveEventRight(event)
+                                        } label: {
+                                            Label("Move Right", systemImage: "arrow.right")
+                                        }
+                                    }
+                                    if let moveToParked = onMoveEventToParked {
+                                        Button {
+                                            moveToParked(event)
+                                        } label: {
+                                            Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                        }
+                                    }
+                                    Divider()
+                                    
                                     Button {
                                         onEdit(event)
                                     } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                        Label("Edit Activity", systemImage: "pencil")
                                     }
                                     
                                     Button(role: .destructive) {
                                         onDelete(event)
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        Label("Delete Activity", systemImage: "trash")
                                     }
                                 }
                         }
@@ -1402,6 +1918,68 @@ struct DayColumn: View {
                 .strokeBorder(Color.white.opacity(0.08))
         }
         .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
+    }
+}
+
+struct ParkedIdeasColumn: View {
+    let items: [EventItem]
+    let columnWidth: CGFloat
+    let columnHeight: CGFloat
+    let onTap: (EventItem) -> Void
+    let onDelete: (EventItem) -> Void
+    let onAdd: () -> Void
+    let onMoveLeftToLastDay: ((EventItem) -> Void)?
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Parked Ideas")
+                    .font(.headline)
+                Text("Not tied to a day")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(items.sorted(by: { $0.startTimeMinutes < $1.startTimeMinutes })) { event in
+                        EventCard(event: event)
+                            .onTapGesture { onTap(event) }
+                            .contextMenu {
+                                if let moveLeft = onMoveLeftToLastDay {
+                                    Button {
+                                        moveLeft(event)
+                                    } label: {
+                                        Label("Move Left", systemImage: "arrow.left")
+                                    }
+                                }
+                                Divider()
+                                Button {
+                                    onTap(event)
+                                } label: {
+                                    Label("Edit Activity", systemImage: "pencil")
+                                }
+                                Button(role: .destructive) {
+                                    onDelete(event)
+                                } label: {
+                                    Label("Delete Activity", systemImage: "trash")
+                                }
+                            }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(width: columnWidth, height: columnHeight)
+        .background(Color(.secondarySystemBackground).opacity(0.7), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
     }
 }
 
@@ -1734,9 +2312,11 @@ struct EventCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                Text(event.time)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if !event.time.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(event.time)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             
             Spacer(minLength: 0)
@@ -1798,6 +2378,7 @@ struct EventDetailView: View {
 
 struct TripSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
     @Binding var name: String
     @Binding var location: String
     @Binding var latitude: Double?
@@ -1806,6 +2387,7 @@ struct TripSettingsSheet: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var coverImageData: Data?
+    @Binding var showParkedIdeas: Bool
     var onApply: () -> Void
     
     @State private var coverImage: UIImage?
@@ -1879,6 +2461,14 @@ struct TripSettingsSheet: View {
                         }
                     }
                 }
+                
+                Section("Options") {
+                    Toggle("Show Parked Ideas", isOn: $showParkedIdeas)
+                        .tint(appAccentColor)
+                    Text("An extra space for ideation")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("Edit Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -1929,8 +2519,7 @@ struct AddEventSheet: View {
     @Binding var endTime: Date
     @Binding var photo: UIImage?
     @Binding var selectedDayID: UUID?
-    @Binding var selectedDayIDs: Set<UUID>
-    let days: [TripDay]
+    let dayOptions: [DayOption]
     let tripLocationRegion: MKCoordinateRegion?
     var onAdd: () -> Void
     var onDelete: (() -> Void)?
@@ -2030,15 +2619,11 @@ struct AddEventSheet: View {
                 }
 
                 Section("Timing") {
-                    if isEditing {
-                        Picker("Day", selection: $selectedDayID) {
-                            ForEach(days) { day in
-                                Text(day.displayTitle)
-                                    .tag(Optional(day.id))
-                            }
+                    Picker("Day", selection: $selectedDayID) {
+                        ForEach(dayOptions) { option in
+                            Text(option.title)
+                                .tag(Optional(option.id))
                         }
-                    } else {
-                        multiDayMenuRow(title: "Days", days: days, selected: $selectedDayIDs)
                     }
                     DatePicker("From", selection: $startTime, displayedComponents: .hourAndMinute)
                     
@@ -2184,59 +2769,13 @@ struct AddEventSheet: View {
             .onChange(of: selectedDayID) { _, _ in if isEditing { onAdd() } }
         }
     }
-    
-    private func multiDayMenuRow(title: String, days: [TripDay], selected: Binding<Set<UUID>>) -> some View {
-        Menu {
-            ForEach(days) { day in
-                let isSelected = selected.wrappedValue.contains(day.id)
-                Button {
-                    var set = selected.wrappedValue
-                    if isSelected {
-                        // Keep at least one day selected.
-                        if set.count > 1 { set.remove(day.id) }
-                    } else {
-                        set.insert(day.id)
-                    }
-                    selected.wrappedValue = set
-                } label: {
-                    HStack {
-                        Text(day.displayTitle)
-                        Spacer()
-                        if isSelected {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            HStack {
-                Text(title)
-                Spacer()
-                Text(multiDaySummary(days: days, selected: selected.wrappedValue))
-                    .foregroundStyle(.secondary)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-    
-    private func multiDaySummary(days: [TripDay], selected: Set<UUID>) -> String {
-        if selected.isEmpty { return "Select days" }
-        if selected.count == days.count { return "All days" }
-        if selected.count == 1, let only = selected.first, let day = days.first(where: { $0.id == only }) {
-            return day.displayTitle
-        }
-        return "\(selected.count) days"
-    }
 }
 
 struct AddReminderSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var reminderText: String
     @Binding var selectedDayID: UUID?
-    @Binding var selectedDayIDs: Set<UUID>
-    let days: [TripDay]
+    let dayOptions: [DayOption]
     var isEditing: Bool = false
     var onAdd: () -> Void
     
@@ -2244,15 +2783,11 @@ struct AddReminderSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    if isEditing {
-                        Picker("Day", selection: $selectedDayID) {
-                            ForEach(days) { day in
-                                Text(day.displayTitle)
-                                    .tag(Optional(day.id))
-                            }
+                    Picker("Day", selection: $selectedDayID) {
+                        ForEach(dayOptions) { option in
+                            Text(option.title)
+                                .tag(Optional(option.id))
                         }
-                    } else {
-                        multiDayMenuRow(title: "Days", days: days, selected: $selectedDayIDs)
                     }
                 }
                 
@@ -2282,8 +2817,7 @@ struct AddReminderSheet: View {
                         systemName: "checkmark",
                         isEnabled: {
                             let textOK = !reminderText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            if isEditing { return textOK && selectedDayID != nil }
-                            return textOK && !selectedDayIDs.isEmpty
+                            return textOK && selectedDayID != nil
                         }()
                     ) {
                         onAdd()
@@ -2292,51 +2826,6 @@ struct AddReminderSheet: View {
                 }
             }
         }
-    }
-    
-    private func multiDayMenuRow(title: String, days: [TripDay], selected: Binding<Set<UUID>>) -> some View {
-        Menu {
-            ForEach(days) { day in
-                let isSelected = selected.wrappedValue.contains(day.id)
-                Button {
-                    var set = selected.wrappedValue
-                    if isSelected {
-                        // Keep at least one day selected.
-                        if set.count > 1 { set.remove(day.id) }
-                    } else {
-                        set.insert(day.id)
-                    }
-                    selected.wrappedValue = set
-                } label: {
-                    HStack {
-                        Text(day.displayTitle)
-                        Spacer()
-                        if isSelected {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            HStack {
-                Text(title)
-                Spacer()
-                Text(multiDaySummary(days: days, selected: selected.wrappedValue))
-                    .foregroundStyle(.secondary)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-    
-    private func multiDaySummary(days: [TripDay], selected: Set<UUID>) -> String {
-        if selected.isEmpty { return "Select days" }
-        if selected.count == days.count { return "All days" }
-        if selected.count == 1, let only = selected.first, let day = days.first(where: { $0.id == only }) {
-            return day.displayTitle
-        }
-        return "\(selected.count) days"
     }
 }
 
@@ -2347,7 +2836,7 @@ struct ChecklistSheet: View {
     @Binding var title: String
     @Binding var items: [ChecklistEntry]
     @Binding var selectedDayID: UUID?
-    let days: [TripDay]
+    let dayOptions: [DayOption]
     var isEditing: Bool = false
     var onSave: () -> Void
     
@@ -2362,9 +2851,9 @@ struct ChecklistSheet: View {
                 Form {
                     Section {
                         Picker("Day", selection: $selectedDayID) {
-                            ForEach(days) { day in
-                                Text(day.displayTitle)
-                                    .tag(Optional(day.id))
+                            ForEach(dayOptions) { option in
+                                Text(option.title)
+                                    .tag(Optional(option.id))
                             }
                         }
                     }
@@ -2552,7 +3041,7 @@ struct AddFlightSheet: View {
     @Binding var endTime: Date
     
     @Binding var selectedDayID: UUID?
-    let days: [TripDay]
+    let dayOptions: [DayOption]
     
     var isEditing: Bool
     var onSave: () -> Void
@@ -2563,9 +3052,9 @@ struct AddFlightSheet: View {
             Form {
                 Section {
                     Picker("Day", selection: $selectedDayID) {
-                        ForEach(days) { day in
-                            Text(day.displayTitle)
-                                .tag(Optional(day.id))
+                        ForEach(dayOptions) { option in
+                            Text(option.title)
+                                .tag(Optional(option.id))
                         }
                     }
                 }
@@ -2934,7 +3423,8 @@ struct LocationSearchField: View {
         
         search.start { response, error in
             guard let response = response,
-                  let coordinate = response.mapItems.first?.placemark.coordinate else {
+                  let first = response.mapItems.first,
+                  let coordinate = mapItemCoordinate(first) else {
                 return
             }
             
@@ -2946,6 +3436,49 @@ struct LocationSearchField: View {
             self.mapSpan = span
         }
     }
+}
+
+// MARK: - MKMapItem helpers (iOS 26 placemark deprecation)
+
+private func mapItemCoordinate(_ item: MKMapItem) -> CLLocationCoordinate2D? {
+    if #available(iOS 26.0, *) {
+        return item.location.coordinate
+    } else {
+        return legacyMapItemCoordinate(item)
+    }
+}
+
+private func mapItemCity(_ item: MKMapItem) -> String? {
+    if #available(iOS 26.0, *) {
+        return item.addressRepresentations?.cityWithContext
+    } else {
+        return legacyMapItemCity(item)
+    }
+}
+
+private func mapItemAddressString(_ item: MKMapItem) -> String? {
+    if #available(iOS 26.0, *) {
+        // Prefer the new iOS 26 address object (avoids placemark).
+        let addr: String? = item.address?.fullAddress ?? item.address?.shortAddress
+        return addr
+    } else {
+        return legacyMapItemAddressString(item)
+    }
+}
+
+@available(iOS, introduced: 17.0, obsoleted: 26.0)
+private func legacyMapItemCoordinate(_ item: MKMapItem) -> CLLocationCoordinate2D? {
+    item.placemark.coordinate
+}
+
+@available(iOS, introduced: 17.0, obsoleted: 26.0)
+private func legacyMapItemCity(_ item: MKMapItem) -> String? {
+    item.placemark.locality ?? item.placemark.administrativeArea
+}
+
+@available(iOS, introduced: 17.0, obsoleted: 26.0)
+private func legacyMapItemAddressString(_ item: MKMapItem) -> String? {
+    item.placemark.title
 }
 
 class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
@@ -3143,25 +3676,20 @@ struct AirportSearchField: View {
             guard let response else { return }
             let items = response.mapItems
             guard let first = items.first else { return }
+            guard let coordinate = mapItemCoordinate(first) else { return }
             
             // If MapKit can identify this POI category, require airport to reduce false positives.
             if let poi = first.pointOfInterestCategory, poi != .airport, initialCode.isEmpty {
                 return
             }
-            
-            let placemark = first.placemark
-            let lat = placemark.coordinate.latitude
-            let lon = placemark.coordinate.longitude
-            let resolvedCity = placemark.locality ?? placemark.administrativeArea ?? result.subtitle
+            let resolvedCity = mapItemCity(first) ?? result.subtitle
             
             // Try to extract a code from any returned map item / placemark text.
             let codeFromItems: String = items
                 .compactMap { mapItem in
-                    let pm = mapItem.placemark
                     return airportCodeCandidate(fromText: [
                         mapItem.name,
-                        pm.name,
-                        pm.title,
+                        mapItemAddressString(mapItem),
                         result.title,
                         result.subtitle
                     ]
@@ -3173,8 +3701,8 @@ struct AirportSearchField: View {
             let chosenCode = !initialCode.isEmpty ? initialCode : codeFromItems
             
             DispatchQueue.main.async {
-                latitude = lat
-                longitude = lon
+                latitude = coordinate.latitude
+                longitude = coordinate.longitude
                 city = resolvedCity
                 
                 // Code is optional; user can type it manually.
@@ -3238,7 +3766,7 @@ struct AirportSearchField: View {
             let items = response?.mapItems ?? []
             let found: String = items
                 .compactMap { item in
-                    airportCodeCandidate(fromText: [item.name, item.placemark.title].compactMap { $0 }.joined(separator: " "))
+                    airportCodeCandidate(fromText: [item.name, mapItemAddressString(item)].compactMap { $0 }.joined(separator: " "))
                 }
                 .first(where: { !$0.isEmpty }) ?? ""
             DispatchQueue.main.async {

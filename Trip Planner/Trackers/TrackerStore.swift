@@ -53,15 +53,23 @@ final class TrackerStore: ObservableObject {
     func save() {
         let snapshot = state
         let url = saveURL
+        
+        // Encode on the main actor (TrackerVisitedState is main-actor isolated under
+        // SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor). Only do file IO off-thread.
+        let data: Data
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            data = try encoder.encode(snapshot)
+        } catch {
+            print("Failed to encode trackers: \(error)")
+            return
+        }
 
         ioQueue.async {
             do {
                 let dir = url.deletingLastPathComponent()
                 try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.sortedKeys]
-                let data = try encoder.encode(snapshot)
                 try data.write(to: url, options: [.atomic])
             } catch {
                 print("Failed to save trackers: \(error)")

@@ -26,6 +26,7 @@ struct MyTripsView: View {
     @State private var selectedImage: UIImage?
     @State private var selectedSegment: TripSegment = .upcoming
     @State private var segmentSwitchInFlight: Bool = false
+    @State private var tripPendingDelete: Trip?
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -100,6 +101,26 @@ struct MyTripsView: View {
             .sheet(isPresented: $showImagePicker) {
                 TripImagePicker(image: $selectedImage)
                     .tint(.primary)
+            }
+            .alert(
+                "Delete Trip",
+                isPresented: Binding(
+                    get: { tripPendingDelete != nil },
+                    set: { if !$0 { tripPendingDelete = nil } }
+                ),
+                presenting: tripPendingDelete
+            ) { trip in
+                Button("Delete Trip", role: .destructive) {
+                    withAnimation {
+                        tripStore.deleteTrip(trip)
+                    }
+                    tripPendingDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    tripPendingDelete = nil
+                }
+            } message: { _ in
+                Text("Are you sure you want to delete this trip? This action cannot be undone.")
             }
             .onChange(of: selectedImage) { _, newImage in
                 if let image = newImage,
@@ -274,9 +295,7 @@ struct MyTripsView: View {
                                         Divider()
                                         
                                         Button(role: .destructive) {
-                                            withAnimation {
-                                                tripStore.deleteTrip(trip)
-                                            }
+                                            tripPendingDelete = trip
                                         } label: {
                                             Label("Delete Trip", systemImage: "trash")
                                         }
@@ -358,6 +377,7 @@ struct TripImagePicker: UIViewControllerRepresentable {
 // Edit Trip View
 struct EditTripView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
     @Binding var trip: Trip
     var onDelete: () -> Void
     
@@ -371,6 +391,7 @@ struct EditTripView: View {
     @State private var coverImage: UIImage?
     @State private var showImagePicker = false
     @State private var showDeleteConfirmation = false
+    @State private var showParkedIdeas: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -441,6 +462,14 @@ struct EditTripView: View {
                     }
                 }
                 
+                Section("Options") {
+                    Toggle("Show Parked Ideas", isOn: $showParkedIdeas)
+                        .tint(appAccentColor)
+                    Text("An extra space for ideation")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                
                 Section {
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
@@ -490,6 +519,7 @@ struct EditTripView: View {
                 mapSpan = trip.mapSpan
                 startDate = trip.startDate
                 endDate = trip.endDate
+                showParkedIdeas = trip.showParkedIdeas
                 if let imageData = trip.coverImageData {
                     coverImage = UIImage(data: imageData)
                 }
@@ -507,6 +537,7 @@ struct EditTripView: View {
         trip.startDate = startDate
         trip.endDate = endDate
         trip.coverImageData = coverImage?.jpegData(compressionQuality: 0.8)
+        trip.showParkedIdeas = showParkedIdeas
     }
 }
 

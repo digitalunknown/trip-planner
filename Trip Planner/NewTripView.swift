@@ -10,6 +10,7 @@ import MapKit
 
 struct NewTripView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
     var tripStore: TripStore
     var onCreated: (UUID) -> Void = { _ in }
     
@@ -22,6 +23,7 @@ struct NewTripView: View {
     @State private var endDate = Date().addingTimeInterval(86400 * 4) // 5 days total
     @State private var coverImage: UIImage?
     @State private var showImagePicker = false
+    @State private var showParkedIdeas: Bool = false
     
     var isValid: Bool {
         !name.isEmpty && !destination.isEmpty && endDate >= startDate
@@ -95,6 +97,14 @@ struct NewTripView: View {
                         }
                     }
                 }
+                
+                Section("Options") {
+                    Toggle("Show Parked Ideas", isOn: $showParkedIdeas)
+                        .tint(appAccentColor)
+                    Text("An extra space for ideation")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("New Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -113,7 +123,9 @@ struct NewTripView: View {
                             latitude: latitude,
                             longitude: longitude,
                             mapSpan: mapSpan,
-                            coverImageData: coverImage?.jpegData(compressionQuality: 0.8)
+                            coverImageData: coverImage?.jpegData(compressionQuality: 0.8),
+                            showParkedIdeas: showParkedIdeas,
+                            parkedIdeas: []
                         )
                         tripStore.addTrip(newTrip)
                         onCreated(newTrip.id)
