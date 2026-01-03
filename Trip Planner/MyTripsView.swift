@@ -70,7 +70,6 @@ struct MyTripsView: View {
             }
             .sheet(isPresented: $showingNewTrip) {
                 NewTripView(tripStore: tripStore) { newTripID in
-                    // Defer navigation until the sheet is fully dismissed.
                     pendingNewTripID = newTripID
                 }
                 .tint(.primary)
@@ -133,14 +132,12 @@ struct MyTripsView: View {
                 }
             }
             .onChange(of: showingNewTrip) { _, isPresented in
-                // When the new-trip sheet is dismissed, navigate if we have a pending trip id.
                 if !isPresented, let id = pendingNewTripID {
                     pendingNewTripID = nil
                     navigationPath.append(id)
                 }
             }
         }
-        // Ensure this navigation stack (and its destinations) never inherits the tab bar's orange tint.
         .tint(.primary)
     }
     
@@ -148,7 +145,6 @@ struct MyTripsView: View {
         VStack(spacing: 24) {
             Spacer()
             
-            // Illustration
             ZStack {
                 Circle()
                     .fill(
@@ -237,12 +233,10 @@ struct MyTripsView: View {
                     .pickerStyle(.segmented)
                     .padding(.top, 4)
                     .padding(.bottom, 6)
-                    // Ensure the segmented control wins hit-testing above cards.
                     .zIndex(10)
                     .contentShape(Rectangle())
                     .highPriorityGesture(
                         TapGesture().onEnded {
-                            // Block card taps immediately to prevent "tap-through" navigation.
                             segmentSwitchInFlight = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                                 segmentSwitchInFlight = false
@@ -268,7 +262,6 @@ struct MyTripsView: View {
                                         TripCardView(trip: trip)
                                     }
                                     .buttonStyle(.plain)
-                                    // Prevent accidental navigation during a segment switch
                                     .allowsHitTesting(!segmentSwitchInFlight)
                                     .contextMenu {
                                         Button {
@@ -320,9 +313,7 @@ struct MyTripsView: View {
                 .padding(.bottom, 12)
             }
             .onChange(of: selectedSegment) { _, _ in
-                // Keep the segmented control reachable when lists are short.
                 segmentSwitchInFlight = true
-                // Jump (no animation) after the tap completes to avoid tap-through onto cards.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
                     withTransaction(Transaction(animation: nil)) {
                         proxy.scrollTo("top", anchor: .top)
@@ -336,7 +327,6 @@ struct MyTripsView: View {
     }
 }
 
-// Image picker for trip cover
 struct TripImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Environment(\.dismiss) private var dismiss
@@ -374,7 +364,6 @@ struct TripImagePicker: UIViewControllerRepresentable {
     }
 }
 
-// Edit Trip View
 struct EditTripView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appAccentColor) private var appAccentColor
@@ -462,12 +451,13 @@ struct EditTripView: View {
                     }
                 }
                 
-                Section("Options") {
+                Section {
                     Toggle("Show Parked Ideas", isOn: $showParkedIdeas)
                         .tint(appAccentColor)
+                } header: {
+                    Text("Options")
+                } footer: {
                     Text("An extra space for ideation")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
                 
                 Section {

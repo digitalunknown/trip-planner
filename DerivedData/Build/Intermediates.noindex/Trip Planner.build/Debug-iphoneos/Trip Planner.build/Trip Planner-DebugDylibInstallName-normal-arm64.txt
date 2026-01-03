@@ -1,0 +1,1 @@
+@rpath/Trip Planner.debug.dylib

@@ -1,0 +1,184 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/DayColumn.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Day %lld of %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Activity",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 136
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Reminder",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Reminder",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 150
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 167
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 181
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Checklist",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 189
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Checklist",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 195
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 212
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 226
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Flight",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Flight",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 240
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 258
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 265
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Activity",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 273
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Activity",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 279
+        }
+      }
+    ]
+  },
+  "version": 1
+}

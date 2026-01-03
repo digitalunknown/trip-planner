@@ -23,10 +23,7 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // MyTripsView already owns its NavigationStack; don't nest another one
-            // (nested NavigationStacks can make dismiss/back feel flaky).
             MyTripsView()
-                // Keep toolbar icons default (non-accent)
                 .tint(.primary)
                 .tabItem {
                 Label("My Trips", systemImage: "suitcase.fill")
@@ -35,7 +32,6 @@ struct ContentView: View {
 
             NavigationStack {
                 TrackersHomeView()
-                    // Keep toolbar icons default (non-orange)
                     .tint(.primary)
             }
             .tabItem {
@@ -43,7 +39,6 @@ struct ContentView: View {
             }
             .tag(RootTab.trackers)
         }
-        // User-selected accent for the system tab bar selection.
         .tint(accentColor)
         .environment(\.appAccentColor, accentColor)
         .preferredColorScheme(appearanceMode.preferredColorScheme)

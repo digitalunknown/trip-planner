@@ -1,0 +1,96 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/ChecklistSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Checklist",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Checklist",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "Checklist",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Items",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Title",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "Item",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 65
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add item",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copied",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 136
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy Items",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 136
+        }
+      }
+    ]
+  },
+  "version": 1
+}

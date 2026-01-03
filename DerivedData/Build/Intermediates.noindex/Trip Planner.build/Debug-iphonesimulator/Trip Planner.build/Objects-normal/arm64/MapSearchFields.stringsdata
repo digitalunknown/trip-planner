@@ -1,0 +1,24 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/MapSearchFields.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No results",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Location",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 38
+        }
+      }
+    ]
+  },
+  "version": 1
+}

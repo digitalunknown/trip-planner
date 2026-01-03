@@ -21,7 +21,6 @@ struct Trip: Identifiable, Hashable, Codable {
     var days: [TripDay]
     var coverImageData: Data?
     
-    // Parked Ideas
     var showParkedIdeas: Bool
     var parkedIdeas: [EventItem]
     

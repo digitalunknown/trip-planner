@@ -16,9 +16,7 @@ enum TrackerData {
         }
     }
 
-    // MARK: - Countries (static list)
 
-    // ISO-3166 alpha-2 codes for stable IDs.
     static let countries: [TrackerItem] = [
         TrackerItem(id: "AF", name: "Afghanistan"),
         TrackerItem(id: "AL", name: "Albania"),
@@ -262,7 +260,6 @@ enum TrackerData {
         TrackerItem(id: "ZW", name: "Zimbabwe")
     ].sorted { $0.name < $1.name }
 
-    // MARK: - U.S. States
 
     static let usStatesOnly: [TrackerItem] = usStates
         .map { TrackerItem(id: "US-\($0.code)", name: $0.name, subtitle: "United States") }
@@ -327,7 +324,6 @@ enum TrackerData {
         Region(code: "DC", name: "District of Columbia")
     ]
 
-    // MARK: - Continents
     
     static let continents: [TrackerItem] = [
         TrackerItem(id: "AFR", name: "Africa"),
@@ -339,7 +335,6 @@ enum TrackerData {
         TrackerItem(id: "SAM", name: "South America")
     ]
     
-    // MARK: - Subway Systems (curated)
     
     static let subwaySystems: [TrackerItem] = [
         TrackerItem(id: "subway-nyc", name: "New York City Subway", subtitle: "New York, USA"),
@@ -399,7 +394,6 @@ enum TrackerData {
         TrackerItem(id: "subway-santiago", name: "Santiago Metro", subtitle: "Santiago, Chile")
     ]
 
-    // MARK: - US National Parks
 
     static let usNationalParks: [TrackerItem] = [
         TrackerItem(id: "nps-acadia", name: "Acadia"),

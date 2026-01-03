@@ -37,7 +37,6 @@ struct TrackerDetailView: View {
                 .padding(.top, 6)
                 .padding(.bottom, 10)
                 
-                // Search
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)

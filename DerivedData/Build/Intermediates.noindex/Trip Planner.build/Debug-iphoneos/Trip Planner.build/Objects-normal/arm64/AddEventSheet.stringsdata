@@ -1,0 +1,128 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/AddEventSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Activity",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Activity",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "Timing",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Visuals",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "Activity Name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duration: %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 141
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "From",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add end time",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "To",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Image",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "Color",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Icon",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Activity",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 214
+        }
+      }
+    ]
+  },
+  "version": 1
+}

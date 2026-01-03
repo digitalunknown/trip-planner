@@ -24,7 +24,6 @@ class TripStore {
     }
     
     func save() {
-        // Snapshot the value so we don't access self.trips off-thread.
         let snapshot = trips
         let url = saveURL
         

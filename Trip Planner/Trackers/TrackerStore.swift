@@ -54,8 +54,6 @@ final class TrackerStore: ObservableObject {
         let snapshot = state
         let url = saveURL
         
-        // Encode on the main actor (TrackerVisitedState is main-actor isolated under
-        // SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor). Only do file IO off-thread.
         let data: Data
         do {
             let encoder = JSONEncoder()

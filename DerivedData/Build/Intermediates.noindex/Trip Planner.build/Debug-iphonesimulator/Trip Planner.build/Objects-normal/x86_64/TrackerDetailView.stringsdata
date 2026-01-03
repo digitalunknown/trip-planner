@@ -1,0 +1,16 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Trackers/TrackerDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Search",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 43
+        }
+      }
+    ]
+  },
+  "version": 1
+}

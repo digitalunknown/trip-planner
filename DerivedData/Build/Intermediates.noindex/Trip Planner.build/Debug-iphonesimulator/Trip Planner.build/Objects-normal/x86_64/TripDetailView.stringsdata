@@ -1,0 +1,56 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/TripDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Activity",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 417
+        }
+      },
+      {
+        "comment": "",
+        "key": "Flight",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 426
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reminder",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Checklist",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 447
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 578
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld°F",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1632
+        }
+      }
+    ]
+  },
+  "version": 1
+}

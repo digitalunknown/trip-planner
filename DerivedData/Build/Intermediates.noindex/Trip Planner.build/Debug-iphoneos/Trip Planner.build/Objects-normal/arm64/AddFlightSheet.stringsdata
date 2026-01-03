@@ -1,0 +1,96 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/AddFlightSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Flight",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Flight",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "Departure",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Arrival",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Flight number",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "Visuals",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "Time",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "Time",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Flight",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 100
+        }
+      }
+    ]
+  },
+  "version": 1
+}

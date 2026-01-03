@@ -1,0 +1,272 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/MyTripsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "My Trips",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 112
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete this trip? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Trips Yet",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start planning your next adventure!\nTap the button below to create your first trip.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create Trip",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 228
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Past Trips",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Upcoming Trips",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trips you’ve completed will show up here.",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trips that are coming up (or in progress) will show up here.",
+        "location": {
+          "startingColumn": 122,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "View Trip",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 270
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Cover Image",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Trip",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 293
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 475
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Trip",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 484
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trip Details",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 388
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dates",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 410
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cover Image",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 415
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trip Name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 390
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Date",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 411
+        }
+      },
+      {
+        "comment": "",
+        "key": "End Date",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 412
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Cover Image",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 447
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Parked Ideas",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 455
+        }
+      },
+      {
+        "comment": "",
+        "key": "Options",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 458
+        }
+      },
+      {
+        "comment": "",
+        "key": "An extra space for ideation",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 460
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 469
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 476
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 480
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete this trip? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 482
+        }
+      }
+    ]
+  },
+  "version": 1
+}
