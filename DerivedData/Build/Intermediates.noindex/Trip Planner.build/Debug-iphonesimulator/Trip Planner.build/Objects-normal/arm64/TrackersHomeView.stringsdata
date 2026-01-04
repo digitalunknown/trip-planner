@@ -7,7 +7,23 @@
         "key": "Trackers",
         "location": {
           "startingColumn": 26,
-          "startingLine": 23
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Passport",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stamps from completed trips",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 41
         }
       },
       {
@@ -15,7 +31,7 @@
         "key": "Add Tracker",
         "location": {
           "startingColumn": 34,
-          "startingLine": 53
+          "startingLine": 100
         }
       },
       {
@@ -23,7 +39,7 @@
         "key": "Coming Soon",
         "location": {
           "startingColumn": 26,
-          "startingLine": 45
+          "startingLine": 92
         }
       },
       {
@@ -31,7 +47,7 @@
         "key": "Custom trackers are coming soon.",
         "location": {
           "startingColumn": 26,
-          "startingLine": 47
+          "startingLine": 94
         }
       }
     ]
