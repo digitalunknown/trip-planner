@@ -114,6 +114,8 @@ struct TripDetailView: View {
     @State private var pendingMarkerTransition: DispatchWorkItem?
     @Environment(\.colorScheme) private var colorScheme
     
+    private var boardDividerColor: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
+    
     private static let parkedIdeasColumnID = UUID(uuidString: "00000000-0000-0000-0000-000000000999")!
     
     private var dayOptions: [DayOption] {
@@ -359,6 +361,11 @@ struct TripDetailView: View {
                 }
                 .frame(height: mapHeight)
                 .ignoresSafeArea(edges: .top)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(boardDividerColor)
+                        .frame(height: 1)
+                }
                 
                 dragHandle(mapHeight: mapHeight, totalHeight: totalHeight, handleHeight: handleHeight)
                 
@@ -541,7 +548,7 @@ struct TripDetailView: View {
                     onSave: saveChecklist
                 )
                 .tint(.primary)
-                .presentationDetents([.large])
+                .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $isPresentingFlight, onDismiss: {
                 editingFlight = nil

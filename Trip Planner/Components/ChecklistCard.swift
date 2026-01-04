@@ -33,7 +33,7 @@ struct ChecklistCard: View {
                         .font(.subheadline.weight(.semibold)) // match event card title style
                         .foregroundStyle(textColor)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 16)
             }
             .frame(maxWidth: .infinity)
@@ -66,7 +66,7 @@ struct ChecklistCard: View {
                             
                             Spacer(minLength: 0)
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 11)
                     }
                     .frame(maxWidth: .infinity)

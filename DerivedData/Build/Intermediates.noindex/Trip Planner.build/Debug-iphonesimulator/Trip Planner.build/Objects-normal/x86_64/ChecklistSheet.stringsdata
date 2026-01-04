@@ -7,7 +7,7 @@
         "key": "Edit Checklist",
         "location": {
           "startingColumn": 42,
-          "startingLine": 164
+          "startingLine": 163
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "New Checklist",
         "location": {
           "startingColumn": 61,
-          "startingLine": 164
+          "startingLine": 163
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Checklist",
         "location": {
           "startingColumn": 29,
-          "startingLine": 33
+          "startingLine": 32
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Items",
         "location": {
           "startingColumn": 29,
-          "startingLine": 48
+          "startingLine": 47
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Day",
         "location": {
           "startingColumn": 32,
-          "startingLine": 25
+          "startingLine": 24
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Title",
         "location": {
           "startingColumn": 39,
-          "startingLine": 35
+          "startingLine": 34
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Item",
         "location": {
           "startingColumn": 37,
-          "startingLine": 65
+          "startingLine": 64
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Add item",
         "location": {
           "startingColumn": 39,
-          "startingLine": 97
+          "startingLine": 96
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Add",
         "location": {
           "startingColumn": 36,
-          "startingLine": 98
+          "startingLine": 97
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "Copied",
         "location": {
           "startingColumn": 54,
-          "startingLine": 136
+          "startingLine": 135
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "Copy Items",
         "location": {
           "startingColumn": 65,
-          "startingLine": 136
+          "startingLine": 135
         }
       }
     ]

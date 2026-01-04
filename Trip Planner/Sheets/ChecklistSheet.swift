@@ -3,7 +3,6 @@ import UIKit
 
 struct ChecklistSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.appAccentColor) private var accentColor
     
     @Binding var title: String
     @Binding var items: [ChecklistEntry]
@@ -57,7 +56,7 @@ struct ChecklistSheet: View {
                                 } label: {
                                     let isDone = items.first(where: { $0.id == itemID })?.isDone ?? false
                                     Image(systemName: isDone ? "checkmark.square.fill" : "square")
-                                        .foregroundStyle(isDone ? accentColor : .secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.plain)
                                 
