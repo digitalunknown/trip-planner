@@ -7,7 +7,7 @@
         "key": "Parked Ideas",
         "location": {
           "startingColumn": 22,
-          "startingLine": 15
+          "startingLine": 22
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Not tied to a day",
         "location": {
           "startingColumn": 22,
-          "startingLine": 17
+          "startingLine": 25
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Move Left",
         "location": {
           "startingColumn": 47,
-          "startingLine": 34
+          "startingLine": 42
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Edit Activity",
         "location": {
           "startingColumn": 43,
-          "startingLine": 41
+          "startingLine": 49
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Delete Activity",
         "location": {
           "startingColumn": 43,
-          "startingLine": 46
+          "startingLine": 54
         }
       }
     ]

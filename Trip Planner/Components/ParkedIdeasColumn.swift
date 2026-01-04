@@ -9,14 +9,22 @@ struct ParkedIdeasColumn: View {
     let onAdd: () -> Void
     let onMoveLeftToLastDay: ((EventItem) -> Void)?
     
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private var columnBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
+    private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
+    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
+    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Parked Ideas")
                     .font(.headline)
+                    .foregroundStyle(textPrimary)
                 Text("Not tied to a day")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(textSecondary)
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -54,10 +62,10 @@ struct ParkedIdeasColumn: View {
             }
         }
         .frame(width: columnWidth, height: columnHeight)
-        .background(Color(.secondarySystemBackground).opacity(0.7), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(columnBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(columnStroke, lineWidth: 1)
         )
     }
 }

@@ -2,6 +2,12 @@ import SwiftUI
 
 struct FlightCard: View {
     let flight: FlightItem
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private var cardBackground: Color { colorScheme == .dark ? Color(hex: 0x222222) : Color(hex: 0xFFFEF9) }
+    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
+    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var iconColor: Color { flight.accent.color }
     
     private var fromCode: String { flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased().isEmpty ? "—" : flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
     private var toCode: String { flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased().isEmpty ? "—" : flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
@@ -27,8 +33,8 @@ struct FlightCard: View {
     }
     
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(alignment: .center, spacing: 10) {
+        VStack(spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
                 airportTopBlock(
                     code: fromCode,
                     city: flight.fromCity,
@@ -38,15 +44,34 @@ struct FlightCard: View {
                 .layoutPriority(1)
                 
                 ZStack {
-                    Capsule(style: .continuous)
-                        .fill(Color.secondary.opacity(0.25))
-                        .frame(height: 3)
+                    HStack(spacing: 0) {
+                        Circle()
+                            .fill(iconColor)
+                            .frame(width: 9, height: 9)
+                            .overlay(
+                                Circle()
+                                    .stroke(cardBackground, lineWidth: 2)
+                            )
+                        
+                        Capsule(style: .continuous)
+                            .fill(iconColor.opacity(0.25))
+                            .frame(height: 3)
+                            .frame(maxWidth: .infinity)
+                        
+                        Circle()
+                            .fill(iconColor)
+                            .frame(width: 9, height: 9)
+                            .overlay(
+                                Circle()
+                                    .stroke(cardBackground, lineWidth: 2)
+                            )
+                    }
                     
                     Image(systemName: "airplane")
                         .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(iconColor)
                 }
-                .frame(width: 140)
+                .frame(width: 110)
                 .layoutPriority(0)
                 
                 airportTopBlock(
@@ -61,14 +86,14 @@ struct FlightCard: View {
             HStack(alignment: .lastTextBaseline) {
                 Text(departureText)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(textSecondary)
                 
                 Spacer(minLength: 0)
                 
                 if let flightNumberText {
                     Text(flightNumberText)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(textPrimary)
                 } else {
                     Text(" ")
                         .font(.subheadline.weight(.semibold))
@@ -80,7 +105,7 @@ struct FlightCard: View {
                 if let arrivalText {
                     Text(arrivalText)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(textSecondary)
                 } else {
                     Text(" ")
                         .font(.caption)
@@ -90,19 +115,19 @@ struct FlightCard: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
     
     private func airportTopBlock(code: String, city: String, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 4) {
             Text(code)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : city)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
         }

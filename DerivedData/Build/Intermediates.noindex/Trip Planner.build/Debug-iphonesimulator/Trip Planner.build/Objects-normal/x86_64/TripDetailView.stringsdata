@@ -7,7 +7,7 @@
         "key": "Activity",
         "location": {
           "startingColumn": 27,
-          "startingLine": 417
+          "startingLine": 422
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Flight",
         "location": {
           "startingColumn": 27,
-          "startingLine": 426
+          "startingLine": 431
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Reminder",
         "location": {
           "startingColumn": 27,
-          "startingLine": 436
+          "startingLine": 441
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Checklist",
         "location": {
           "startingColumn": 27,
-          "startingLine": 447
+          "startingLine": 452
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "",
         "location": {
           "startingColumn": 30,
-          "startingLine": 578
+          "startingLine": 585
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "%lld°F",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1632
+          "startingLine": 1640
         }
       }
     ]

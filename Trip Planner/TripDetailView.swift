@@ -112,6 +112,7 @@ struct TripDetailView: View {
     @State private var displayedDayIDForMarkers: UUID?
     @State private var markersOpacity: Double = 1.0
     @State private var pendingMarkerTransition: DispatchWorkItem?
+    @Environment(\.colorScheme) private var colorScheme
     
     private static let parkedIdeasColumnID = UUID(uuidString: "00000000-0000-0000-0000-000000000999")!
     
@@ -188,7 +189,7 @@ struct TripDetailView: View {
             
             let latSpread = maxLat - minLat
             let lonSpread = maxLon - minLon
-            let padding: Double = 1.25
+            let padding: Double = 1.55
             let span = MKCoordinateSpan(
                 latitudeDelta: max(latSpread * padding, 0.012),
                 longitudeDelta: max(lonSpread * padding, 0.012)
@@ -227,7 +228,7 @@ struct TripDetailView: View {
         
         let latSpread = maxLat - minLat
         let lonSpread = maxLon - minLon
-        let padding: Double = 1.25
+        let padding: Double = 1.55
         let span = MKCoordinateSpan(
             latitudeDelta: max(latSpread * padding, 0.012),
             longitudeDelta: max(lonSpread * padding, 0.012)
@@ -389,8 +390,10 @@ struct TripDetailView: View {
                 Image(systemName: "chevron.left")
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
+                    .contentShape(Rectangle())
             }
             .tint(.primary)
+            .buttonStyle(.plain)
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
             Button {
@@ -399,8 +402,10 @@ struct TripDetailView: View {
                 Image(systemName: "gearshape")
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
+                    .contentShape(Rectangle())
             }
             .tint(.primary)
+            .buttonStyle(.plain)
             
             Menu {
                 Button {
@@ -450,8 +455,10 @@ struct TripDetailView: View {
                 Image(systemName: "plus")
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
+                    .contentShape(Rectangle())
             }
             .tint(.primary)
+            .buttonStyle(.plain)
         }
         ToolbarItem(placement: .principal) {
             VStack(spacing: 2) {
@@ -663,7 +670,8 @@ struct TripDetailView: View {
 
 private extension TripDetailView {
     var backgroundGradient: some View {
-        Color(.systemBackground).ignoresSafeArea()
+        (colorScheme == .dark ? Color(hex: 0x0A0A0A) : Color(hex: 0xE0E0E0))
+            .ignoresSafeArea()
     }
 
     func kanbanBoard() -> some View {

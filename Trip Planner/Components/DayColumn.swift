@@ -29,6 +29,13 @@ struct DayColumn: View {
     let onAddEvent: () -> Void
     let showEmptyPlaceholder: Bool
     
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
+    private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
+    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
+    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    
     @State private var weatherMode: WeatherPillMode = .conditions
     
     private struct TimedRow: Identifiable {
@@ -56,6 +63,7 @@ struct DayColumn: View {
         return (flightRows + activityRows)
             .sorted { a, b in
                 if a.minutes != b.minutes { return a.minutes < b.minutes }
+                // Tie-break: flights first, then activities
                 switch (a.kind, b.kind) {
                 case (.flight, .activity): return true
                 case (.activity, .flight): return false
@@ -69,9 +77,10 @@ struct DayColumn: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(day.displayTitle)
                     .font(.headline)
+                    .foregroundStyle(textPrimary)
                 Text("Day \(day.order) of \(totalDays)")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(textSecondary)
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -91,12 +100,13 @@ struct DayColumn: View {
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 10) {
                     if day.events.isEmpty && day.reminders.isEmpty && day.checklists.isEmpty && day.flights.isEmpty && showEmptyPlaceholder {
+                        // Empty state placeholder - only on first day when trip has no events
                         Button {
                             onAddEvent()
                         } label: {
                             Text("Add Activity")
                                 .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(textSecondary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 24)
                                 .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -109,6 +119,7 @@ struct DayColumn: View {
                         .buttonStyle(.plain)
                     }
                     
+                    // Reminders always show at the top and have no time.
                     if !day.reminders.isEmpty {
                         VStack(spacing: 8) {
                             ForEach(day.reminders) { reminder in
@@ -291,15 +302,9 @@ struct DayColumn: View {
         .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08))
+                .strokeBorder(columnStroke)
         }
         .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
-    }
-}
-
-private extension DayColumn {
-    var dayBackground: Color {
-        Color(.secondarySystemBackground).opacity(0.7)
     }
 }
 
