@@ -4,26 +4,10 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "Trackers",
+        "key": "Stats",
         "location": {
           "startingColumn": 26,
-          "startingLine": 70
-        }
-      },
-      {
-        "comment": "",
-        "key": "Passport",
-        "location": {
-          "startingColumn": 34,
-          "startingLine": 38
-        }
-      },
-      {
-        "comment": "",
-        "key": "Stamps from completed trips",
-        "location": {
-          "startingColumn": 34,
-          "startingLine": 41
+          "startingLine": 54
         }
       },
       {
@@ -31,7 +15,7 @@
         "key": "Add Tracker",
         "location": {
           "startingColumn": 34,
-          "startingLine": 100
+          "startingLine": 87
         }
       },
       {
@@ -39,7 +23,7 @@
         "key": "Coming Soon",
         "location": {
           "startingColumn": 26,
-          "startingLine": 92
+          "startingLine": 79
         }
       },
       {
@@ -47,7 +31,31 @@
         "key": "Custom trackers are coming soon.",
         "location": {
           "startingColumn": 26,
-          "startingLine": 94
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "Complete a trip to earn your first stamp.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Passport",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stamps from completed trips",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 109
         }
       }
     ]

@@ -4,18 +4,18 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "My Trips",
+        "key": "Trips",
         "location": {
           "startingColumn": 23,
-          "startingLine": 29
+          "startingLine": 30
         }
       },
       {
         "comment": "",
-        "key": "Trackers",
+        "key": "Stats",
         "location": {
           "startingColumn": 23,
-          "startingLine": 38
+          "startingLine": 39
         }
       }
     ]

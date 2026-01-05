@@ -15,7 +15,7 @@ struct MyTripsView: View {
         var id: String { rawValue }
     }
     
-    @State private var tripStore = TripStore()
+    @Environment(TripStore.self) private var tripStore
     @State private var showingNewTrip = false
     @State private var showingSettings = false
     @State private var navigationPath = NavigationPath()
@@ -38,7 +38,7 @@ struct MyTripsView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("My Trips")
+            .navigationTitle("Trips")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: UUID.self) { tripID in
                 if let index = tripStore.trips.firstIndex(where: { $0.id == tripID }) {
@@ -211,12 +211,26 @@ struct MyTripsView: View {
                     return end < today
                 }
             }
-            .sorted { $0.startDate < $1.startDate }
+            .sorted { a, b in
+                switch selectedSegment {
+                case .upcoming:
+                    return a.startDate < b.startDate
+                case .past:
+                    return a.startDate > b.startDate
+                }
+            }
         
         let groupedTrips = Dictionary(grouping: filteredTrips) { trip in
             Calendar.current.component(.year, from: trip.startDate)
         }
-        let sortedYears = groupedTrips.keys.sorted()
+        let sortedYears = groupedTrips.keys.sorted(by: { a, b in
+            switch selectedSegment {
+            case .upcoming:
+                return a < b
+            case .past:
+                return a > b
+            }
+        })
         
         return ScrollViewReader { proxy in
             ScrollView {
@@ -255,7 +269,16 @@ struct MyTripsView: View {
                     } else {
                         ForEach(sortedYears, id: \.self) { year in
                             Section {
-                                ForEach(groupedTrips[year] ?? []) { trip in
+                                let tripsForYear = (groupedTrips[year] ?? []).sorted { a, b in
+                                    switch selectedSegment {
+                                    case .upcoming:
+                                        return a.startDate < b.startDate
+                                    case .past:
+                                        return a.startDate > b.startDate
+                                    }
+                                }
+                                
+                                ForEach(tripsForYear) { trip in
                                     Button {
                                         navigationPath.append(trip.id)
                                     } label: {
@@ -532,6 +555,9 @@ struct EditTripView: View {
 }
 
 #Preview {
-    MyTripsView()
+    Group {
+        MyTripsView()
+    }
+    .environment(TripStore())
 }
 

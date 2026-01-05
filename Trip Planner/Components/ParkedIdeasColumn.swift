@@ -5,6 +5,7 @@ struct ParkedIdeasColumn: View {
     let columnWidth: CGFloat
     let columnHeight: CGFloat
     let onTap: (EventItem) -> Void
+    let onDuplicate: (EventItem) -> Void
     let onDelete: (EventItem) -> Void
     let onAdd: () -> Void
     let onMoveLeftToLastDay: ((EventItem) -> Void)?
@@ -48,6 +49,13 @@ struct ParkedIdeasColumn: View {
                                 } label: {
                                     Label("Edit Activity", systemImage: "pencil")
                                 }
+                                
+                                Button {
+                                    onDuplicate(event)
+                                } label: {
+                                    Label("Duplicate Activity", systemImage: "doc.on.doc")
+                                }
+                                
                                 Button(role: .destructive) {
                                     onDelete(event)
                                 } label: {

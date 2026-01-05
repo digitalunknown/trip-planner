@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct PassportView: View {
-    @State private var tripStore = TripStore()
+    @Environment(TripStore.self) private var tripStore
+    
+    private let passportStampSize: CGFloat = 200
     
     private var completedTrips: [Trip] {
         let calendar = Calendar.current
@@ -11,18 +13,18 @@ struct PassportView: View {
                 let end = calendar.startOfDay(for: trip.endDate)
                 return end < today
             }
-            .sorted { $0.endDate < $1.endDate }
+            .sorted { $0.endDate > $1.endDate }
     }
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
-            LazyVStack(spacing: 18) {
+            LazyVStack(spacing: 28) {
                 ForEach(completedTrips) { trip in
                     PassportStampView(
                         destination: trip.destination,
-                        iconSystemName: "airplane",
+                        iconSystemName: "globe",
                         date: trip.endDate,
-                        size: 180,
+                        size: passportStampSize,
                         tint: .primary
                     )
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -36,4 +38,5 @@ struct PassportView: View {
         .toolbar(.hidden, for: .tabBar)
     }
 }
+
 

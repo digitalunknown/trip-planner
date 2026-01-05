@@ -697,6 +697,7 @@ private extension TripDetailView {
                             columnHeight: geo.size.height - 24,
                             onTap: { event in startEditing(event: event, day: day) },
                             onEdit: { event in startEditing(event: event, day: day) },
+                            onDuplicate: { event in duplicateEvent(event, in: day) },
                             onDelete: { event in deleteEvent(event) },
                             onMoveEventLeft: { event in moveEvent(event, from: day, direction: -1) },
                             onMoveEventRight: { event in moveEvent(event, from: day, direction: 1) },
@@ -740,6 +741,7 @@ private extension TripDetailView {
                             columnWidth: columnWidth,
                             columnHeight: geo.size.height - 24,
                             onTap: { event in startEditingParkedIdea(event) },
+                            onDuplicate: { event in duplicateParkedIdea(event) },
                             onDelete: { event in deleteEvent(event) },
                             onAdd: {
                                 editingEvent = nil
@@ -1295,6 +1297,45 @@ private extension TripDetailView {
                 break
             }
         }
+    }
+    
+    func duplicateEvent(_ event: EventItem, in day: TripDay) {
+        guard let dayIndex = tripDays.firstIndex(where: { $0.id == day.id }),
+              let eventIndex = tripDays[dayIndex].events.firstIndex(where: { $0.id == event.id }) else { return }
+        
+        let duplicated = EventItem(
+            id: UUID(),
+            title: event.title,
+            description: event.description,
+            time: event.time,
+            location: event.location,
+            latitude: event.latitude,
+            longitude: event.longitude,
+            icon: event.icon,
+            accent: event.accent,
+            photoData: event.photoData
+        )
+        
+        tripDays[dayIndex].events.insert(duplicated, at: min(eventIndex + 1, tripDays[dayIndex].events.count))
+    }
+    
+    func duplicateParkedIdea(_ event: EventItem) {
+        guard let idx = parkedIdeas.firstIndex(where: { $0.id == event.id }) else { return }
+        
+        let duplicated = EventItem(
+            id: UUID(),
+            title: event.title,
+            description: event.description,
+            time: event.time,
+            location: event.location,
+            latitude: event.latitude,
+            longitude: event.longitude,
+            icon: event.icon,
+            accent: event.accent,
+            photoData: event.photoData
+        )
+        
+        parkedIdeas.insert(duplicated, at: min(idx + 1, parkedIdeas.count))
     }
 
     func prepareNewFlightDefaults() {

@@ -58,7 +58,7 @@ struct TripCardView: View {
         case .upcoming(let daysUntilStart):
             if daysUntilStart == 0 { return "Today!" }
             if daysUntilStart == 1 { return "Tomorrow" }
-            return "\(max(daysUntilStart, 0)) days away"
+            return "In \(max(daysUntilStart, 0)) days"
         case .inProgress:
             return "In progress"
         case .ended:

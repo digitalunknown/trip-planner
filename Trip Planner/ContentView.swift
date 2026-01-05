@@ -16,6 +16,7 @@ struct ContentView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @AppStorage("accentColor") private var accentColorRaw: String = AccentColorOption.orange.rawValue
     @State private var selectedTab: RootTab = .myTrips
+    @State private var tripStore = TripStore()
     
     private var accentColor: Color {
         AccentColorOption(rawValue: accentColorRaw)?.color ?? .orange
@@ -26,7 +27,7 @@ struct ContentView: View {
             MyTripsView()
                 .tint(.primary)
                 .tabItem {
-                Label("My Trips", systemImage: "suitcase.fill")
+                Label("Trips", systemImage: "suitcase.fill")
             }
             .tag(RootTab.myTrips)
 
@@ -35,10 +36,11 @@ struct ContentView: View {
                     .tint(.primary)
             }
             .tabItem {
-                Label("Trackers", systemImage: "checkmark.seal.fill")
+                Label("Stats", systemImage: "checkmark.seal.fill")
             }
             .tag(RootTab.trackers)
         }
+        .environment(tripStore)
         .tint(accentColor)
         .environment(\.appAccentColor, accentColor)
         .preferredColorScheme(appearanceMode.preferredColorScheme)

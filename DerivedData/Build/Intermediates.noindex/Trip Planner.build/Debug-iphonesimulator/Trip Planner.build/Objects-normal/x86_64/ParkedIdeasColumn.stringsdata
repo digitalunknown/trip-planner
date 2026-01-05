@@ -7,7 +7,7 @@
         "key": "Parked Ideas",
         "location": {
           "startingColumn": 22,
-          "startingLine": 22
+          "startingLine": 23
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Not tied to a day",
         "location": {
           "startingColumn": 22,
-          "startingLine": 25
+          "startingLine": 26
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Move Left",
         "location": {
           "startingColumn": 47,
-          "startingLine": 42
+          "startingLine": 43
         }
       },
       {
@@ -31,7 +31,15 @@
         "key": "Edit Activity",
         "location": {
           "startingColumn": 43,
-          "startingLine": 49
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate Activity",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 56
         }
       },
       {
@@ -39,7 +47,7 @@
         "key": "Delete Activity",
         "location": {
           "startingColumn": 43,
-          "startingLine": 54
+          "startingLine": 62
         }
       }
     ]

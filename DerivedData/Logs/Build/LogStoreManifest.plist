@@ -6,7 +6,7 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
-		<key>538A0AE3-5D1E-46CA-8BC8-196D7BD8CB8C</key>
+		<key>0C5C7F93-36C1-4444-AAFE-C41FEC391287</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>538A0AE3-5D1E-46CA-8BC8-196D7BD8CB8C.xcactivitylog</string>
+			<string>0C5C7F93-36C1-4444-AAFE-C41FEC391287.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,15 +40,15 @@
 			<key>signature</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>789257844.01983595</real>
+			<real>789272226.23056197</real>
 			<key>timeStoppedRecording</key>
-			<real>789257847.982252</real>
+			<real>789272231.66950595</real>
 			<key>title</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>538A0AE3-5D1E-46CA-8BC8-196D7BD8CB8C</string>
+			<string>0C5C7F93-36C1-4444-AAFE-C41FEC391287</string>
 		</dict>
-		<key>8978A7BF-7854-4A61-B079-9FA00B690CDF</key>
+		<key>3A865F58-27BB-4CCD-AD76-080E16CC3355</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -57,49 +57,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>8978A7BF-7854-4A61-B079-9FA00B690CDF.xcactivitylog</string>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>E</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>2</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>2</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Trip Planner project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Trip Planner</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
-			<key>timeStartedRecording</key>
-			<real>789257777.26608598</real>
-			<key>timeStoppedRecording</key>
-			<real>789257782.17468905</real>
-			<key>title</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
-			<key>uniqueIdentifier</key>
-			<string>8978A7BF-7854-4A61-B079-9FA00B690CDF</string>
-		</dict>
-		<key>F606FF21-7B5C-48A9-86A1-A09828A3C6B1</key>
-		<dict>
-			<key>className</key>
-			<string>IDECommandLineBuildLog</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
-			<key>fileName</key>
-			<string>F606FF21-7B5C-48A9-86A1-A09828A3C6B1.xcactivitylog</string>
+			<string>3A865F58-27BB-4CCD-AD76-080E16CC3355.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -124,13 +82,13 @@
 			<key>signature</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>789258100.579126</real>
+			<real>789273778.60516405</real>
 			<key>timeStoppedRecording</key>
-			<real>789258107.29988897</real>
+			<real>789273794.86994302</real>
 			<key>title</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>F606FF21-7B5C-48A9-86A1-A09828A3C6B1</string>
+			<string>3A865F58-27BB-4CCD-AD76-080E16CC3355</string>
 		</dict>
 	</dict>
 </dict>

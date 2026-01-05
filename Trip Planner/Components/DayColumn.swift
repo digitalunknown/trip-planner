@@ -7,6 +7,7 @@ struct DayColumn: View {
     let columnHeight: CGFloat
     let onTap: (EventItem) -> Void
     let onEdit: (EventItem) -> Void
+    let onDuplicate: (EventItem) -> Void
     let onDelete: (EventItem) -> Void
     let onMoveEventLeft: (EventItem) -> Void
     let onMoveEventRight: (EventItem) -> Void
@@ -46,18 +47,19 @@ struct DayColumn: View {
         
         let id: String
         let minutes: Int
+        let orderIndex: Int
         let kind: Kind
     }
     
     private var timelineRows: [TimedRow] {
-        let flightRows = day.flights.map { flight in
+        let flightRows = day.flights.enumerated().map { idx, flight in
             let comps = Calendar.current.dateComponents([.hour, .minute], from: flight.startTime)
             let minutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
-            return TimedRow(id: "flight-\(flight.id)", minutes: minutes, kind: .flight(flight))
+            return TimedRow(id: "flight-\(flight.id)", minutes: minutes, orderIndex: idx, kind: .flight(flight))
         }
         
-        let activityRows = day.events.map { event in
-            TimedRow(id: "activity-\(event.id)", minutes: event.startTimeMinutes, kind: .activity(event))
+        let activityRows = day.events.enumerated().map { idx, event in
+            TimedRow(id: "activity-\(event.id)", minutes: event.startTimeMinutes, orderIndex: idx, kind: .activity(event))
         }
         
         return (flightRows + activityRows)
@@ -67,7 +69,7 @@ struct DayColumn: View {
                 switch (a.kind, b.kind) {
                 case (.flight, .activity): return true
                 case (.activity, .flight): return false
-                default: return a.id < b.id
+                default: return a.orderIndex < b.orderIndex
                 }
             }
     }
@@ -283,6 +285,12 @@ struct DayColumn: View {
                                     } label: {
                                         Label("Edit Activity", systemImage: "pencil")
                                     }
+                                        
+                                        Button {
+                                            onDuplicate(event)
+                                        } label: {
+                                            Label("Duplicate Activity", systemImage: "doc.on.doc")
+                                        }
                                     
                                     Button(role: .destructive) {
                                         onDelete(event)

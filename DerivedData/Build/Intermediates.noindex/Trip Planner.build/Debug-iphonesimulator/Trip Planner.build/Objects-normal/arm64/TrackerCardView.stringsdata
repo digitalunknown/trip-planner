@@ -4,18 +4,18 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "%lld%%",
+        "key": "%lld/%lld",
         "location": {
           "startingColumn": 22,
-          "startingLine": 18
+          "startingLine": 33
         }
       },
       {
         "comment": "",
-        "key": "%lld/%lld visited",
+        "key": "%lld%%",
         "location": {
           "startingColumn": 22,
-          "startingLine": 21
+          "startingLine": 39
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Visited %lld/%lld",
         "location": {
           "startingColumn": 18,
-          "startingLine": 138
+          "startingLine": 175
         }
       }
     ]
