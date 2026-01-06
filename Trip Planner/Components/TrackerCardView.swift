@@ -8,19 +8,22 @@ struct TrackerProgressBar: View {
     let totalCount: Int
     let totalBars: Int
     let barHeight: CGFloat
+    let unfilledColor: Color
     
     init(
         percent: Double,
         visitedCount: Int,
         totalCount: Int,
         totalBars: Int = 30,
-        barHeight: CGFloat = 36
+        barHeight: CGFloat = 36,
+        unfilledColor: Color = Color.secondary.opacity(0.25)
     ) {
         self.percent = percent
         self.visitedCount = visitedCount
         self.totalCount = totalCount
         self.totalBars = totalBars
         self.barHeight = barHeight
+        self.unfilledColor = unfilledColor
     }
     
     var body: some View {
@@ -48,7 +51,7 @@ struct TrackerProgressBar: View {
             HStack(spacing: 4) {
                 ForEach(0..<totalBars, id: \.self) { idx in
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(idx < filled ? accentColor : Color.secondary.opacity(0.25))
+                        .fill(idx < filled ? accentColor : unfilledColor)
                         .frame(height: barHeight)
                 }
             }
@@ -78,6 +81,27 @@ struct TrackerRowCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(type.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(textPrimary)
+                        .lineLimit(1)
+                    
+                    Text(type.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(textSecondary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
+                }
+                
+                Spacer(minLength: 0)
+                
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(textSecondary)
+            }
+            
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -99,24 +123,8 @@ struct TrackerRowCard: View {
                             )
                         )
                 }
-                .frame(width: 44, height: 44)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(type.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(textPrimary)
-                        .lineLimit(1)
-                    Text(type.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(textSecondary)
-                        .lineLimit(1)
-                }
-                
+                .frame(width: 58, height: 58)
                 Spacer(minLength: 0)
-                
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(textSecondary)
             }
             
             TrackerProgressBar(
@@ -124,16 +132,18 @@ struct TrackerRowCard: View {
                 visitedCount: visitedCount,
                 totalCount: totalCount,
                 totalBars: 16,
-                barHeight: 28
+                barHeight: 28,
+                unfilledColor: columnStroke
             )
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 172, maxHeight: 172, alignment: .topLeading)
-        .background(dayBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(15)
+        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(columnStroke)
         }
+        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
     }
 }
 

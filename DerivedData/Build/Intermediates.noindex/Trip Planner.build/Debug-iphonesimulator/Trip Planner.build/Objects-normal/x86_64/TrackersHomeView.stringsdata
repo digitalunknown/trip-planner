@@ -7,7 +7,7 @@
         "key": "Stats",
         "location": {
           "startingColumn": 26,
-          "startingLine": 54
+          "startingLine": 60
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Add Tracker",
         "location": {
           "startingColumn": 34,
-          "startingLine": 87
+          "startingLine": 93
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Coming Soon",
         "location": {
           "startingColumn": 26,
-          "startingLine": 79
+          "startingLine": 85
         }
       },
       {
@@ -31,7 +31,31 @@
         "key": "Custom trackers are coming soon.",
         "location": {
           "startingColumn": 26,
-          "startingLine": 81
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 156
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trips Taken",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Logged in this app",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 121
         }
       },
       {
@@ -39,23 +63,23 @@
         "key": "Complete a trip to earn your first stamp.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 122
+          "startingLine": 203
         }
       },
       {
         "comment": "",
-        "key": "Passport",
+        "key": "Stamps",
         "location": {
           "startingColumn": 26,
-          "startingLine": 106
+          "startingLine": 187
         }
       },
       {
         "comment": "",
-        "key": "Stamps from completed trips",
+        "key": "You’ve completed %lld %@",
         "location": {
           "startingColumn": 26,
-          "startingLine": 109
+          "startingLine": 190
         }
       }
     ]

@@ -53,9 +53,9 @@ struct FlightCard: View {
                                     .stroke(cardBackground, lineWidth: 2)
                             )
                         
-                        Capsule(style: .continuous)
+                    Capsule(style: .continuous)
                             .fill(iconColor.opacity(0.25))
-                            .frame(height: 3)
+                        .frame(height: 3)
                             .frame(maxWidth: .infinity)
                         
                         Circle()

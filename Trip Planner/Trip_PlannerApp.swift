@@ -19,9 +19,9 @@ struct Trip_PlannerApp: App {
 
 enum Haptics {
     static func tabSelectionChanged() {
-        let generator = UISelectionFeedbackGenerator()
+        let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.prepare()
-        generator.selectionChanged()
+        generator.impactOccurred(intensity: 1.0)
     }
     
     static func bump() {

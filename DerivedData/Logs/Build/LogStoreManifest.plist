@@ -6,7 +6,7 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
-		<key>0C5C7F93-36C1-4444-AAFE-C41FEC391287</key>
+		<key>02B43AF2-580C-4E2D-85F4-5B4FDB954F1A</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>0C5C7F93-36C1-4444-AAFE-C41FEC391287.xcactivitylog</string>
+			<string>02B43AF2-580C-4E2D-85F4-5B4FDB954F1A.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,15 +40,15 @@
 			<key>signature</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>789272226.23056197</real>
+			<real>789361740.84395194</real>
 			<key>timeStoppedRecording</key>
-			<real>789272231.66950595</real>
+			<real>789361753.18719196</real>
 			<key>title</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>0C5C7F93-36C1-4444-AAFE-C41FEC391287</string>
+			<string>02B43AF2-580C-4E2D-85F4-5B4FDB954F1A</string>
 		</dict>
-		<key>3A865F58-27BB-4CCD-AD76-080E16CC3355</key>
+		<key>83515351-1796-45E5-9CB6-DC129D52B9F4</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -57,7 +57,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>3A865F58-27BB-4CCD-AD76-080E16CC3355.xcactivitylog</string>
+			<string>83515351-1796-45E5-9CB6-DC129D52B9F4.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -82,13 +82,13 @@
 			<key>signature</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>789273778.60516405</real>
+			<real>789363533.26323402</real>
 			<key>timeStoppedRecording</key>
-			<real>789273794.86994302</real>
+			<real>789363538.59568202</real>
 			<key>title</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>3A865F58-27BB-4CCD-AD76-080E16CC3355</string>
+			<string>83515351-1796-45E5-9CB6-DC129D52B9F4</string>
 		</dict>
 	</dict>
 </dict>

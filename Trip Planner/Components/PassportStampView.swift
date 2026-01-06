@@ -98,12 +98,10 @@ struct PassportStampView: View {
             }
             
             // Inner guide ring between icon and text
+            let guideRadius = max(0, ringRadius - (fontSize * 0.95))
             Circle()
                 .stroke(tint.opacity(0.92), lineWidth: 1)
-                .frame(
-                    width: max(0, (ringRadius - (fontSize * 0.95)) * 2),
-                    height: max(0, (ringRadius - (fontSize * 0.95)) * 2)
-                )
+                .frame(width: guideRadius * 2, height: guideRadius * 2)
         }
         
         let iconLayer =

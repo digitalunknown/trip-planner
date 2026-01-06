@@ -21,6 +21,10 @@ struct TripCardView: View {
     
     private static let animationStart = Date()
     
+    private let cardHeight: CGFloat = 280
+    private let blurHeight: CGFloat = 220
+    private let blurRadius: CGFloat = 60
+    
     private var mapRegion: MKCoordinateRegion {
         if let lat = trip.latitude, let lon = trip.longitude {
             let span = trip.mapSpan ?? 0.1
@@ -68,33 +72,30 @@ struct TripCardView: View {
     
     var body: some View {
         ZStack {
-            if let imageData = trip.coverImageData, let uiImage = UIImage(data: imageData) {
-                TimelineView(.animation) { timeline in
-                    let elapsed = timeline.date.timeIntervalSince(Self.animationStart)
-                    let phase = elapsed.truncatingRemainder(dividingBy: 24) // Full cycle is 24 seconds
-                    let normalizedPhase = phase < 12 ? phase / 12 : (24 - phase) / 12
-                    let scale = 1.0 + (0.15 * normalizedPhase)
-                    
-                    GeometryReader { geo in
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
-                            .scaleEffect(scale)
-                            .frame(width: geo.size.width, height: 280)
-                            .clipped()
-                    }
-                    .frame(height: 280)
-                }
-            } else {
-                MapSnapshotView(region: mapRegion)
-                    .frame(height: 280)
-                    .clipped()
-            }
+            backgroundLayer
+            
+            backgroundLayer
+                .blur(radius: blurRadius)
+                .mask(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0.0),
+                            .init(color: .clear, location: 0.12),
+                            .init(color: .black.opacity(0.35), location: 0.38),
+                            .init(color: .black.opacity(0.85), location: 0.72),
+                            .init(color: .black, location: 1.0)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: blurHeight)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                )
             
             VStack {
                 Spacer()
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.7)],
+                    colors: [.clear, .black.opacity(0.45)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -148,6 +149,32 @@ struct TripCardView: View {
         .frame(height: 280)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
+    }
+    
+    @ViewBuilder
+    private var backgroundLayer: some View {
+        if let imageData = trip.coverImageData, let uiImage = UIImage(data: imageData) {
+            TimelineView(.animation) { timeline in
+                let elapsed = timeline.date.timeIntervalSince(Self.animationStart)
+                let phase = elapsed.truncatingRemainder(dividingBy: 24)
+                let normalizedPhase = phase < 12 ? phase / 12 : (24 - phase) / 12
+                let scale = 1.0 + (0.15 * normalizedPhase)
+                
+                GeometryReader { geo in
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .scaleEffect(scale)
+                        .frame(width: geo.size.width, height: cardHeight)
+                        .clipped()
+                }
+                .frame(height: cardHeight)
+            }
+        } else {
+            MapSnapshotView(region: mapRegion)
+                .frame(height: cardHeight)
+                .clipped()
+        }
     }
 }
 

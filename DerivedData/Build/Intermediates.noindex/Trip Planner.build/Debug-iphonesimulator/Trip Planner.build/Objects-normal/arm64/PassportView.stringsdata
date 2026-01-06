@@ -4,10 +4,10 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "Passport",
+        "key": "Stamps",
         "location": {
           "startingColumn": 26,
-          "startingLine": 36
+          "startingLine": 43
         }
       }
     ]

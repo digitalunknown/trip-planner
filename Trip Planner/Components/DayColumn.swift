@@ -290,7 +290,7 @@ struct DayColumn: View {
                                             onDuplicate(event)
                                         } label: {
                                             Label("Duplicate Activity", systemImage: "doc.on.doc")
-                                        }
+                                    }
                                     
                                     Button(role: .destructive) {
                                         onDelete(event)

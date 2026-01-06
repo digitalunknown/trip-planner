@@ -4,6 +4,8 @@ struct TrackersHomeView: View {
     @StateObject private var store = TrackerStore()
     @State private var showComingSoon = false
     @State private var isShowingPassport = false
+    @State private var passportPageIndex: Int = 0
+    @State private var isPagingPassport: Bool = false
     @Environment(\.appAccentColor) private var appAccentColor
     @Environment(\.colorScheme) private var colorScheme
     @Environment(TripStore.self) private var tripStore
@@ -12,6 +14,7 @@ struct TrackersHomeView: View {
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var inactivePageDotColor: Color { colorScheme == .dark ? columnStroke : Color(.systemGray3) }
     
     private let passportStampSize: CGFloat = 200
     
@@ -37,6 +40,8 @@ struct TrackersHomeView: View {
                 ]
                 
                 LazyVGrid(columns: columns, spacing: 12) {
+                    tripsTakenCard
+                    
                     ForEach(TrackerType.allCases) { type in
                         NavigationLink(value: type) {
                             TrackerRowCard(
@@ -51,6 +56,7 @@ struct TrackersHomeView: View {
             }
             .padding()
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -99,14 +105,89 @@ struct TrackersHomeView: View {
         }
     }
     
+    private var tripsTakenCard: some View {
+        let tripsTaken = completedTrips.count
+        let totalBars = 16
+        let filled = min(tripsTaken, totalBars)
+        
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Trips Taken")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(textPrimary)
+                        .lineLimit(1)
+                    
+                    Text("Logged in this app")
+                        .font(.caption)
+                        .foregroundStyle(textSecondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer(minLength: 0)
+            }
+            
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [appAccentColor.opacity(0.22), appAccentColor.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    
+                    Image(systemName: "suitcase.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [appAccentColor, appAccentColor.opacity(0.75)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .frame(width: 58, height: 58)
+                
+                Spacer(minLength: 0)
+            }
+            
+            Text("\(tripsTaken)")
+                .font(.largeTitle.weight(.semibold))
+                .foregroundStyle(textPrimary)
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+            
+            HStack(spacing: 4) {
+                ForEach(0..<totalBars, id: \.self) { idx in
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(idx < filled ? appAccentColor : columnStroke)
+                        .frame(height: 28)
+                }
+            }
+            .padding(.bottom, 6)
+            .animation(.easeInOut(duration: 0.25), value: filled)
+        }
+        .padding(15)
+        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(columnStroke)
+        }
+        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
+    }
+    
     private var passportCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Passport")
+                    Text("Stamps")
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(textPrimary)
-                    Text("Stamps from completed trips")
+                    Text("You’ve completed \(completedTrips.count) \(completedTrips.count == 1 ? "trip" : "trips")")
                         .font(.caption)
                         .foregroundStyle(textSecondary)
                 }
@@ -125,8 +206,10 @@ struct TrackersHomeView: View {
                     .padding(.vertical, 18)
                     .frame(maxWidth: .infinity, alignment: .center)
             } else {
-                TabView {
-                    ForEach(Array(completedTrips.prefix(12))) { trip in
+                let trips = Array(completedTrips.prefix(12))
+                
+                TabView(selection: $passportPageIndex) {
+                    ForEach(Array(trips.enumerated()), id: \.element.id) { idx, trip in
                         PassportStampView(
                             destination: trip.destination,
                             iconSystemName: "globe",
@@ -136,23 +219,45 @@ struct TrackersHomeView: View {
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                         .padding(.top, 6)
-                        .padding(.bottom, 48)
+                        .tag(idx)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .automatic))
-                .frame(height: passportStampSize + 92)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: passportStampSize + 18)
                 .padding(.top, 2)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 8)
+                        .onChanged { _ in isPagingPassport = true }
+                        .onEnded { _ in
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                isPagingPassport = false
+                            }
+                        }
+                )
+                
+                HStack(spacing: 7) {
+                    ForEach(0..<trips.count, id: \.self) { idx in
+                        Capsule(style: .continuous)
+                            .fill(idx == passportPageIndex ? textPrimary : inactivePageDotColor)
+                            .frame(width: idx == passportPageIndex ? 16 : 7, height: 7)
+                            .animation(.easeInOut(duration: 0.18), value: passportPageIndex)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 10)
             }
         }
-        .padding(18)
+        .padding(15)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(dayBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(columnStroke)
         }
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onTapGesture {
+            guard !isPagingPassport else { return }
             isShowingPassport = true
         }
     }

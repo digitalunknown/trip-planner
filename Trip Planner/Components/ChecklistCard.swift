@@ -21,6 +21,18 @@ struct ChecklistCard: View {
                 Rectangle()
                     .fill(headerColor)
                 
+                // 1px dashed stitch divider at bottom
+                GeometryReader { geo in
+                    Path { p in
+                        p.move(to: CGPoint(x: 0, y: geo.size.height - 0.5))
+                        p.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height - 0.5))
+                    }
+                    .stroke(
+                        Color(hex: 0xC9A239),
+                        style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 4])
+                    )
+                }
+                
                 HStack(alignment: .firstTextBaseline) {
                     Text(checklist.title)
                         .font(.subheadline.weight(.semibold)) // match event card title style
@@ -34,9 +46,9 @@ struct ChecklistCard: View {
                         .foregroundStyle(textColor)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 16)
             }
             .frame(maxWidth: .infinity)
+            .frame(height: 44)
             
             VStack(spacing: 0) {
                 ForEach(0..<3, id: \.self) { idx in
@@ -67,9 +79,9 @@ struct ChecklistCard: View {
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
                     }
                     .frame(maxWidth: .infinity)
+                    .frame(height: 44)
                     
                     if idx < 2 {
                         Rectangle()

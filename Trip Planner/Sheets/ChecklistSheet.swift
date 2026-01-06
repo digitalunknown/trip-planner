@@ -3,6 +3,7 @@ import UIKit
 
 struct ChecklistSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
     
     @Binding var title: String
     @Binding var items: [ChecklistEntry]
@@ -15,6 +16,7 @@ struct ChecklistSheet: View {
     @FocusState private var focusedItemID: UUID?
     @State private var pendingDeleteItemID: UUID?
     @State private var didCopyItems: Bool = false
+    @State private var isFocusingNewItem: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -83,6 +85,18 @@ struct ChecklistSheet: View {
                                 }
                             }
                             .id(itemID)
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                let isDone = items.first(where: { $0.id == itemID })?.isDone ?? false
+                                Button {
+                                    guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
+                                    let wasDone = items[idx].isDone
+                                    items[idx].isDone = !wasDone
+                                    if !wasDone, items[idx].isDone { Haptics.bump() }
+                                } label: {
+                                    Label(isDone ? "Undone" : "Done", systemImage: isDone ? "arrow.uturn.left" : "checkmark")
+                                }
+                                .tint(isDone ? Color.secondary : appAccentColor)
+                            }
                         }
                         .onDelete { offsets in
                             for offset in offsets.sorted(by: >) where offset < items.count {
@@ -100,8 +114,20 @@ struct ChecklistSheet: View {
                                 let newID = UUID()
                                 items.append(ChecklistEntry(id: newID, text: t, isDone: false))
                                 newItemText = ""
-                                DispatchQueue.main.async {
+                                
+                                // Ensure the newly created row becomes the active input (Form updates can steal focus).
+                                isFocusingNewItem = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        proxy.scrollTo(newID, anchor: .center)
+                                    }
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
                                     focusedItemID = newID
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+                                    focusedItemID = newID
+                                    isFocusingNewItem = false
                                 }
                             }
                             .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -132,7 +158,7 @@ struct ChecklistSheet: View {
                         } label: {
                             HStack {
                                 Spacer()
-                                Label(didCopyItems ? "Copied" : "Copy Items", systemImage: "doc.on.doc")
+                                Text(didCopyItems ? "Copied" : "Copy Items")
                                     .fontWeight(.semibold)
                                 Spacer()
                             }

@@ -41,7 +41,8 @@ struct TrackerDetailView: View {
                 TrackerProgressBar(
                     percent: progress,
                     visitedCount: store.visitedCount(in: type),
-                    totalCount: TrackerData.items(for: type).count
+                    totalCount: TrackerData.items(for: type).count,
+                    unfilledColor: columnStroke
                 )
                 .padding(.top, 6)
                 .padding(.bottom, 10)
