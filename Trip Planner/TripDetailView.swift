@@ -112,6 +112,7 @@ struct TripDetailView: View {
     @State private var displayedDayIDForMarkers: UUID?
     @State private var markersOpacity: Double = 1.0
     @State private var pendingMarkerTransition: DispatchWorkItem?
+    @State private var lastDayFocusHapticAt: Date = .distantPast
     @Environment(\.colorScheme) private var colorScheme
     
     private var boardDividerColor: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
@@ -631,8 +632,16 @@ struct TripDetailView: View {
         .onChange(of: trip.mapSpan) { _, _ in
             setMapRegion(appropriateMapRegion, animated: false)
         }
-        .onChange(of: focusedDayID) { _, newValue in
+        .onChange(of: focusedDayID) { oldValue, newValue in
             guard hasUserScrolledDays else { return }
+            
+            if oldValue != newValue, newValue != nil {
+                let now = Date()
+                if now.timeIntervalSince(lastDayFocusHapticAt) > 0.35 {
+                    lastDayFocusHapticAt = now
+                    Haptics.bump()
+                }
+            }
             
             let targetDayID: UUID? = {
                 guard let dayID = newValue else { return nil }

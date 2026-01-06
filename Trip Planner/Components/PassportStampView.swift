@@ -10,6 +10,8 @@ struct PassportStampView: View {
     var size: CGFloat = 180
     var tint: Color = .primary
     
+    @AppStorage("parallaxEffectsEnabled") private var parallaxEffectsEnabled: Bool = true
+    
     @State private var letterWidths: [Int: CGFloat] = [:]
     @StateObject private var motion = TiltMotionManager()
     
@@ -58,8 +60,8 @@ struct PassportStampView: View {
         let text = ringText(targetCharacterCount: targetChars)
         let lettersOffset = Array(text.enumerated())
         
-        let tiltX = motion.pitch // up/down
-        let tiltY = motion.roll  // left/right
+        let tiltX = parallaxEffectsEnabled ? motion.pitch : 0 // up/down
+        let tiltY = parallaxEffectsEnabled ? motion.roll : 0  // left/right
         
         func fetchAngle(at index: Int) -> Angle {
             // Use the measured total width so the ring always fits 360° with no overlap.
@@ -124,8 +126,21 @@ struct PassportStampView: View {
                     letterWidths.merge(newWidths, uniquingKeysWith: { _, new in new })
                 }
             }
-            .onAppear { motion.start() }
+            .onAppear {
+                if parallaxEffectsEnabled {
+                    motion.start()
+                } else {
+                    motion.stop()
+                }
+            }
             .onDisappear { motion.stop() }
+            .onChange(of: parallaxEffectsEnabled) { _, isEnabled in
+                if isEnabled {
+                    motion.start()
+                } else {
+                    motion.stop()
+                }
+            }
             .onChange(of: destination) { _, _ in
                 letterWidths = [:]
             }
@@ -160,6 +175,10 @@ private final class TiltMotionManager: ObservableObject {
     
     func stop() {
         manager.stopDeviceMotionUpdates()
+        DispatchQueue.main.async {
+            self.roll = 0
+            self.pitch = 0
+        }
     }
 }
 

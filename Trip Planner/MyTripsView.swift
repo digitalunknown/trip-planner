@@ -336,6 +336,7 @@ struct MyTripsView: View {
                 .padding(.bottom, 12)
             }
             .onChange(of: selectedSegment) { _, _ in
+                Haptics.bump()
                 segmentSwitchInFlight = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
                     withTransaction(Transaction(animation: nil)) {

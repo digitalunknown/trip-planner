@@ -7,7 +7,7 @@
         "key": "Settings",
         "location": {
           "startingColumn": 30,
-          "startingLine": 55
+          "startingLine": 50
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "General",
         "location": {
           "startingColumn": 25,
-          "startingLine": 18
+          "startingLine": 20
         }
       },
       {
@@ -23,15 +23,23 @@
         "key": "Appearance",
         "location": {
           "startingColumn": 28,
-          "startingLine": 19
+          "startingLine": 21
         }
       },
       {
         "comment": "",
-        "key": "Accent Color",
+        "key": "Haptics",
         "location": {
           "startingColumn": 28,
-          "startingLine": 25
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Parallax Effects",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 29
         }
       },
       {
@@ -39,7 +47,7 @@
         "key": "Version",
         "location": {
           "startingColumn": 30,
-          "startingLine": 38
+          "startingLine": 33
         }
       },
       {
@@ -47,7 +55,7 @@
         "key": "Beta",
         "location": {
           "startingColumn": 30,
-          "startingLine": 40
+          "startingLine": 35
         }
       },
       {
@@ -55,7 +63,7 @@
         "key": "Created by Peter Osmenda (@digitalunknown).",
         "location": {
           "startingColumn": 30,
-          "startingLine": 45
+          "startingLine": 40
         }
       },
       {
@@ -63,7 +71,7 @@
         "key": "Send feedback on X",
         "location": {
           "startingColumn": 30,
-          "startingLine": 49
+          "startingLine": 44
         }
       }
     ]

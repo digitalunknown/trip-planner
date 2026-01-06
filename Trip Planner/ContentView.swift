@@ -14,13 +14,10 @@ struct ContentView: View {
     }
     
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
-    @AppStorage("accentColor") private var accentColorRaw: String = AccentColorOption.orange.rawValue
     @State private var selectedTab: RootTab = .myTrips
     @State private var tripStore = TripStore()
     
-    private var accentColor: Color {
-        AccentColorOption(rawValue: accentColorRaw)?.color ?? .orange
-    }
+    private let accentColor: Color = .orange
     
     var body: some View {
         TabView(selection: $selectedTab) {

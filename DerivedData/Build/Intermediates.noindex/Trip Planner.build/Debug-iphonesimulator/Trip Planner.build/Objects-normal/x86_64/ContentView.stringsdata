@@ -7,7 +7,7 @@
         "key": "Trips",
         "location": {
           "startingColumn": 23,
-          "startingLine": 30
+          "startingLine": 27
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Stats",
         "location": {
           "startingColumn": 23,
-          "startingLine": 39
+          "startingLine": 36
         }
       }
     ]

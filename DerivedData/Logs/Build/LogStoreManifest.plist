@@ -6,7 +6,7 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
-		<key>02B43AF2-580C-4E2D-85F4-5B4FDB954F1A</key>
+		<key>3FE060C7-368C-40F8-A179-9B3C5550464F</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>02B43AF2-580C-4E2D-85F4-5B4FDB954F1A.xcactivitylog</string>
+			<string>3FE060C7-368C-40F8-A179-9B3C5550464F.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,55 +40,13 @@
 			<key>signature</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>789361740.84395194</real>
+			<real>789412502.02894199</real>
 			<key>timeStoppedRecording</key>
-			<real>789361753.18719196</real>
+			<real>789412514.85376894</real>
 			<key>title</key>
 			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>02B43AF2-580C-4E2D-85F4-5B4FDB954F1A</string>
-		</dict>
-		<key>83515351-1796-45E5-9CB6-DC129D52B9F4</key>
-		<dict>
-			<key>className</key>
-			<string>IDECommandLineBuildLog</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
-			<key>fileName</key>
-			<string>83515351-1796-45E5-9CB6-DC129D52B9F4.xcactivitylog</string>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>S</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>0</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Trip Planner project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Trip Planner</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
-			<key>timeStartedRecording</key>
-			<real>789363533.26323402</real>
-			<key>timeStoppedRecording</key>
-			<real>789363538.59568202</real>
-			<key>title</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
-			<key>uniqueIdentifier</key>
-			<string>83515351-1796-45E5-9CB6-DC129D52B9F4</string>
+			<string>3FE060C7-368C-40F8-A179-9B3C5550464F</string>
 		</dict>
 	</dict>
 </dict>

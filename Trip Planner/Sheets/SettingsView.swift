@@ -9,8 +9,10 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
-    @AppStorage("accentColor") private var accentColorRaw: String = AccentColorOption.orange.rawValue
+    @AppStorage("hapticsEnabled") private var hapticsEnabled: Bool = true
+    @AppStorage("parallaxEffectsEnabled") private var parallaxEffectsEnabled: Bool = true
     
     var body: some View {
         NavigationStack {
@@ -22,17 +24,10 @@ struct SettingsView: View {
                         }
                     }
                     
-                    Picker("Accent Color", selection: $accentColorRaw) {
-                        ForEach(AccentColorOption.allCases) { option in
-                            HStack(spacing: 10) {
-                                Circle()
-                                    .fill(option.color)
-                                    .frame(width: 14, height: 14)
-                                Text(option.title)
-                            }
-                            .tag(option.rawValue)
-                        }
-                    }
+                    Toggle("Haptics", isOn: $hapticsEnabled)
+                        .tint(appAccentColor)
+                    Toggle("Parallax Effects", isOn: $parallaxEffectsEnabled)
+                        .tint(appAccentColor)
                     
                     HStack {
                         Text("Version")
@@ -65,6 +60,14 @@ struct SettingsView: View {
         }
         .preferredColorScheme(appearanceMode.preferredColorScheme)
         .tint(.primary)
+        .onAppear {
+            if UserDefaults.standard.object(forKey: "hapticsEnabled") == nil {
+                hapticsEnabled = true
+            }
+            if UserDefaults.standard.object(forKey: "parallaxEffectsEnabled") == nil {
+                parallaxEffectsEnabled = true
+            }
+        }
     }
 }
 
@@ -88,36 +91,6 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
         case .system: return nil
         case .light: return .light
         case .dark: return .dark
-        }
-    }
-}
-
-enum AccentColorOption: String, CaseIterable, Identifiable {
-    case orange
-    case purple
-    case blue
-    case teal
-    case pink
-    
-    var id: String { rawValue }
-    
-    var title: String {
-        switch self {
-        case .orange: return "Orange"
-        case .purple: return "Purple"
-        case .blue: return "Blue"
-        case .teal: return "Teal"
-        case .pink: return "Pink"
-        }
-    }
-    
-    var color: Color {
-        switch self {
-        case .orange: return .orange
-        case .purple: return .purple
-        case .blue: return .blue
-        case .teal: return .teal
-        case .pink: return .pink
         }
     }
 }
