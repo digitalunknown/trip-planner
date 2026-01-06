@@ -40,6 +40,7 @@ struct TripCardView: View {
     }
     
     private var tripStatus: TripStatus {
+        guard trip.isDatesSet else { return .upcoming(daysUntilStart: 0) }
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         let start = cal.startOfDay(for: trip.startDate)
@@ -51,6 +52,7 @@ struct TripCardView: View {
     }
     
     private var isUrgent: Bool {
+        guard trip.isDatesSet else { return false }
         if case let .upcoming(daysUntilStart) = tripStatus {
             return daysUntilStart >= 0 && daysUntilStart < 5
         }
@@ -58,6 +60,7 @@ struct TripCardView: View {
     }
     
     private var countdownText: String {
+        guard trip.isDatesSet else { return "Unscheduled" }
         switch tripStatus {
         case .upcoming(let daysUntilStart):
             if daysUntilStart == 0 { return "Today!" }
@@ -103,26 +106,28 @@ struct TripCardView: View {
             }
             
             VStack {
-                HStack {
-                    Spacer()
-                    HStack(spacing: 4) {
-                        if trip.daysUntilTrip == 0 {
-                            Image(systemName: "star.fill")
-                                .font(.caption)
+                if trip.isDatesSet {
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 4) {
+                            if trip.daysUntilTrip == 0 {
+                                Image(systemName: "star.fill")
+                                    .font(.caption)
+                            }
+                            Text(countdownText)
                         }
-                        Text(countdownText)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(.ultraThinMaterial)
+                        )
+                        .clipShape(Capsule())
                     }
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(.ultraThinMaterial)
-                    )
-                    .clipShape(Capsule())
+                    .padding(12)
                 }
-                .padding(12)
                 Spacer()
             }
             
@@ -139,7 +144,7 @@ struct TripCardView: View {
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
                 
-                Text(trip.formattedDateRange)
+                Text(trip.isDatesSet ? trip.formattedDateRange : "Unscheduled")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
             }

@@ -113,6 +113,13 @@ struct TripDetailView: View {
     @State private var markersOpacity: Double = 1.0
     @State private var pendingMarkerTransition: DispatchWorkItem?
     @State private var lastDayFocusHapticAt: Date = .distantPast
+    
+    @State private var settingsSnapshotTrip: Trip?
+    @State private var settingsSnapshotTripDays: [TripDay] = []
+    @State private var showConvertDatesDropAlert: Bool = false
+    @State private var pendingConvertNewDaysCount: Int = 0
+    @State private var pendingConvertDroppedCounts: (activities: Int, reminders: Int, checklists: Int, flights: Int) = (0, 0, 0, 0)
+    @State private var pendingConvertOldDays: [TripDay] = []
     @Environment(\.colorScheme) private var colorScheme
     
     private var boardDividerColor: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
@@ -405,6 +412,8 @@ struct TripDetailView: View {
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
             Button {
+                settingsSnapshotTrip = trip
+                settingsSnapshotTripDays = tripDays
                 isPresentingSettings = true
             } label: {
                 Image(systemName: "gearshape")
@@ -498,11 +507,28 @@ struct TripDetailView: View {
                     mapSpan: $trip.mapSpan,
                     startDate: $trip.startDate,
                     endDate: $trip.endDate,
+                    isDatesSet: $trip.isDatesSet,
+                    unscheduledDaysCount: $trip.unscheduledDaysCount,
                     coverImageData: $trip.coverImageData,
                     showParkedIdeas: $trip.showParkedIdeas,
-                    onApply: updateTripDaysForDates
+                    onApply: applyTripSettingsFromSheet
                 )
                 .tint(.primary)
+            }
+            .alert("Shorter date range", isPresented: $showConvertDatesDropAlert) {
+                Button("Cancel", role: .cancel) {
+                    if let snap = settingsSnapshotTrip {
+                        trip = snap
+                    }
+                    tripDays = settingsSnapshotTripDays
+                    showConvertDatesDropAlert = false
+                }
+                Button("Remove & Convert", role: .destructive) {
+                    convertCurrentTripDaysToScheduledByIndex(oldDays: pendingConvertOldDays)
+                    showConvertDatesDropAlert = false
+                }
+            } message: {
+                Text("This date range is shorter and will remove items from days that no longer fit.\n\n\(pendingConvertDroppedCounts.activities) activities, \(pendingConvertDroppedCounts.reminders) reminders, \(pendingConvertDroppedCounts.checklists) checklists, \(pendingConvertDroppedCounts.flights) flights.")
             }
             .sheet(isPresented: $isPresentingAdd, onDismiss: {
                 editingEvent = nil
@@ -584,6 +610,79 @@ struct TripDetailView: View {
                 .tint(.primary)
                 .presentationDetents([.medium, .large])
             }
+    }
+
+    private func applyTripSettingsFromSheet() {
+        // Detect unscheduled -> scheduled conversion and map days by index.
+        let wasUnscheduled = settingsSnapshotTrip?.isDatesSet == false
+        if wasUnscheduled, trip.isDatesSet {
+            let calendar = Calendar.current
+            let totalDays = max(1, (calendar.dateComponents([.day], from: trip.startDate, to: trip.endDate).day ?? 0) + 1)
+            let oldDays = tripDays
+            
+            if oldDays.count > totalDays {
+                let dropped = oldDays.suffix(from: totalDays)
+                let activities = dropped.map { $0.events.count }.reduce(0, +)
+                let reminders = dropped.map { $0.reminders.count }.reduce(0, +)
+                let checklists = dropped.map { $0.checklists.count }.reduce(0, +)
+                let flights = dropped.map { $0.flights.count }.reduce(0, +)
+                
+                pendingConvertNewDaysCount = totalDays
+                pendingConvertDroppedCounts = (activities, reminders, checklists, flights)
+                pendingConvertOldDays = oldDays
+                showConvertDatesDropAlert = true
+                return
+            }
+            
+            convertCurrentTripDaysToScheduledByIndex(oldDays: oldDays)
+            return
+        }
+        
+        updateTripDaysForDates()
+    }
+    
+    private func convertCurrentTripDaysToScheduledByIndex(oldDays: [TripDay]) {
+        let calendar = Calendar.current
+        let totalDays = max(1, (calendar.dateComponents([.day], from: trip.startDate, to: trip.endDate).day ?? 0) + 1)
+        
+        var newDays: [TripDay] = []
+        newDays.reserveCapacity(totalDays)
+        
+        for offset in 0..<totalDays {
+            let date = calendar.date(byAdding: .day, value: offset, to: trip.startDate) ?? trip.startDate
+            if offset < oldDays.count {
+                let existing = oldDays[offset]
+                let updated = TripDay(
+                    id: existing.id,
+                    date: date,
+                    events: existing.events,
+                    reminders: existing.reminders,
+                    checklists: existing.checklists,
+                    flights: existing.flights,
+                    label: "Day \(offset + 1)",
+                    order: offset + 1,
+                    weatherIcon: existing.weatherIcon,
+                    temperatureF: existing.temperatureF
+                )
+                newDays.append(updated)
+            } else {
+                let emptyDay = TripDay(
+                    id: UUID(),
+                    date: date,
+                    events: [],
+                    reminders: [],
+                    checklists: [],
+                    flights: [],
+                    label: "Day \(offset + 1)",
+                    order: offset + 1,
+                    weatherIcon: "cloud.sun.fill",
+                    temperatureF: 72
+                )
+                newDays.append(emptyDay)
+            }
+        }
+        
+        tripDays = newDays
     }
     
     var body: some View {
@@ -702,6 +801,7 @@ private extension TripDetailView {
                         DayColumn(
                             day: day,
                             totalDays: tripDays.count,
+                            isUnscheduled: !trip.isDatesSet,
                             columnWidth: columnWidth,
                             columnHeight: geo.size.height - 24,
                             onTap: { event in startEditing(event: event, day: day) },
@@ -882,6 +982,51 @@ private extension TripDetailView {
     }
 
     func updateTripDaysForDates() {
+        // Unscheduled trips: drive the day columns by unscheduledDaysCount and preserve content by index.
+        if !trip.isDatesSet {
+            let desiredCount = max(1, trip.unscheduledDaysCount)
+            let base = Calendar.current.startOfDay(for: Date())
+            var newDays: [TripDay] = []
+            newDays.reserveCapacity(desiredCount)
+            
+            for idx in 0..<desiredCount {
+                let date = Calendar.current.date(byAdding: .day, value: idx, to: base) ?? base
+                if idx < tripDays.count {
+                    let existing = tripDays[idx]
+                    let updated = TripDay(
+                        id: existing.id,
+                        date: date,
+                        events: existing.events,
+                        reminders: existing.reminders,
+                        checklists: existing.checklists,
+                        flights: existing.flights,
+                        label: "Day \(idx + 1)",
+                        order: idx + 1,
+                        weatherIcon: existing.weatherIcon,
+                        temperatureF: existing.temperatureF
+                    )
+                    newDays.append(updated)
+                } else {
+                    let emptyDay = TripDay(
+                        id: UUID(),
+                        date: date,
+                        events: [],
+                        reminders: [],
+                        checklists: [],
+                        flights: [],
+                        label: "Day \(idx + 1)",
+                        order: idx + 1,
+                        weatherIcon: "cloud.sun.fill",
+                        temperatureF: 72
+                    )
+                    newDays.append(emptyDay)
+                }
+            }
+            
+            tripDays = newDays
+            return
+        }
+        
         let calendar = Calendar.current
         let components = calendar.dateComponents([.day], from: trip.startDate, to: trip.endDate)
         let totalDays = (components.day ?? 0) + 1

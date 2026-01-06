@@ -3,6 +3,7 @@ import SwiftUI
 struct DayColumn: View {
     let day: TripDay
     let totalDays: Int
+    let isUnscheduled: Bool
     let columnWidth: CGFloat
     let columnHeight: CGFloat
     let onTap: (EventItem) -> Void
@@ -77,7 +78,7 @@ struct DayColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(day.displayTitle)
+                Text(isUnscheduled ? "No Date" : day.displayTitle)
                     .font(.headline)
                     .foregroundStyle(textPrimary)
                 Text("Day \(day.order) of \(totalDays)")

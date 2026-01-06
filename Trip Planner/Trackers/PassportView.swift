@@ -7,6 +7,7 @@ struct PassportView: View {
     private let passportStampSize: CGFloat = 200
     
     private var pageBackground: Color { colorScheme == .dark ? Color(hex: 0x0A0A0A) : Color(hex: 0xE0E0E0) }
+    private var dotColor: Color { colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.06) }
     
     private var completedTrips: [Trip] {
         let calendar = Calendar.current
@@ -22,6 +23,8 @@ struct PassportView: View {
     var body: some View {
         ZStack {
             pageBackground.ignoresSafeArea()
+            DotGridBackground(color: dotColor, spacing: 18, dotDiameter: 2)
+                .ignoresSafeArea()
             
             ScrollView(.vertical, showsIndicators: true) {
                 LazyVStack(spacing: 28) {
@@ -43,6 +46,33 @@ struct PassportView: View {
         .navigationTitle("Stamps")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+    }
+}
+
+private struct DotGridBackground: View {
+    let color: Color
+    let spacing: CGFloat
+    let dotDiameter: CGFloat
+    
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            let r = dotDiameter / 2
+            
+            // Offset by half spacing so dots feel centered.
+            var y: CGFloat = spacing / 2
+            while y <= size.height + spacing {
+                var x: CGFloat = spacing / 2
+                while x <= size.width + spacing {
+                    path.addEllipse(in: CGRect(x: x - r, y: y - r, width: dotDiameter, height: dotDiameter))
+                    x += spacing
+                }
+                y += spacing
+            }
+            
+            context.fill(path, with: .color(color))
+        }
+        .allowsHitTesting(false)
     }
 }
 

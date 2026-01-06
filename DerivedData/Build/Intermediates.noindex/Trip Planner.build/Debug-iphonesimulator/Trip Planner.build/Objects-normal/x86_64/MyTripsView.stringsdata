@@ -7,7 +7,7 @@
         "key": "Trips",
         "location": {
           "startingColumn": 30,
-          "startingLine": 41
+          "startingLine": 63
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Delete Trip",
         "location": {
           "startingColumn": 17,
-          "startingLine": 105
+          "startingLine": 127
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Delete Trip",
         "location": {
           "startingColumn": 24,
-          "startingLine": 112
+          "startingLine": 134
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 24,
-          "startingLine": 118
+          "startingLine": 140
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Are you sure you want to delete this trip? This action cannot be undone.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 122
+          "startingLine": 144
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "No Trips Yet",
         "location": {
           "startingColumn": 22,
-          "startingLine": 171
+          "startingLine": 193
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Start planning your next adventure!\nTap the button below to create your first trip.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 175
+          "startingLine": 197
         }
       },
       {
@@ -63,15 +63,15 @@
         "key": "Create Trip",
         "location": {
           "startingColumn": 22,
-          "startingLine": 185
+          "startingLine": 207
         }
       },
       {
         "comment": "",
         "key": "",
         "location": {
-          "startingColumn": 28,
-          "startingLine": 242
+          "startingColumn": 32,
+          "startingLine": 275
         }
       },
       {
@@ -79,15 +79,23 @@
         "key": "No Past Trips",
         "location": {
           "startingColumn": 56,
-          "startingLine": 263
+          "startingLine": 297
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Unscheduled Trips",
+        "location": {
+          "startingColumn": 109,
+          "startingLine": 297
         }
       },
       {
         "comment": "",
         "key": "No Upcoming Trips",
         "location": {
-          "startingColumn": 74,
-          "startingLine": 263
+          "startingColumn": 134,
+          "startingLine": 297
         }
       },
       {
@@ -95,15 +103,55 @@
         "key": "Trips you’ve completed will show up here.",
         "location": {
           "startingColumn": 74,
-          "startingLine": 265
+          "startingLine": 299
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trips without dates will show up here.",
+        "location": {
+          "startingColumn": 157,
+          "startingLine": 299
         }
       },
       {
         "comment": "",
         "key": "Trips that are coming up (or in progress) will show up here.",
         "location": {
-          "startingColumn": 122,
-          "startingLine": 265
+          "startingColumn": 200,
+          "startingLine": 299
+        }
+      },
+      {
+        "comment": "",
+        "key": "View Trip",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 317
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Cover Image",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 326
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Trip",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 332
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 340
         }
       },
       {
@@ -111,7 +159,7 @@
         "key": "View Trip",
         "location": {
           "startingColumn": 51,
-          "startingLine": 293
+          "startingLine": 370
         }
       },
       {
@@ -119,7 +167,7 @@
         "key": "Add Cover Image",
         "location": {
           "startingColumn": 51,
-          "startingLine": 302
+          "startingLine": 379
         }
       },
       {
@@ -127,7 +175,7 @@
         "key": "Edit Trip",
         "location": {
           "startingColumn": 51,
-          "startingLine": 308
+          "startingLine": 385
         }
       },
       {
@@ -135,7 +183,15 @@
         "key": "Delete Trip",
         "location": {
           "startingColumn": 51,
-          "startingLine": 316
+          "startingLine": 393
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shorter date range",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 668
         }
       },
       {
@@ -143,7 +199,7 @@
         "key": "Delete Trip",
         "location": {
           "startingColumn": 33,
-          "startingLine": 499
+          "startingLine": 616
         }
       },
       {
@@ -151,7 +207,7 @@
         "key": "Edit Trip",
         "location": {
           "startingColumn": 30,
-          "startingLine": 508
+          "startingLine": 625
         }
       },
       {
@@ -159,7 +215,7 @@
         "key": "Trip Details",
         "location": {
           "startingColumn": 25,
-          "startingLine": 412
+          "startingLine": 515
         }
       },
       {
@@ -167,7 +223,7 @@
         "key": "Dates",
         "location": {
           "startingColumn": 25,
-          "startingLine": 434
+          "startingLine": 537
         }
       },
       {
@@ -175,7 +231,7 @@
         "key": "Cover Image",
         "location": {
           "startingColumn": 25,
-          "startingLine": 439
+          "startingLine": 556
         }
       },
       {
@@ -183,23 +239,47 @@
         "key": "Trip Name",
         "location": {
           "startingColumn": 35,
-          "startingLine": 414
+          "startingLine": 517
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set Dates",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 538
         }
       },
       {
         "comment": "",
         "key": "Start Date",
         "location": {
-          "startingColumn": 32,
-          "startingLine": 435
+          "startingColumn": 36,
+          "startingLine": 542
         }
       },
       {
         "comment": "",
         "key": "End Date",
         "location": {
-          "startingColumn": 32,
-          "startingLine": 436
+          "startingColumn": 36,
+          "startingLine": 543
+        }
+      },
+      {
+        "comment": "",
+        "key": "Number of Days",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 547
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 549
         }
       },
       {
@@ -207,7 +287,7 @@
         "key": "Add Cover Image",
         "location": {
           "startingColumn": 38,
-          "startingLine": 471
+          "startingLine": 588
         }
       },
       {
@@ -215,7 +295,7 @@
         "key": "Show Parked Ideas",
         "location": {
           "startingColumn": 28,
-          "startingLine": 479
+          "startingLine": 596
         }
       },
       {
@@ -223,7 +303,7 @@
         "key": "Options",
         "location": {
           "startingColumn": 26,
-          "startingLine": 482
+          "startingLine": 599
         }
       },
       {
@@ -231,7 +311,7 @@
         "key": "An extra space for ideation",
         "location": {
           "startingColumn": 26,
-          "startingLine": 484
+          "startingLine": 601
         }
       },
       {
@@ -239,7 +319,7 @@
         "key": "Delete Trip",
         "location": {
           "startingColumn": 34,
-          "startingLine": 493
+          "startingLine": 610
         }
       },
       {
@@ -247,7 +327,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 24,
-          "startingLine": 500
+          "startingLine": 617
         }
       },
       {
@@ -255,7 +335,7 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 24,
-          "startingLine": 504
+          "startingLine": 621
         }
       },
       {
@@ -263,7 +343,31 @@
         "key": "Are you sure you want to delete this trip? This action cannot be undone.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 506
+          "startingLine": 623
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 669
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove & Convert",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 670
+        }
+      },
+      {
+        "comment": "",
+        "key": "This date range is shorter and will remove items from days that no longer fit.\n\n%lld activities, %lld reminders, %lld checklists, %lld flights.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 675
         }
       }
     ]

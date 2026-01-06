@@ -21,12 +21,18 @@ struct NewTripView: View {
     @State private var mapSpan: Double?
     @State private var startDate = Date()
     @State private var endDate = Date().addingTimeInterval(86400 * 4) // 5 days total
+    @State private var isDatesSet: Bool = true
+    @State private var unscheduledDaysCount: Int = 5
     @State private var coverImage: UIImage?
     @State private var showImagePicker = false
     @State private var showParkedIdeas: Bool = false
     
     var isValid: Bool {
-        !name.isEmpty && !destination.isEmpty && endDate >= startDate
+        guard !name.isEmpty && !destination.isEmpty else { return false }
+        if isDatesSet {
+            return endDate >= startDate
+        }
+        return unscheduledDaysCount >= 1
     }
     
     var body: some View {
@@ -55,8 +61,22 @@ struct NewTripView: View {
                 }
                 
                 Section("Dates") {
-                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                    DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    Toggle("Set Dates", isOn: $isDatesSet)
+                        .tint(appAccentColor)
+                    
+                    if isDatesSet {
+                        DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    } else {
+                        Stepper(value: $unscheduledDaysCount, in: 1...30) {
+                            HStack {
+                                Text("Number of Days")
+                                Spacer()
+                                Text("\(unscheduledDaysCount)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
                 
                 Section("Cover Image") {
@@ -116,6 +136,26 @@ struct NewTripView: View {
                 
                 ToolbarItem(placement: .topBarTrailing) {
                     LiquidGlassIconButton(systemName: "checkmark", isEnabled: isValid) {
+                        let days: [TripDay] = {
+                            guard !isDatesSet else { return [] }
+                            let base = Calendar.current.startOfDay(for: Date())
+                            return (0..<max(1, unscheduledDaysCount)).map { idx in
+                                let d = Calendar.current.date(byAdding: .day, value: idx, to: base) ?? base
+                                return TripDay(
+                                    id: UUID(),
+                                    date: d,
+                                    events: [],
+                                    reminders: [],
+                                    checklists: [],
+                                    flights: [],
+                                    label: "Day \(idx + 1)",
+                                    order: idx + 1,
+                                    weatherIcon: "cloud.sun.fill",
+                                    temperatureF: 72
+                                )
+                            }
+                        }()
+                        
                         let newTrip = Trip(
                             name: name,
                             destination: destination,
@@ -124,6 +164,9 @@ struct NewTripView: View {
                             latitude: latitude,
                             longitude: longitude,
                             mapSpan: mapSpan,
+                            isDatesSet: isDatesSet,
+                            unscheduledDaysCount: unscheduledDaysCount,
+                            days: days,
                             coverImageData: coverImage?.jpegData(compressionQuality: 0.8),
                             showParkedIdeas: showParkedIdeas,
                             parkedIdeas: []
@@ -137,6 +180,11 @@ struct NewTripView: View {
             .sheet(isPresented: $showImagePicker) {
                 TripImagePicker(image: $coverImage)
                     .tint(.primary)
+            }
+            .onChange(of: startDate) { _, newValue in
+                if isDatesSet, endDate < newValue {
+                    endDate = newValue
+                }
             }
         }
         .tint(.primary)

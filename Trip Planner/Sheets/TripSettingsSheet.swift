@@ -12,6 +12,8 @@ struct TripSettingsSheet: View {
     @Binding var mapSpan: Double?
     @Binding var startDate: Date
     @Binding var endDate: Date
+    @Binding var isDatesSet: Bool
+    @Binding var unscheduledDaysCount: Int
     @Binding var coverImageData: Data?
     @Binding var showParkedIdeas: Bool
     var onApply: () -> Void
@@ -45,8 +47,22 @@ struct TripSettingsSheet: View {
                 }
 
                 Section("Dates") {
-                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                    DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    Toggle("Set Dates", isOn: $isDatesSet)
+                        .tint(appAccentColor)
+                    
+                    if isDatesSet {
+                        DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                    } else {
+                        Stepper(value: $unscheduledDaysCount, in: 1...30) {
+                            HStack {
+                                Text("Number of Days")
+                                Spacer()
+                                Text("\(unscheduledDaysCount)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
                 
                 Section("Cover Image") {
@@ -124,7 +140,7 @@ struct TripSettingsSheet: View {
                 }
             }
             .onChange(of: startDate) { _, newValue in
-                if endDate < newValue {
+                if isDatesSet, endDate < newValue {
                     endDate = newValue
                 }
             }

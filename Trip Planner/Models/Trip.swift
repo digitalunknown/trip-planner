@@ -18,6 +18,11 @@ struct Trip: Identifiable, Hashable, Codable {
     var longitude: Double?
     var mapSpan: Double?
     
+    // When false, this trip is "Unscheduled" and date fields are treated as ignored.
+    var isDatesSet: Bool
+    // Used only when isDatesSet == false.
+    var unscheduledDaysCount: Int
+    
     var days: [TripDay]
     var coverImageData: Data?
     
@@ -27,6 +32,7 @@ struct Trip: Identifiable, Hashable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, destination, startDate, endDate
         case latitude, longitude, mapSpan
+        case isDatesSet, unscheduledDaysCount
         case days, coverImageData
         case showParkedIdeas, parkedIdeas
     }
@@ -40,6 +46,8 @@ struct Trip: Identifiable, Hashable, Codable {
         latitude: Double? = nil,
         longitude: Double? = nil,
         mapSpan: Double? = nil,
+        isDatesSet: Bool = true,
+        unscheduledDaysCount: Int = 5,
         days: [TripDay] = [],
         coverImageData: Data? = nil,
         showParkedIdeas: Bool = false,
@@ -53,10 +61,52 @@ struct Trip: Identifiable, Hashable, Codable {
         self.latitude = latitude
         self.longitude = longitude
         self.mapSpan = mapSpan
+        self.isDatesSet = isDatesSet
+        self.unscheduledDaysCount = max(1, unscheduledDaysCount)
         self.days = days
         self.coverImageData = coverImageData
         self.showParkedIdeas = showParkedIdeas
         self.parkedIdeas = parkedIdeas
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        destination = try c.decode(String.self, forKey: .destination)
+        startDate = try c.decode(Date.self, forKey: .startDate)
+        endDate = try c.decode(Date.self, forKey: .endDate)
+        latitude = try c.decodeIfPresent(Double.self, forKey: .latitude)
+        longitude = try c.decodeIfPresent(Double.self, forKey: .longitude)
+        mapSpan = try c.decodeIfPresent(Double.self, forKey: .mapSpan)
+        
+        isDatesSet = try c.decodeIfPresent(Bool.self, forKey: .isDatesSet) ?? true
+        unscheduledDaysCount = max(1, try c.decodeIfPresent(Int.self, forKey: .unscheduledDaysCount) ?? 5)
+        
+        days = try c.decodeIfPresent([TripDay].self, forKey: .days) ?? []
+        coverImageData = try c.decodeIfPresent(Data.self, forKey: .coverImageData)
+        showParkedIdeas = try c.decodeIfPresent(Bool.self, forKey: .showParkedIdeas) ?? false
+        parkedIdeas = try c.decodeIfPresent([EventItem].self, forKey: .parkedIdeas) ?? []
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(destination, forKey: .destination)
+        try c.encode(startDate, forKey: .startDate)
+        try c.encode(endDate, forKey: .endDate)
+        try c.encodeIfPresent(latitude, forKey: .latitude)
+        try c.encodeIfPresent(longitude, forKey: .longitude)
+        try c.encodeIfPresent(mapSpan, forKey: .mapSpan)
+        
+        try c.encode(isDatesSet, forKey: .isDatesSet)
+        try c.encode(unscheduledDaysCount, forKey: .unscheduledDaysCount)
+        
+        try c.encode(days, forKey: .days)
+        try c.encodeIfPresent(coverImageData, forKey: .coverImageData)
+        try c.encode(showParkedIdeas, forKey: .showParkedIdeas)
+        try c.encode(parkedIdeas, forKey: .parkedIdeas)
     }
     
     var formattedDateRange: String {

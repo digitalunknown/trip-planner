@@ -7,7 +7,7 @@
         "key": "Activity",
         "location": {
           "startingColumn": 27,
-          "startingLine": 430
+          "startingLine": 439
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Flight",
         "location": {
           "startingColumn": 27,
-          "startingLine": 439
+          "startingLine": 448
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Reminder",
         "location": {
           "startingColumn": 27,
-          "startingLine": 449
+          "startingLine": 458
         }
       },
       {
@@ -31,7 +31,39 @@
         "key": "Checklist",
         "location": {
           "startingColumn": 27,
-          "startingLine": 460
+          "startingLine": 469
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shorter date range",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 518
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 519
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove & Convert",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 526
+        }
+      },
+      {
+        "comment": "",
+        "key": "This date range is shorter and will remove items from days that no longer fit.\n\n%lld activities, %lld reminders, %lld checklists, %lld flights.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 531
         }
       },
       {
@@ -39,7 +71,7 @@
         "key": "",
         "location": {
           "startingColumn": 30,
-          "startingLine": 593
+          "startingLine": 692
         }
       },
       {
@@ -47,7 +79,7 @@
         "key": "%lld°F",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1697
+          "startingLine": 1842
         }
       }
     ]

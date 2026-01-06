@@ -7,7 +7,7 @@
         "key": "New Trip",
         "location": {
           "startingColumn": 30,
-          "startingLine": 110
+          "startingLine": 130
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Trip Details",
         "location": {
           "startingColumn": 25,
-          "startingLine": 35
+          "startingLine": 41
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Dates",
         "location": {
           "startingColumn": 25,
-          "startingLine": 57
+          "startingLine": 63
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Cover Image",
         "location": {
           "startingColumn": 25,
-          "startingLine": 62
+          "startingLine": 82
         }
       },
       {
@@ -39,23 +39,47 @@
         "key": "Trip Name",
         "location": {
           "startingColumn": 35,
-          "startingLine": 37
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set Dates",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 64
         }
       },
       {
         "comment": "",
         "key": "Start Date",
         "location": {
-          "startingColumn": 32,
-          "startingLine": 58
+          "startingColumn": 36,
+          "startingLine": 68
         }
       },
       {
         "comment": "",
         "key": "End Date",
         "location": {
-          "startingColumn": 32,
-          "startingLine": 59
+          "startingColumn": 36,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Number of Days",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 75
         }
       },
       {
@@ -63,7 +87,7 @@
         "key": "Add Cover Image",
         "location": {
           "startingColumn": 38,
-          "startingLine": 94
+          "startingLine": 114
         }
       },
       {
@@ -71,7 +95,7 @@
         "key": "Show Parked Ideas",
         "location": {
           "startingColumn": 28,
-          "startingLine": 102
+          "startingLine": 122
         }
       },
       {
@@ -79,7 +103,7 @@
         "key": "Options",
         "location": {
           "startingColumn": 26,
-          "startingLine": 105
+          "startingLine": 125
         }
       },
       {
@@ -87,7 +111,7 @@
         "key": "An extra space for ideation",
         "location": {
           "startingColumn": 26,
-          "startingLine": 107
+          "startingLine": 127
         }
       }
     ]
