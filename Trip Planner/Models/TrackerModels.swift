@@ -12,7 +12,7 @@ enum TrackerType: String, Codable, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .countries: return "Countries"
-        case .states: return "States"
+        case .states: return "U.S. States"
         case .continents: return "Continents"
         case .subwaySystems: return "Subway Systems"
         case .nationalParks: return "U.S. National Parks"

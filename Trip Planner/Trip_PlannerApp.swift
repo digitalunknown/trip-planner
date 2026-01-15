@@ -1,15 +1,10 @@
-//
-//  Trip_PlannerApp.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/16/25.
-//
-
 import SwiftUI
 import UIKit
 
 @main
 struct Trip_PlannerApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    
     var body: some Scene {
         WindowGroup {
             ContentView()

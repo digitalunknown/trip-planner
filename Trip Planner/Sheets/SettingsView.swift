@@ -1,10 +1,3 @@
-//
-//  SettingsView.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/18/25.
-//
-
 import SwiftUI
 
 struct SettingsView: View {
@@ -13,11 +6,45 @@ struct SettingsView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @AppStorage("hapticsEnabled") private var hapticsEnabled: Bool = true
     @AppStorage("parallaxEffectsEnabled") private var parallaxEffectsEnabled: Bool = true
+    @AppStorage("prefFood") private var prefFood: String = ""
+    @AppStorage("prefAlcohol") private var prefAlcohol: Bool = false
+    @AppStorage("prefInterests") private var prefInterests: String = ""
+    
+    private var createdByFooter: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Created by Peter Osmenda (@digitalunknown).")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            Link("Send feedback on X", destination: URL(string: "https://x.com/digitalunknown")!)
+                .font(.subheadline.weight(.semibold))
+        }
+    }
     
     var body: some View {
         NavigationStack {
             Form {
-                Section("General") {
+                Section {
+                    TextField("Favorite food, separated by commas", text: $prefFood, axis: .vertical)
+                        .lineLimit(1...3)
+                    
+                    Picker("Alcohol", selection: $prefAlcohol) {
+                        Text("No").tag(false)
+                        Text("Yes").tag(true)
+                    }
+                    
+                    TextField("Interests, separated by commas", text: $prefInterests, axis: .vertical)
+                        .lineLimit(1...3)
+                } header: {
+                    Text("Personal Preferences")
+                } footer: {
+                    Text("Your preferences will be considered for trip planning and recommendations")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                }
+                
+                Section("App Settings") {
                     Picker("Appearance", selection: $appearanceMode) {
                         ForEach(AppearanceMode.allCases) { mode in
                             Text(mode.title).tag(mode)
@@ -35,16 +62,12 @@ struct SettingsView: View {
                         Text("Beta")
                             .foregroundStyle(.secondary)
                     }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Created by Peter Osmenda (@digitalunknown).")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        
-                        Link("Send feedback on X", destination: URL(string: "https://x.com/digitalunknown")!)
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .padding(.vertical, 2)
+                }
+                
+                Section {
+                    createdByFooter
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 2)
                 }
             }
             .navigationTitle("Settings")

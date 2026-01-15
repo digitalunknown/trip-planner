@@ -2,13 +2,16 @@ import SwiftUI
 
 struct TrackersHomeView: View {
     @StateObject private var store = TrackerStore()
-    @State private var showComingSoon = false
+    @State private var showStatsSettings = false
+    @State private var showCompletedTrips = false
     @State private var isShowingPassport = false
     @State private var passportPageIndex: Int = 0
     @State private var isPagingPassport: Bool = false
+    @State private var presentedTracker: TrackerType?
     @Environment(\.appAccentColor) private var appAccentColor
     @Environment(\.colorScheme) private var colorScheme
     @Environment(TripStore.self) private var tripStore
+    @AppStorage("hiddenStats") private var hiddenStatsRaw: String = ""
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
@@ -23,16 +26,44 @@ struct TrackersHomeView: View {
         let today = calendar.startOfDay(for: Date())
         return tripStore.trips
             .filter { trip in
+                guard trip.isDatesSet else { return false }
                 let end = calendar.startOfDay(for: trip.endDate)
                 return end < today
             }
             .sorted { $0.endDate > $1.endDate }
     }
+    
+    private var hiddenStats: Set<String> {
+        Set(hiddenStatsRaw.split(separator: "|").map { String($0) }.filter { !$0.isEmpty })
+    }
+    
+    private func statID(for tracker: TrackerType) -> String { "tracker:\(tracker.rawValue)" }
+    
+    private func isStatHidden(_ id: String) -> Bool { hiddenStats.contains(id) }
+    
+    private func setStatHidden(_ id: String, _ hidden: Bool) {
+        var set = hiddenStats
+        if hidden {
+            set.insert(id)
+        } else {
+            set.remove(id)
+        }
+        hiddenStatsRaw = set.sorted().joined(separator: "|")
+    }
 
     var body: some View {
         SwiftUI.ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 12) {
-                passportCard
+                if !completedTrips.isEmpty {
+                    passportCard
+                        .contextMenu {
+                            Button {
+                                isShowingPassport = true
+                            } label: {
+                                Label("View", systemImage: "arrow.right.circle")
+                            }
+                        }
+                }
                 
                 let columns: [GridItem] = [
                     GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -40,17 +71,49 @@ struct TrackersHomeView: View {
                 ]
                 
                 LazyVGrid(columns: columns, spacing: 12) {
-                    tripsTakenCard
+                    if !isStatHidden("tripsTaken") {
+                        tripsTakenCard
+                            .contextMenu {
+                                Button {
+                                    showCompletedTrips = true
+                                } label: {
+                                    Label("View", systemImage: "arrow.right.circle")
+                                }
+                                
+                                Button {
+                                    setStatHidden("tripsTaken", true)
+                                } label: {
+                                    Label("Hide", systemImage: "eye.slash")
+                                }
+                            }
+                    }
                     
                     ForEach(TrackerType.allCases) { type in
-                        NavigationLink(value: type) {
-                            TrackerRowCard(
-                                type: type,
-                                visitedCount: store.visitedCount(in: type),
-                                totalCount: TrackerData.items(for: type).count
-                            )
+                        if !isStatHidden(statID(for: type)) {
+                            Button {
+                                presentedTracker = type
+                            } label: {
+                                TrackerRowCard(
+                                    type: type,
+                                    visitedCount: store.visitedCount(in: type),
+                                    totalCount: TrackerData.items(for: type).count
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    presentedTracker = type
+                                } label: {
+                                    Label("View", systemImage: "arrow.right.circle")
+                                }
+                                
+                                Button {
+                                    setStatHidden(statID(for: type), true)
+                                } label: {
+                                    Label("Hide", systemImage: "eye.slash")
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -62,46 +125,93 @@ struct TrackersHomeView: View {
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
-                    showComingSoon = true
+                    showStatsSettings = true
                 } label: {
-                    Image(systemName: "plus")
+                    Image(systemName: "switch.2")
                         .fontWeight(.medium)
                 }
             }
         }
-        .navigationDestination(for: TrackerType.self) { type in
-            TrackerDetailView(type: type, store: store)
-        }
-        .navigationDestination(isPresented: $isShowingPassport) {
-            PassportView()
-        }
-        .sheet(isPresented: $showComingSoon) {
+        .sheet(item: $presentedTracker) { type in
             NavigationStack {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 44, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    Text("Coming Soon")
-                        .font(.title2.weight(.bold))
-                    Text("Custom trackers are coming soon.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                    Spacer()
+                TrackerDetailView(type: type, store: store)
+                    .navigationTitle(type.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            LiquidGlassIconButton(systemName: "xmark") { presentedTracker = nil }
+                        }
+                    }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $isShowingPassport) {
+            NavigationStack {
+                PassportView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            LiquidGlassIconButton(systemName: "xmark") { isShowingPassport = false }
+                        }
+                    }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showStatsSettings) {
+            NavigationStack {
+                Form {
+                    Toggle("Trips Taken", isOn: Binding(
+                        get: { !isStatHidden("tripsTaken") },
+                        set: { setStatHidden("tripsTaken", !$0) }
+                    ))
+                    .tint(appAccentColor)
+                    
+                    ForEach(TrackerType.allCases) { type in
+                        Toggle(type.title, isOn: Binding(
+                            get: { !isStatHidden(statID(for: type)) },
+                            set: { setStatHidden(statID(for: type), !$0) }
+                        ))
+                        .tint(appAccentColor)
+                    }
                 }
-                .padding()
-                .navigationTitle("Add Tracker")
+                .navigationTitle("Edit Stats")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        LiquidGlassIconButton(systemName: "xmark") { showComingSoon = false }
+                        LiquidGlassIconButton(systemName: "xmark") { showStatsSettings = false }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        LiquidGlassIconButton(systemName: "checkmark") { showComingSoon = false }
+                        LiquidGlassIconButton(systemName: "checkmark") { showStatsSettings = false }
                     }
                 }
             }
-            .presentationDetents([.medium])
+            .tint(appAccentColor)
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showCompletedTrips) {
+            NavigationStack {
+                ScrollView(.vertical, showsIndicators: true) {
+                    LazyVStack(spacing: 16) {
+                        ForEach(completedTrips) { trip in
+                            TripCardView(trip: trip)
+                        }
+                    }
+                    .padding(16)
+                }
+                .navigationTitle("Trips Taken")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        LiquidGlassIconButton(systemName: "xmark") { showCompletedTrips = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .onAppear {
+            // Stamps are no longer hideable; clean up any stale hidden flag.
+            if isStatHidden("stamps") {
+                setStatHidden("stamps", false)
+            }
         }
     }
     

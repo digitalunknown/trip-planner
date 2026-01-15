@@ -1,10 +1,10 @@
 {
-  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/MapKitHelpers.swift" : {
-    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/MapKitHelpers.swiftconstvalues",
-    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/MapKitHelpers.d",
-    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/MapKitHelpers.dia",
-    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/MapKitHelpers.o",
-    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/MapKitHelpers.swiftdeps"
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/LiquidGlassIconButton.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/LiquidGlassIconButton.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/LiquidGlassIconButton.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/LiquidGlassIconButton.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/LiquidGlassIconButton.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/LiquidGlassIconButton.swiftdeps"
   },
   "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/MapSearchFields.swift" : {
     "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/arm64/MapSearchFields.swiftconstvalues",

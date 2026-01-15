@@ -1,10 +1,3 @@
-//
-//  MyTripsView.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/18/25.
-//
-
 import SwiftUI
 import MapKit
 
@@ -28,6 +21,8 @@ struct MyTripsView: View {
     @State private var selectedSegment: TripSegment = .upcoming
     @State private var segmentSwitchInFlight: Bool = false
     @State private var tripPendingDelete: Trip?
+    
+    private let pendingCreateTripFlagKey = "pendingCreateTripFromQuickAction"
     
     private func availableSegments(for trips: [Trip]) -> [TripSegment] {
         let calendar = Calendar.current
@@ -99,6 +94,13 @@ struct MyTripsView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
                     .tint(.primary)
+                    .presentationDetents([.medium, .large])
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openNewTripSheet)) { _ in
+                openCreateTripSheetIfNeeded(force: true)
+            }
+            .onAppear {
+                openCreateTripSheetIfNeeded(force: false)
             }
             .sheet(item: $editingTrip) { trip in
                 if let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) {
@@ -163,42 +165,37 @@ struct MyTripsView: View {
         .tint(.primary)
     }
     
+    private func openCreateTripSheetIfNeeded(force: Bool) {
+        if force || UserDefaults.standard.bool(forKey: pendingCreateTripFlagKey) {
+            UserDefaults.standard.set(false, forKey: pendingCreateTripFlagKey)
+            showingNewTrip = true
+        }
+    }
+    
     private var emptyStateView: some View {
-        VStack(spacing: 24) {
+        let gradient = LinearGradient(
+            colors: [Color(hex: 0xFF8B00), Color(hex: 0xFF12EB)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+        
+        return VStack(spacing: 25) {
             Spacer()
             
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.blue.opacity(0.2), .purple.opacity(0.2)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(gradient.opacity(0.25))
                     .frame(width: 160, height: 160)
                 
                 Image(systemName: "airplane.departure")
                     .font(.system(size: 60))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.blue, .purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundStyle(gradient)
             }
             
-            VStack(spacing: 12) {
+            VStack(spacing: 25) {
                 Text("No Trips Yet")
                     .font(.title2)
                     .fontWeight(.bold)
-                
-                Text("Start planning your next adventure!\nTap the button below to create your first trip.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
             }
             
             Button {
@@ -247,7 +244,6 @@ struct MyTripsView: View {
                 case .past:
                     return a.startDate > b.startDate
                 case .unscheduled:
-                    // Best-effort "newest first" without a createdAt field.
                     return a.id.uuidString > b.id.uuidString
                 }
             }
@@ -593,7 +589,7 @@ struct EditTripView: View {
                 }
                 
                 Section {
-                    Toggle("Show Parked Ideas", isOn: $showParkedIdeas)
+                    Toggle("Show Ideas", isOn: $showParkedIdeas)
                         .tint(appAccentColor)
                 } header: {
                     Text("Options")
@@ -613,7 +609,7 @@ struct EditTripView: View {
                     }
                 }
             }
-            .confirmationDialog("Delete Trip", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            .alert("Delete Trip", isPresented: $showDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     onDelete()
                     dismiss()
@@ -677,7 +673,6 @@ struct EditTripView: View {
     }
     
     private func attemptSaveTrip() {
-        // Conversion: unscheduled -> scheduled (map by day index).
         if originalIsDatesSet == false, isDatesSet {
             let calendar = Calendar.current
             let totalDays = max(1, (calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)

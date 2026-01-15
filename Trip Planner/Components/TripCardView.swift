@@ -1,10 +1,3 @@
-//
-//  TripCardView.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/18/25.
-//
-
 import SwiftUI
 import MapKit
 
@@ -22,8 +15,6 @@ struct TripCardView: View {
     private static let animationStart = Date()
     
     private let cardHeight: CGFloat = 280
-    private let blurHeight: CGFloat = 220
-    private let blurRadius: CGFloat = 60
     
     private var mapRegion: MKCoordinateRegion {
         if let lat = trip.latitude, let lon = trip.longitude {
@@ -77,34 +68,6 @@ struct TripCardView: View {
         ZStack {
             backgroundLayer
             
-            backgroundLayer
-                .blur(radius: blurRadius)
-                .mask(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0.0),
-                            .init(color: .clear, location: 0.12),
-                            .init(color: .black.opacity(0.35), location: 0.38),
-                            .init(color: .black.opacity(0.85), location: 0.72),
-                            .init(color: .black, location: 1.0)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: blurHeight)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                )
-            
-            VStack {
-                Spacer()
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.45)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 140)
-            }
-            
             VStack {
                 if trip.isDatesSet {
                     HStack {
@@ -139,14 +102,17 @@ struct TripCardView: View {
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .lineLimit(2)
+                    .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 4)
                 
                 Text(trip.destination)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
+                    .shadow(color: .black.opacity(0.30), radius: 8, x: 0, y: 3)
                 
                 Text(trip.isDatesSet ? trip.formattedDateRange : "Unscheduled")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
+                    .shadow(color: .black.opacity(0.30), radius: 8, x: 0, y: 3)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)

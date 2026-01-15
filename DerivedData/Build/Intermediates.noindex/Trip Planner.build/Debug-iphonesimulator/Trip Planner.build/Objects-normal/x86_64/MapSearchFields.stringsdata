@@ -17,6 +17,14 @@
           "startingColumn": 27,
           "startingLine": 38
         }
+      },
+      {
+        "comment": "",
+        "key": "Searching airports…",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 347
+        }
       }
     ]
   },

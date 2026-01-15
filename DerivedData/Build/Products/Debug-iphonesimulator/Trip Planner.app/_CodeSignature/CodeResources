@@ -4,9 +4,21 @@
 <dict>
 	<key>files</key>
 	<dict>
+		<key>AppIcon60x60@2x.png</key>
+		<data>
+		VqPZZG9pOPoyaDRpR9TmVP65aTI=
+		</data>
+		<key>AppIcon76x76@2x~ipad.png</key>
+		<data>
+		MIx31P9KQ9ZIB4MzSYy2HDKsBeU=
+		</data>
+		<key>Assets.car</key>
+		<data>
+		SXkYcjZHXXT2vsBhIdIKWEgW/D8=
+		</data>
 		<key>Info.plist</key>
 		<data>
-		9OjxZ7begC1CQqU19AcMdhi5rVE=
+		Iao04ogCZhQ8HHuPU0aOB99dbIM=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -14,7 +26,7 @@
 		</data>
 		<key>Trip Planner.debug.dylib</key>
 		<data>
-		7bIZ5nJ2hYw+cKcSyYwm0jFwmVo=
+		stwO3O5+h0r2e8/0TMeKipQsB4k=
 		</data>
 		<key>__preview.dylib</key>
 		<data>
@@ -23,11 +35,32 @@
 	</dict>
 	<key>files2</key>
 	<dict>
+		<key>AppIcon60x60@2x.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			C0oOeaNX7+gKAkWCnFancY6alQt4RrZ5CjdJIKk0+k0=
+			</data>
+		</dict>
+		<key>AppIcon76x76@2x~ipad.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			ev4AN9R0PDhAlLPHDsxcBhwECMl/qscnc4YOdoPWrow=
+			</data>
+		</dict>
+		<key>Assets.car</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			lFnPl/xiWIaNnqQb0L0xyTs9xBrQxQKbWwIZ+M2xyH0=
+			</data>
+		</dict>
 		<key>Trip Planner.debug.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			IMgGMZTA4UtvYlLUqHh3YYDgC8wiFe9McOlg1M+j4Bk=
+			Y2J5qagDfotzf6qlbbMV+nw0LIaSWoR5uK12nM/74Fc=
 			</data>
 		</dict>
 		<key>__preview.dylib</key>

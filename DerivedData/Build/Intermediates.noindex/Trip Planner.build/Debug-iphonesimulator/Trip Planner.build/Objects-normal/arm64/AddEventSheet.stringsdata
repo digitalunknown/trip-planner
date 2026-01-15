@@ -7,7 +7,7 @@
         "key": "Edit Activity",
         "location": {
           "startingColumn": 42,
-          "startingLine": 214
+          "startingLine": 251
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Add Activity",
         "location": {
           "startingColumn": 60,
-          "startingLine": 214
+          "startingLine": 251
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Timing",
         "location": {
           "startingColumn": 25,
-          "startingLine": 111
+          "startingLine": 133
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Visuals",
         "location": {
           "startingColumn": 25,
-          "startingLine": 140
+          "startingLine": 162
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Notes",
         "location": {
           "startingColumn": 25,
-          "startingLine": 195
+          "startingLine": 217
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Activity Name",
         "location": {
           "startingColumn": 35,
-          "startingLine": 92
+          "startingLine": 114
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Duration: %@",
         "location": {
           "startingColumn": 30,
-          "startingLine": 134
+          "startingLine": 156
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Day",
         "location": {
           "startingColumn": 28,
-          "startingLine": 112
+          "startingLine": 134
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "From",
         "location": {
           "startingColumn": 32,
-          "startingLine": 118
+          "startingLine": 140
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "Add end time",
         "location": {
           "startingColumn": 28,
-          "startingLine": 120
+          "startingLine": 142
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "To",
         "location": {
           "startingColumn": 36,
-          "startingLine": 131
+          "startingLine": 153
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "Add Image",
         "location": {
           "startingColumn": 38,
-          "startingLine": 172
+          "startingLine": 194
         }
       },
       {
@@ -103,7 +103,7 @@
         "key": "Color",
         "location": {
           "startingColumn": 30,
-          "startingLine": 178
+          "startingLine": 200
         }
       },
       {
@@ -111,7 +111,23 @@
         "key": "Icon",
         "location": {
           "startingColumn": 30,
-          "startingLine": 184
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 218
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open in Google Maps",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 228
         }
       },
       {
@@ -119,7 +135,7 @@
         "key": "Delete Activity",
         "location": {
           "startingColumn": 38,
-          "startingLine": 207
+          "startingLine": 244
         }
       }
     ]

@@ -7,31 +7,71 @@
         "key": "Stats",
         "location": {
           "startingColumn": 26,
-          "startingLine": 60
+          "startingLine": 123
         }
       },
       {
         "comment": "",
-        "key": "Add Tracker",
+        "key": "View",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Stats",
         "location": {
           "startingColumn": 34,
-          "startingLine": 93
+          "startingLine": 176
         }
       },
       {
         "comment": "",
-        "key": "Coming Soon",
+        "key": "Trips Taken",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 85
+          "startingColumn": 28,
+          "startingLine": 162
         }
       },
       {
         "comment": "",
-        "key": "Custom trackers are coming soon.",
+        "key": "Trips Taken",
         "location": {
-          "startingColumn": 26,
-          "startingLine": 87
+          "startingColumn": 34,
+          "startingLine": 200
         }
       },
       {
@@ -39,7 +79,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 18,
-          "startingLine": 156
+          "startingLine": 266
         }
       },
       {
@@ -47,7 +87,7 @@
         "key": "Trips Taken",
         "location": {
           "startingColumn": 26,
-          "startingLine": 116
+          "startingLine": 226
         }
       },
       {
@@ -55,7 +95,7 @@
         "key": "Logged in this app",
         "location": {
           "startingColumn": 26,
-          "startingLine": 121
+          "startingLine": 231
         }
       },
       {
@@ -63,7 +103,7 @@
         "key": "Complete a trip to earn your first stamp.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 203
+          "startingLine": 313
         }
       },
       {
@@ -71,7 +111,7 @@
         "key": "Stamps",
         "location": {
           "startingColumn": 26,
-          "startingLine": 187
+          "startingLine": 297
         }
       },
       {
@@ -79,7 +119,7 @@
         "key": "You’ve completed %lld %@",
         "location": {
           "startingColumn": 26,
-          "startingLine": 190
+          "startingLine": 300
         }
       }
     ]

@@ -1,10 +1,3 @@
-//
-//  NewTripView.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/18/25.
-//
-
 import SwiftUI
 import MapKit
 
@@ -119,7 +112,7 @@ struct NewTripView: View {
                 }
                 
                 Section {
-                    Toggle("Show Parked Ideas", isOn: $showParkedIdeas)
+                    Toggle("Show Ideas", isOn: $showParkedIdeas)
                         .tint(appAccentColor)
                 } header: {
                     Text("Options")
@@ -127,7 +120,7 @@ struct NewTripView: View {
                     Text("An extra space for ideation")
                 }
             }
-            .navigationTitle("New Trip")
+            .navigationTitle("Create Trip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

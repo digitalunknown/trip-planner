@@ -7,7 +7,7 @@
         "key": "Edit Flight",
         "location": {
           "startingColumn": 42,
-          "startingLine": 107
+          "startingLine": 108
         }
       },
       {
@@ -15,23 +15,7 @@
         "key": "Add Flight",
         "location": {
           "startingColumn": 58,
-          "startingLine": 107
-        }
-      },
-      {
-        "comment": "",
-        "key": "Departure",
-        "location": {
-          "startingColumn": 25,
-          "startingLine": 49
-        }
-      },
-      {
-        "comment": "",
-        "key": "Arrival",
-        "location": {
-          "startingColumn": 25,
-          "startingLine": 64
+          "startingLine": 108
         }
       },
       {
@@ -39,7 +23,23 @@
         "key": "Flight number",
         "location": {
           "startingColumn": 25,
-          "startingLine": 79
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Departure",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Arrival",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 68
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Time",
         "location": {
           "startingColumn": 32,
-          "startingLine": 61
+          "startingLine": 65
         }
       },
       {
@@ -79,7 +79,15 @@
         "key": "Time",
         "location": {
           "startingColumn": 32,
-          "startingLine": 76
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 88
         }
       },
       {
@@ -87,7 +95,7 @@
         "key": "Delete Flight",
         "location": {
           "startingColumn": 38,
-          "startingLine": 100
+          "startingLine": 101
         }
       }
     ]

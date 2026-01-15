@@ -279,6 +279,7 @@ typedef unsigned int swift_uint4  __attribute__((__ext_vector_type__(4)));
 #if __has_warning("-Watimport-in-framework-header")
 #pragma clang diagnostic ignored "-Watimport-in-framework-header"
 #endif
+@import Foundation;
 @import MapKit;
 @import ObjectiveC;
 @import UIKit;
@@ -303,6 +304,13 @@ typedef unsigned int swift_uint4  __attribute__((__ext_vector_type__(4)));
 #endif
 
 #if defined(__OBJC__)
+
+@class UIApplication;
+SWIFT_CLASS("_TtC12Trip_Planner11AppDelegate")
+@interface AppDelegate : NSObject <UIApplicationDelegate>
+- (BOOL)application:(UIApplication * _Nonnull)application didFinishLaunchingWithOptions:(NSDictionary<UIApplicationLaunchOptionsKey, id> * _Nullable)launchOptions SWIFT_WARN_UNUSED_RESULT;
+- (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
+@end
 
 @class MKLocalSearchCompleter;
 SWIFT_CLASS("_TtC12Trip_Planner23LocationSearchCompleter")

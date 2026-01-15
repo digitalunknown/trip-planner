@@ -14,6 +14,7 @@ struct PassportView: View {
         let today = calendar.startOfDay(for: Date())
         return tripStore.trips
             .filter { trip in
+                guard trip.isDatesSet else { return false }
                 let end = calendar.startOfDay(for: trip.endDate)
                 return end < today
             }
@@ -59,7 +60,6 @@ private struct DotGridBackground: View {
             var path = Path()
             let r = dotDiameter / 2
             
-            // Offset by half spacing so dots feel centered.
             var y: CGFloat = spacing / 2
             while y <= size.height + spacing {
                 var x: CGFloat = spacing / 2

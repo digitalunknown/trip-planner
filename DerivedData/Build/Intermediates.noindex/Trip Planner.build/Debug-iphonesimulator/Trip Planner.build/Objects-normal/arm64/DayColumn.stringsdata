@@ -7,7 +7,7 @@
         "key": "Day %lld of %lld",
         "location": {
           "startingColumn": 22,
-          "startingLine": 84
+          "startingLine": 82
         }
       },
       {
@@ -15,12 +15,28 @@
         "key": "Add Activity",
         "location": {
           "startingColumn": 34,
-          "startingLine": 110
+          "startingLine": 96
         }
       },
       {
         "comment": "",
         "key": "Move Left",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
         "location": {
           "startingColumn": 55,
           "startingLine": 136
@@ -28,26 +44,10 @@
       },
       {
         "comment": "",
-        "key": "Move Right",
-        "location": {
-          "startingColumn": 55,
-          "startingLine": 143
-        }
-      },
-      {
-        "comment": "",
-        "key": "Move to Parked",
-        "location": {
-          "startingColumn": 55,
-          "startingLine": 150
-        }
-      },
-      {
-        "comment": "",
         "key": "Edit Reminder",
         "location": {
           "startingColumn": 51,
-          "startingLine": 158
+          "startingLine": 144
         }
       },
       {
@@ -55,12 +55,28 @@
         "key": "Delete Reminder",
         "location": {
           "startingColumn": 51,
-          "startingLine": 164
+          "startingLine": 150
         }
       },
       {
         "comment": "",
         "key": "Move Left",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 167
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
         "location": {
           "startingColumn": 55,
           "startingLine": 181
@@ -68,26 +84,10 @@
       },
       {
         "comment": "",
-        "key": "Move Right",
-        "location": {
-          "startingColumn": 55,
-          "startingLine": 188
-        }
-      },
-      {
-        "comment": "",
-        "key": "Move to Parked",
-        "location": {
-          "startingColumn": 55,
-          "startingLine": 195
-        }
-      },
-      {
-        "comment": "",
         "key": "Edit Checklist",
         "location": {
           "startingColumn": 51,
-          "startingLine": 203
+          "startingLine": 189
         }
       },
       {
@@ -95,12 +95,28 @@
         "key": "Delete Checklist",
         "location": {
           "startingColumn": 51,
-          "startingLine": 209
+          "startingLine": 195
         }
       },
       {
         "comment": "",
         "key": "Move Left",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 212
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
         "location": {
           "startingColumn": 51,
           "startingLine": 226
@@ -108,26 +124,10 @@
       },
       {
         "comment": "",
-        "key": "Move Right",
-        "location": {
-          "startingColumn": 51,
-          "startingLine": 233
-        }
-      },
-      {
-        "comment": "",
-        "key": "Move to Parked",
-        "location": {
-          "startingColumn": 51,
-          "startingLine": 240
-        }
-      },
-      {
-        "comment": "",
         "key": "Edit Flight",
         "location": {
           "startingColumn": 47,
-          "startingLine": 248
+          "startingLine": 234
         }
       },
       {
@@ -135,7 +135,7 @@
         "key": "Delete Flight",
         "location": {
           "startingColumn": 47,
-          "startingLine": 254
+          "startingLine": 240
         }
       },
       {
@@ -143,7 +143,7 @@
         "key": "Move Left",
         "location": {
           "startingColumn": 51,
-          "startingLine": 265
+          "startingLine": 251
         }
       },
       {
@@ -151,7 +151,7 @@
         "key": "Move Right",
         "location": {
           "startingColumn": 51,
-          "startingLine": 272
+          "startingLine": 258
         }
       },
       {
@@ -159,7 +159,7 @@
         "key": "Move to Parked",
         "location": {
           "startingColumn": 51,
-          "startingLine": 279
+          "startingLine": 265
         }
       },
       {
@@ -167,7 +167,7 @@
         "key": "Edit Activity",
         "location": {
           "startingColumn": 47,
-          "startingLine": 287
+          "startingLine": 273
         }
       },
       {
@@ -175,7 +175,7 @@
         "key": "Duplicate Activity",
         "location": {
           "startingColumn": 51,
-          "startingLine": 293
+          "startingLine": 279
         }
       },
       {
@@ -183,7 +183,7 @@
         "key": "Delete Activity",
         "location": {
           "startingColumn": 47,
-          "startingLine": 299
+          "startingLine": 285
         }
       }
     ]

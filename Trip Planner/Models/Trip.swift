@@ -1,10 +1,3 @@
-//
-//  Trip.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/18/25.
-//
-
 import Foundation
 
 struct Trip: Identifiable, Hashable, Codable {
@@ -18,9 +11,7 @@ struct Trip: Identifiable, Hashable, Codable {
     var longitude: Double?
     var mapSpan: Double?
     
-    // When false, this trip is "Unscheduled" and date fields are treated as ignored.
     var isDatesSet: Bool
-    // Used only when isDatesSet == false.
     var unscheduledDaysCount: Int
     
     var days: [TripDay]
@@ -144,7 +135,7 @@ struct Trip: Identifiable, Hashable, Codable {
                     latitude: nil,
                     longitude: nil,
                     icon: "fork.knife",
-                    accent: .gold,
+                    accent: .yellow,
                     photoData: nil
                 )
             ],

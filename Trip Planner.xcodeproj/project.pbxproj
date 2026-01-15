@@ -24,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		FF997AEA2EF216E400B3A68E /* Trip Planner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Trip Planner.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF997AEA2EF216E400B3A68E /* TripStacks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TripStacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF997AF72EF216E600B3A68E /* Trip PlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Trip PlannerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF997B012EF216E600B3A68E /* Trip PlannerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Trip PlannerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -85,7 +85,7 @@
 		FF997AEB2EF216E400B3A68E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				FF997AEA2EF216E400B3A68E /* Trip Planner.app */,
+				FF997AEA2EF216E400B3A68E /* TripStacks.app */,
 				FF997AF72EF216E600B3A68E /* Trip PlannerTests.xctest */,
 				FF997B012EF216E600B3A68E /* Trip PlannerUITests.xctest */,
 			);
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		FF997AE92EF216E400B3A68E /* Trip Planner */ = {
+		FF997AE92EF216E400B3A68E /* TripStacks */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = FF997B0B2EF216E600B3A68E /* Build configuration list for PBXNativeTarget "Trip Planner" */;
+			buildConfigurationList = FF997B0B2EF216E600B3A68E /* Build configuration list for PBXNativeTarget "TripStacks" */;
 			buildPhases = (
 				FF997AE62EF216E400B3A68E /* Sources */,
 				FF997AE72EF216E400B3A68E /* Frameworks */,
@@ -110,11 +110,11 @@
 			fileSystemSynchronizedGroups = (
 				FF997AEC2EF216E400B3A68E /* Trip Planner */,
 			);
-			name = "Trip Planner";
+			name = TripStacks;
 			packageProductDependencies = (
 			);
 			productName = "Trip Planner";
-			productReference = FF997AEA2EF216E400B3A68E /* Trip Planner.app */;
+			productReference = FF997AEA2EF216E400B3A68E /* TripStacks.app */;
 			productType = "com.apple.product-type.application";
 		};
 		FF997AF62EF216E600B3A68E /* Trip PlannerTests */ = {
@@ -200,7 +200,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				FF997AE92EF216E400B3A68E /* Trip Planner */,
+				FF997AE92EF216E400B3A68E /* TripStacks */,
 				FF997AF62EF216E600B3A68E /* Trip PlannerTests */,
 				FF997B002EF216E600B3A68E /* Trip PlannerUITests */,
 			);
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		FF997AF92EF216E600B3A68E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = FF997AE92EF216E400B3A68E /* Trip Planner */;
+			target = FF997AE92EF216E400B3A68E /* TripStacks */;
 			targetProxy = FF997AF82EF216E600B3A68E /* PBXContainerItemProxy */;
 		};
 		FF997B032EF216E600B3A68E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = FF997AE92EF216E400B3A68E /* Trip Planner */;
+			target = FF997AE92EF216E400B3A68E /* TripStacks */;
 			targetProxy = FF997B022EF216E600B3A68E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -402,6 +402,7 @@
 				DEVELOPMENT_TEAM = JA9P4WR529;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Trip Planner needs access to your photo library so you can choose cover images for trips and activities.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -437,6 +438,7 @@
 				DEVELOPMENT_TEAM = JA9P4WR529;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Trip Planner needs access to your photo library so you can choose cover images for trips and activities.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -556,7 +558,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		FF997B0B2EF216E600B3A68E /* Build configuration list for PBXNativeTarget "Trip Planner" */ = {
+		FF997B0B2EF216E600B3A68E /* Build configuration list for PBXNativeTarget "TripStacks" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				FF997B0C2EF216E600B3A68E /* Debug */,

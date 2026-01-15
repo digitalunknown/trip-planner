@@ -105,7 +105,7 @@ struct TripSettingsSheet: View {
                 }
                 
                 Section {
-                    Toggle("Show Parked Ideas", isOn: $showParkedIdeas)
+                    Toggle("Show Ideas", isOn: $showParkedIdeas)
                         .tint(appAccentColor)
                 } header: {
                     Text("Options")

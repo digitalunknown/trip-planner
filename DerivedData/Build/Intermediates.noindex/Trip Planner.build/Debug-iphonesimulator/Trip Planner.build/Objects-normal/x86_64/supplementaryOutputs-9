@@ -1,23 +1,23 @@
 {
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/ResizeHandle.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/ResizeHandle.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/ResizeHandle.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/ResizeHandle.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/ResizeHandle.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/ResizeHandle.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/TrackerCardView.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TrackerCardView.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TrackerCardView.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TrackerCardView.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TrackerCardView.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TrackerCardView.swiftdeps"
+  },
   "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/TripCardView.swift" : {
     "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TripCardView.swiftconstvalues",
     "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TripCardView.d",
     "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TripCardView.dia",
     "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TripCardView.o",
     "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/TripCardView.swiftdeps"
-  },
-  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/AddEventSheet.swift" : {
-    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddEventSheet.swiftconstvalues",
-    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddEventSheet.d",
-    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddEventSheet.dia",
-    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddEventSheet.o",
-    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddEventSheet.swiftdeps"
-  },
-  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/AddFlightSheet.swift" : {
-    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddFlightSheet.swiftconstvalues",
-    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddFlightSheet.d",
-    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddFlightSheet.dia",
-    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddFlightSheet.o",
-    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/Trip Planner.build/Objects-normal/x86_64/AddFlightSheet.swiftdeps"
   }
 }

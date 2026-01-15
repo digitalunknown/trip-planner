@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/16/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -43,6 +36,12 @@ struct ContentView: View {
         .preferredColorScheme(appearanceMode.preferredColorScheme)
         .onChange(of: selectedTab) { _, _ in
             Haptics.tabSelectionChanged()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .quickActionCreateNewTrip)) { _ in
+            selectedTab = .myTrips
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                NotificationCenter.default.post(name: .openNewTripSheet, object: nil)
+            }
         }
     }
 }

@@ -54,7 +54,6 @@ struct PassportStampView: View {
         let radius = Double(ringRadius)
         let circumference = 2.0 * Double.pi * radius
         
-        // Target a consistent density around the ring.
         let desiredChars = Int((circumference / max(Double(fontSize) * 0.85, 1)).rounded())
         let targetChars = max(60, min(140, desiredChars))
         let text = ringText(targetCharacterCount: targetChars)

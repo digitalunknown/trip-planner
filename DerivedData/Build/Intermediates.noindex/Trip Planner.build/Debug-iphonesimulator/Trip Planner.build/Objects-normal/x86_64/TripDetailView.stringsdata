@@ -36,10 +36,18 @@
       },
       {
         "comment": "",
+        "key": "Plan Day",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 477
+        }
+      },
+      {
+        "comment": "",
         "key": "Shorter date range",
         "location": {
           "startingColumn": 20,
-          "startingLine": 518
+          "startingLine": 526
         }
       },
       {
@@ -47,7 +55,7 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 24,
-          "startingLine": 519
+          "startingLine": 527
         }
       },
       {
@@ -55,7 +63,7 @@
         "key": "Remove & Convert",
         "location": {
           "startingColumn": 24,
-          "startingLine": 526
+          "startingLine": 534
         }
       },
       {
@@ -63,7 +71,7 @@
         "key": "This date range is shorter and will remove items from days that no longer fit.\n\n%lld activities, %lld reminders, %lld checklists, %lld flights.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 531
+          "startingLine": 539
         }
       },
       {
@@ -71,7 +79,7 @@
         "key": "",
         "location": {
           "startingColumn": 30,
-          "startingLine": 692
+          "startingLine": 951
         }
       },
       {
@@ -79,7 +87,7 @@
         "key": "%lld°F",
         "location": {
           "startingColumn": 26,
-          "startingLine": 1842
+          "startingLine": 2100
         }
       }
     ]

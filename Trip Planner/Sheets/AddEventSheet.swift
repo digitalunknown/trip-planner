@@ -25,6 +25,24 @@ struct AddEventSheet: View {
     @State private var showImagePicker = false
     @State private var hasEndTime = false
     
+    private var googleMapsURL: URL? {
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !loc.isEmpty else { return nil }
+        
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = t.isEmpty ? loc : "\(t) \(loc)"
+        
+        var comps = URLComponents()
+        comps.scheme = "https"
+        comps.host = "www.google.com"
+        comps.path = "/maps/search/"
+        comps.queryItems = [
+            URLQueryItem(name: "api", value: "1"),
+            URLQueryItem(name: "query", value: query)
+        ]
+        return comps.url
+    }
+    
     private var durationString: String? {
         let interval = endTime.timeIntervalSince(startTime)
         guard interval > 0 else { return nil }
@@ -35,6 +53,13 @@ struct AddEventSheet: View {
     }
 
     private let iconOptions: [String] = [
+        "mappin.and.ellipse",
+        
+        "fork.knife",
+        "cup.and.saucer.fill",
+        "mug.fill",
+        "wineglass.fill",
+        
         "airplane",
         "car.fill",
         "bus.fill",
@@ -43,11 +68,12 @@ struct AddEventSheet: View {
         "ferry.fill",
         "bicycle",
         "figure.walk",
-        "fork.knife",
-        "cup.and.saucer.fill",
-        "wineglass.fill",
+        
         "cart.fill",
-        "mug.fill",
+        "bag.fill",
+        "duffle.bag.fill",
+        "creditcard.fill",
+        
         "bed.double.fill",
         "house.fill",
         "building.2.fill",
@@ -66,10 +92,6 @@ struct AddEventSheet: View {
         "dumbbell.fill",
         "trophy.fill",
         "building.columns.fill",
-        "mappin.and.ellipse",
-        "duffle.bag.fill",
-        "bag.fill",
-        "creditcard.fill",
         "airpods.max",
         "stroller.fill",
         "drone.fill",
@@ -193,11 +215,26 @@ struct AddEventSheet: View {
                 }
                 
                 Section("Notes") {
-                    TextEditor(text: $description)
-                        .frame(minHeight: 80)
+                    TextField("Notes", text: $description, axis: .vertical)
+                        .lineLimit(3...12)
+                        .textInputAutocapitalization(.sentences)
                 }
                 
                 if isEditing {
+                    if let url = googleMapsURL {
+                        Section {
+                            Link(destination: url) {
+                                HStack {
+                                    Label("Open in Google Maps", systemImage: "map")
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    
                     Section {
                         Button(role: .destructive) {
                             deleteEvent()

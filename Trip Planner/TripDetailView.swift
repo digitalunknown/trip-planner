@@ -1,10 +1,3 @@
-//
-//  TripDetailView.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/16/25.
-//
-
 import SwiftUI
 import MapKit
 import UniformTypeIdentifiers
@@ -56,6 +49,9 @@ struct TripDetailView: View {
     @State private var tripDays: [TripDay] = []
     @State private var isPresentingSettings: Bool = false
     @State private var isPresentingAdd: Bool = false
+    @State private var isPresentingPasteImport: Bool = false
+    @State private var pasteDefaultDayID: UUID?
+    @State private var geocodeTask: Task<Void, Never>?
     @State private var splitRatio: CGFloat = 0.45 // Map takes 45% by default
     @State private var newEventTitle: String = ""
     @State private var newEventLocation: String = ""
@@ -63,7 +59,7 @@ struct TripDetailView: View {
     @State private var newEventLongitude: Double?
     @State private var newEventDescription: String = ""
     @State private var newEventIcon: String = "mappin.and.ellipse"
-    @State private var newEventAccent: EventAccent = .sky
+    @State private var newEventAccent: EventAccent = .neutral
     @State private var newEventStart: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     @State private var newEventEnd: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(10 * 3600)
     @State private var newEventPhoto: UIImage?
@@ -101,7 +97,7 @@ struct TripDetailView: View {
     @State private var flightToGate: String = ""
     @State private var flightNumber: String = ""
     @State private var flightNotes: String = ""
-    @State private var flightAccent: EventAccent = .sky
+    @State private var flightAccent: EventAccent = .neutral
     @State private var flightStartTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     @State private var flightEndTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     
@@ -127,9 +123,13 @@ struct TripDetailView: View {
     private static let parkedIdeasColumnID = UUID(uuidString: "00000000-0000-0000-0000-000000000999")!
     
     private var dayOptions: [DayOption] {
-        var opts = tripDays.map { DayOption(id: $0.id, title: $0.displayTitle, isParkedIdeas: false) }
+        let total = tripDays.count
+        var opts = tripDays.map { day in
+            let title = trip.isDatesSet ? day.displayTitle : "Day \(day.order) of \(total)"
+            return DayOption(id: day.id, title: title, isParkedIdeas: false)
+        }
         if trip.showParkedIdeas {
-            opts.append(DayOption(id: Self.parkedIdeasColumnID, title: "Parked Ideas", isParkedIdeas: true))
+            opts.append(DayOption(id: Self.parkedIdeasColumnID, title: "Ideas", isParkedIdeas: true))
         }
         return opts
     }
@@ -468,6 +468,14 @@ struct TripDetailView: View {
                 } label: {
                     Label("Checklist", systemImage: "checklist.checked")
                 }
+                
+                Button {
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    pasteDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    isPresentingPasteImport = true
+                } label: {
+                    Label("Plan Day", systemImage: "sparkles")
+                }
             } label: {
                 Image(systemName: "plus")
                     .fontWeight(.medium)
@@ -610,6 +618,257 @@ struct TripDetailView: View {
                 .tint(.primary)
                 .presentationDetents([.medium, .large])
             }
+            .sheet(isPresented: $isPresentingPasteImport) {
+                PasteImportSheet(
+                    tripContext: PasteImportTripContext(
+                        isDatesSet: trip.isDatesSet,
+                        startDate: trip.startDate,
+                        endDate: trip.endDate,
+                        unscheduledDaysCount: trip.unscheduledDaysCount,
+                        destination: trip.destination
+                    ),
+                    dayOptions: dayOptions,
+                    defaultDayID: pasteDefaultDayID,
+                    onCommit: applyPasteImportItems
+                )
+                .tint(.primary)
+                .presentationDetents([.medium, .large])
+            }
+    }
+
+    private func applyPasteImportItems(_ items: [PasteImportItem]) {
+        let now = Date()
+        
+        let ideasID: UUID? = trip.showParkedIdeas ? Self.parkedIdeasColumnID : nil
+        let defaultDayID = pasteDefaultDayID ?? tripDays.first?.id
+        var newlyAddedEventIDs: [UUID] = []
+        
+        func timeText(start: Date?, end: Date?) -> String {
+            guard let start else { return "" }
+            let f = DateFormatter()
+            f.dateStyle = .none
+            f.timeStyle = .short
+            let s = f.string(from: start)
+            if let end, end > start {
+                return "\(s)–\(f.string(from: end))"
+            }
+            return s
+        }
+        
+        for item in items where item.include {
+            let targetID = item.dayID ?? defaultDayID
+            let isIdeasTarget = (ideasID != nil && targetID == ideasID)
+            
+            switch item.kind {
+            case .activity:
+                let event = EventItem(
+                    id: UUID(),
+                    title: item.title,
+                    description: item.notes,
+                    time: timeText(start: item.startTime, end: item.endTime),
+                    location: item.location,
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "mappin.and.ellipse",
+                    accent: .neutral,
+                    photoData: nil
+                )
+                
+                if isIdeasTarget {
+                    parkedIdeas.insert(event, at: 0)
+                    if !event.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        newlyAddedEventIDs.append(event.id)
+                    }
+                    continue
+                }
+                
+                if let targetID, let idx = tripDays.firstIndex(where: { $0.id == targetID }) {
+                    tripDays[idx].events.append(event)
+                } else if let first = tripDays.indices.first {
+                    tripDays[first].events.append(event)
+                }
+                
+                if !event.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    newlyAddedEventIDs.append(event.id)
+                }
+                
+            case .reminder:
+                let reminder = ReminderItem(id: UUID(), text: item.title, createdAt: now)
+                let fallbackID = isIdeasTarget ? defaultDayID : targetID
+                if let fallbackID, let idx = tripDays.firstIndex(where: { $0.id == fallbackID }) {
+                    tripDays[idx].reminders.append(reminder)
+                } else if let first = tripDays.indices.first {
+                    tripDays[first].reminders.append(reminder)
+                }
+                
+            case .checklist:
+                let rawLines = item.checklistItemsText
+                    .replacingOccurrences(of: "\r\n", with: "\n")
+                    .replacingOccurrences(of: "\r", with: "\n")
+                    .components(separatedBy: "\n")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                
+                let entries: [ChecklistEntry] = rawLines.map { ChecklistEntry(id: UUID(), text: $0, isDone: false) }
+                let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Checklist" : item.title
+                let checklist = ChecklistItem(id: UUID(), title: title, items: entries, createdAt: now)
+                
+                let fallbackID = isIdeasTarget ? defaultDayID : targetID
+                if let fallbackID, let idx = tripDays.firstIndex(where: { $0.id == fallbackID }) {
+                    tripDays[idx].checklists.append(checklist)
+                } else if let first = tripDays.indices.first {
+                    tripDays[first].checklists.append(checklist)
+                }
+                
+            case .flight:
+                let start = item.startTime ?? now
+                let end = item.endTime ?? start
+                let flight = FlightItem(
+                    fromName: "",
+                    fromCode: item.flightFromCode,
+                    fromCity: "",
+                    fromLatitude: nil,
+                    fromLongitude: nil,
+                    fromTerminal: "",
+                    fromGate: "",
+                    toName: "",
+                    toCode: item.flightToCode,
+                    toCity: "",
+                    toLatitude: nil,
+                    toLongitude: nil,
+                    toTerminal: "",
+                    toGate: "",
+                    flightNumber: item.flightNumber,
+                    notes: item.notes,
+                    accent: .neutral,
+                    startTime: start,
+                    endTime: end
+                )
+                
+                let fallbackID = isIdeasTarget ? defaultDayID : targetID
+                if let fallbackID, let idx = tripDays.firstIndex(where: { $0.id == fallbackID }) {
+                    tripDays[idx].flights.append(flight)
+                } else if let first = tripDays.indices.first {
+                    tripDays[first].flights.append(flight)
+                }
+            }
+        }
+        
+        if trip.isDatesSet {
+            for idx in tripDays.indices {
+                tripDays[idx].events.sort { $0.startTimeMinutes < $1.startTimeMinutes }
+            }
+        } else {
+            for idx in tripDays.indices {
+                tripDays[idx].events.sort { $0.startTimeMinutes < $1.startTimeMinutes }
+            }
+        }
+        
+        if trip.showParkedIdeas {
+            parkedIdeas.sort { a, b in
+                let aT = a.startTimeMinutes
+                let bT = b.startTimeMinutes
+                if aT != bT { return aT < bT }
+                return a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
+            }
+        }
+        
+        if let focused = focusedDayID, focused == Self.parkedIdeasColumnID, !trip.showParkedIdeas {
+            focusedDayID = nil
+        }
+        
+        if !newlyAddedEventIDs.isEmpty {
+            geocodeTask?.cancel()
+            geocodeTask = Task {
+                await geocodeEventsIfNeeded(eventIDs: newlyAddedEventIDs)
+            }
+        }
+    }
+
+    private func geocodeEventsIfNeeded(eventIDs: [UUID]) async {
+        let region: MKCoordinateRegion? = await MainActor.run { geocodeBiasRegion() }
+        
+        for id in eventIDs {
+            if Task.isCancelled { return }
+            
+            let payload: (query: String, isIdeas: Bool)? = await MainActor.run {
+                geocodeQuery(forEventID: id)
+            }
+            guard let payload else { continue }
+            
+            if Task.isCancelled { return }
+            if let coord = await searchCoordinate(for: payload.query, region: region) {
+                await MainActor.run {
+                    applyCoordinate(coord, toEventID: id, isIdeas: payload.isIdeas)
+                }
+            }
+            
+            try? await Task.sleep(nanoseconds: 220_000_000)
+        }
+    }
+    
+    @MainActor
+    private func geocodeBiasRegion() -> MKCoordinateRegion? {
+        guard let lat = trip.latitude, let lon = trip.longitude else { return nil }
+        let span = max(0.05, min(trip.mapSpan ?? 0.18, 0.6))
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+            span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
+        )
+    }
+    
+    @MainActor
+    private func geocodeQuery(forEventID id: UUID) -> (query: String, isIdeas: Bool)? {
+        if let idx = parkedIdeas.firstIndex(where: { $0.id == id }) {
+            let e = parkedIdeas[idx]
+            let loc = e.location.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !loc.isEmpty, e.latitude == nil, e.longitude == nil else { return nil }
+            return (query: "\(e.title) \(loc) \(trip.destination)", isIdeas: true)
+        }
+        
+        for dayIdx in tripDays.indices {
+            if let eventIdx = tripDays[dayIdx].events.firstIndex(where: { $0.id == id }) {
+                let e = tripDays[dayIdx].events[eventIdx]
+                let loc = e.location.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !loc.isEmpty, e.latitude == nil, e.longitude == nil else { return nil }
+                return (query: "\(e.title) \(loc) \(trip.destination)", isIdeas: false)
+            }
+        }
+        
+        return nil
+    }
+    
+    private func searchCoordinate(for query: String, region: MKCoordinateRegion?) async -> CLLocationCoordinate2D? {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        if let region {
+            request.region = region
+        }
+        
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            guard let item = response.mapItems.first else { return nil }
+            return mapItemCoordinate(item)
+        } catch {
+            return nil
+        }
+    }
+    
+    @MainActor
+    private func applyCoordinate(_ coord: CLLocationCoordinate2D, toEventID id: UUID, isIdeas: Bool) {
+        if isIdeas, let idx = parkedIdeas.firstIndex(where: { $0.id == id }) {
+            parkedIdeas[idx].latitude = coord.latitude
+            parkedIdeas[idx].longitude = coord.longitude
+            return
+        }
+        
+        for dayIdx in tripDays.indices {
+            if let eventIdx = tripDays[dayIdx].events.firstIndex(where: { $0.id == id }) {
+                tripDays[dayIdx].events[eventIdx].latitude = coord.latitude
+                tripDays[dayIdx].events[eventIdx].longitude = coord.longitude
+                return
+            }
+        }
     }
 
     private func applyTripSettingsFromSheet() {
@@ -982,7 +1241,6 @@ private extension TripDetailView {
     }
 
     func updateTripDaysForDates() {
-        // Unscheduled trips: drive the day columns by unscheduledDaysCount and preserve content by index.
         if !trip.isDatesSet {
             let desiredCount = max(1, trip.unscheduledDaysCount)
             let base = Calendar.current.startOfDay(for: Date())
@@ -1079,7 +1337,7 @@ private extension TripDetailView {
         newEventLongitude = nil
         newEventDescription = ""
         newEventIcon = "mappin.and.ellipse"
-        newEventAccent = .sky
+        newEventAccent = .neutral
         newEventPhoto = nil
         let base = Calendar.current.startOfDay(for: Date())
         newEventStart = base.addingTimeInterval(9 * 3600)
@@ -1180,7 +1438,7 @@ private extension TripDetailView {
                     latitude: nil,
                     longitude: nil,
                     icon: "pin.fill",
-                    accent: .sand,
+                    accent: .neutral,
                     photoData: nil
                 )
                 parkedIdeas.insert(parked, at: 0)
@@ -1204,7 +1462,7 @@ private extension TripDetailView {
                     latitude: nil,
                     longitude: nil,
                     icon: "pin.fill",
-                    accent: .sand,
+                    accent: .neutral,
                     photoData: nil
                 )
                 parkedIdeas.insert(parked, at: 0)
@@ -1246,7 +1504,7 @@ private extension TripDetailView {
                     latitude: nil,
                     longitude: nil,
                     icon: "checklist.checked",
-                    accent: .gold,
+                    accent: .yellow,
                     photoData: nil
                 )
                 parkedIdeas.insert(parked, at: 0)
@@ -1277,7 +1535,7 @@ private extension TripDetailView {
                     latitude: nil,
                     longitude: nil,
                     icon: "checklist.checked",
-                    accent: .gold,
+                    accent: .yellow,
                     photoData: nil
                 )
                 parkedIdeas.insert(parked, at: 0)
@@ -1513,7 +1771,7 @@ private extension TripDetailView {
         flightToGate = ""
         flightNumber = ""
         flightNotes = ""
-        flightAccent = .sky
+        flightAccent = .neutral
         let base = Calendar.current.startOfDay(for: Date())
         flightStartTime = base.addingTimeInterval(9 * 3600)
         flightEndTime = flightStartTime
@@ -1736,7 +1994,7 @@ private extension TripDetailView {
             latitude: nil,
             longitude: nil,
             icon: "pin.fill",
-            accent: .sand,
+            accent: .neutral,
             photoData: nil
         )
         parkedIdeas.insert(parked, at: 0)
@@ -1757,7 +2015,7 @@ private extension TripDetailView {
             latitude: nil,
             longitude: nil,
             icon: "checklist.checked",
-            accent: .gold,
+            accent: .yellow,
             photoData: nil
         )
         parkedIdeas.insert(parked, at: 0)
@@ -2243,7 +2501,7 @@ struct FlightItem: Identifiable, Hashable, Codable {
         toGate: String = "",
         flightNumber: String = "",
         notes: String = "",
-        accent: EventAccent = .sky,
+        accent: EventAccent = .neutral,
         startTime: Date = Date(),
         endTime: Date = Date()
     ) {
@@ -2325,25 +2583,23 @@ struct FlightItem: Identifiable, Hashable, Codable {
 }
 
 enum EventAccent: String, Codable, CaseIterable, Hashable {
-    case sand
-    case gold
-    case burntOrange
+    case neutral
+    case blue
     case mint
-    case forest
-    case deepNavy
-    case sky
-    case lavender
+    case yellow
+    case orange
+    case red
+    case purple
 
     var color: Color {
         switch self {
-        case .sand: return Color(hex: 0xC0B5A1)
-        case .gold: return Color(hex: 0xF6C00A)
-        case .burntOrange: return Color(hex: 0xD66710)
-        case .mint: return Color(hex: 0x27EAA6)
-        case .forest: return Color(hex: 0x41634A)
-        case .deepNavy: return Color(hex: 0x1B3745)
-        case .sky: return Color(hex: 0x94BAFB)
-        case .lavender: return Color(hex: 0xB2A1FF)
+        case .neutral: return Color(hex: 0x7A7A7A)
+        case .blue: return Color(hex: 0x4DA1F7)
+        case .mint: return Color(hex: 0x7AE3A9)
+        case .yellow: return Color(hex: 0xFFC63B)
+        case .orange: return Color(hex: 0xFF7640)
+        case .red: return Color(hex: 0xE63B3B)
+        case .purple: return Color(hex: 0xAD8DF0)
         }
     }
     
@@ -2357,20 +2613,34 @@ enum EventAccent: String, Codable, CaseIterable, Hashable {
         }
         
         switch raw {
+        case "sand":
+            self = .neutral
+        case "gold":
+            self = .yellow
+        case "burntOrange":
+            self = .orange
+        case "forest":
+            self = .mint
+        case "deepNavy":
+            self = .blue
+        case "sky":
+            self = .blue
+        case "lavender":
+            self = .purple
         case "yellow":
-            self = .gold
+            self = .yellow
         case "orange", "amber":
-            self = .burntOrange
+            self = .orange
         case "mint", "teal", "cyan", "lime":
             self = .mint
         case "green":
-            self = .forest
+            self = .mint
         case "blue":
-            self = .sky
+            self = .blue
         case "indigo", "purple", "violet", "pink", "coral", "red":
-            self = .lavender
+            self = .purple
         default:
-            self = .sky
+            self = .neutral
         }
     }
 }

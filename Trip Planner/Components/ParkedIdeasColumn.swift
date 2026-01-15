@@ -20,7 +20,7 @@ struct ParkedIdeasColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Parked Ideas")
+                Text("Ideas")
                     .font(.headline)
                     .foregroundStyle(textPrimary)
                 Text("Not tied to a day")

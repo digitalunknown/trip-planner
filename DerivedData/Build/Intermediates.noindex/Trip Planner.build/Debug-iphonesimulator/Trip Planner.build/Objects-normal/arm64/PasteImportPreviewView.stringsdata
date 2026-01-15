@@ -1,0 +1,56 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/PasteImportPreviewView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Preview",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add %lld",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ → %@  %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 180
+        }
+      },
+      {
+        "comment": "",
+        "key": "Flight details",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 185
+        }
+      }
+    ]
+  },
+  "version": 1
+}

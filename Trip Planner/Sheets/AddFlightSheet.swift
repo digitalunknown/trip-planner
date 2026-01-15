@@ -46,6 +46,10 @@ struct AddFlightSheet: View {
                     }
                 }
                 
+                Section("Flight number") {
+                    clearableTextField(title: "Flight number", text: $flightNumber, capitalization: .characters)
+                }
+                
                 Section("Departure") {
                     AirportSearchField(
                         title: "Location",
@@ -76,17 +80,14 @@ struct AddFlightSheet: View {
                     DatePicker("Time", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
                 }
                 
-                Section("Flight number") {
-                    clearableTextField(title: "Flight number", text: $flightNumber, capitalization: .characters)
-                }
-                
                 Section("Visuals") {
                     ColorChips(selection: $accent)
                 }
                 
                 Section("Notes") {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 90)
+                    TextField("Notes", text: $notes, axis: .vertical)
+                        .lineLimit(3...12)
+                        .textInputAutocapitalization(.sentences)
                 }
                 
                 if isEditing {

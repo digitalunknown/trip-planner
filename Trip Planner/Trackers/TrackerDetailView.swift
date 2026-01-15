@@ -65,11 +65,8 @@ struct TrackerDetailView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(dayBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(columnStroke)
-                }
+                .background(dayBackground, in: Capsule())
+                .overlay { Capsule().strokeBorder(columnStroke) }
                 .padding(.bottom, 2)
 
                 VStack(spacing: 0) {

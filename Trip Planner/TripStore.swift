@@ -1,10 +1,3 @@
-//
-//  TripStore.swift
-//  Trip Planner
-//
-//  Created by Piotr Osmenda on 12/18/25.
-//
-
 import Foundation
 import SwiftUI
 

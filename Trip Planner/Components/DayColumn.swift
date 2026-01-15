@@ -38,8 +38,6 @@ struct DayColumn: View {
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     
-    @State private var weatherMode: WeatherPillMode = .conditions
-    
     private struct TimedRow: Identifiable {
         enum Kind {
             case flight(FlightItem)
@@ -87,18 +85,6 @@ struct DayColumn: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .topTrailing) {
-                WeatherPill(
-                    mode: $weatherMode,
-                    fallbackIcon: day.weatherIcon,
-                    fallbackTempF: day.temperatureF,
-                    dayDate: day.date
-                )
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.thinMaterial, in: Capsule())
-                .padding(10)
-            }
 
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 10) {

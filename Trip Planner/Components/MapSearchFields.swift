@@ -176,6 +176,9 @@ struct AirportSearchField: View {
     @State private var resolvedCodes: [MKLocalSearchCompletion: String] = [:]
     @State private var failedCodeResolutions: Set<MKLocalSearchCompletion> = []
     @State private var inFlightCodeResolutions: Set<MKLocalSearchCompletion> = []
+    @State private var fallbackItems: [MKMapItem] = []
+    @State private var isFallbackSearching: Bool = false
+    @State private var fallbackTask: Task<Void, Never>?
     
     private var filteredResults: [MKLocalSearchCompletion] {
         completer.results.filter(isAirportCompletion)
@@ -219,6 +222,7 @@ struct AirportSearchField: View {
                     .onChange(of: name) { _, newValue in
                         completer.searchQuery = newValue
                         showingResults = !newValue.isEmpty
+                        scheduleFallbackSearch(for: newValue)
                     }
                 
                 if !name.isEmpty {
@@ -266,8 +270,8 @@ struct AirportSearchField: View {
                                     ProgressView()
                                         .scaleEffect(0.8)
                                         .tint(.secondary)
-                                } else {
-                                    Text(code.isEmpty ? "—" : code)
+                                } else if !code.isEmpty {
+                                    Text(code)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 10)
@@ -287,6 +291,64 @@ struct AirportSearchField: View {
                         }
                     }
                 }
+            } else if showingResults && filteredResults.isEmpty && !fallbackItems.isEmpty {
+                Divider()
+                    .padding(.top, 8)
+                
+                VStack(spacing: 0) {
+                    ForEach(fallbackItems.prefix(10), id: \.self) { item in
+                        Button {
+                            selectAirportMapItem(item)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    let airportName = item.name ?? name
+                                    let code = airportCodeCandidate(fromText: [item.name, mapItemAddressString(item)].compactMap { $0 }.joined(separator: " "))
+                                    Text(code.isEmpty ? airportName : "\(code) - \(airportName)")
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                    
+                                    let subtitle = bestAirportSubtitle(for: item)
+                                    if !subtitle.isEmpty {
+                                        Text(subtitle)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                
+                                Spacer(minLength: 0)
+                                
+                                let code = airportCodeCandidate(fromText: [item.name, mapItemAddressString(item)].compactMap { $0 }.joined(separator: " "))
+                                if !code.isEmpty {
+                                    Text(code)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(.thinMaterial, in: Capsule())
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 16)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        if item != fallbackItems.prefix(10).last {
+                            Divider()
+                        }
+                    }
+                }
+            } else if showingResults && filteredResults.isEmpty && isFallbackSearching {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.9)
+                    Text("Searching airports…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
             }
         }
         .onChange(of: completer.results) { _, newValue in
@@ -306,6 +368,8 @@ struct AirportSearchField: View {
         let airportName = stripLeadingCode(from: result.title)
         name = airportName
         showingResults = false
+        fallbackTask?.cancel()
+        fallbackItems = []
         let initialCode = codeForDisplay(result)
         
         let request = MKLocalSearch.Request(completion: result)
@@ -339,12 +403,30 @@ struct AirportSearchField: View {
             DispatchQueue.main.async {
                 latitude = coordinate.latitude
                 longitude = coordinate.longitude
-                city = resolvedCity
+                city = resolvedCity.isEmpty ? bestAirportSubtitle(for: first) : resolvedCity
                 
                 if !chosenCode.isEmpty {
                     code = chosenCode
                 }
             }
+        }
+    }
+    
+    private func selectAirportMapItem(_ item: MKMapItem) {
+        let airportName = item.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? name
+        let addr = mapItemAddressString(item) ?? ""
+        let combined = [airportName, addr].joined(separator: " ")
+        let detectedCode = airportCodeCandidate(fromText: combined)
+        let detectedCity = bestAirportSubtitle(for: item)
+        
+        DispatchQueue.main.async {
+            name = stripLeadingCode(from: airportName)
+            if !detectedCode.isEmpty { code = detectedCode }
+            if !detectedCity.isEmpty { city = detectedCity }
+            latitude = item.placemark.coordinate.latitude
+            longitude = item.placemark.coordinate.longitude
+            showingResults = false
+            fallbackItems = []
         }
     }
     
@@ -376,6 +458,18 @@ struct AirportSearchField: View {
             let match = String(combined[range])
             let letters = match.filter { $0.isLetter }
             if letters.count >= 3 { return String(letters.suffix(3)) }
+        }
+        
+        if (combined.contains("AIRPORT") || combined.contains("INTL")) {
+            let tokens = combined
+                .replacingOccurrences(of: "(", with: " ")
+                .replacingOccurrences(of: ")", with: " ")
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { $0.count == 3 && $0.allSatisfy { $0.isLetter } }
+            let forbidden: Set<String> = ["USA", "THE"]
+            if let first = tokens.first(where: { !forbidden.contains($0) }) {
+                return first
+            }
         }
         
         return ""
@@ -412,6 +506,70 @@ struct AirportSearchField: View {
                 }
             }
         }
+    }
+    
+    private func scheduleFallbackSearch(for raw: String) {
+        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        fallbackTask?.cancel()
+        fallbackItems = []
+        isFallbackSearching = false
+        guard q.count >= 2 else { return }
+        
+        fallbackTask = Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if Task.isCancelled { return }
+            await MainActor.run { isFallbackSearching = true }
+            runFallbackAirportSearch(query: q)
+        }
+    }
+    
+    private func runFallbackAirportSearch(query: String) {
+        var q = query
+        let upper = q.uppercased()
+        let looksLikeCode = upper.count == 3 && upper.allSatisfy { $0.isLetter }
+        if !looksLikeCode && !upper.contains("AIRPORT") {
+            q += " airport"
+        }
+        
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = q
+        request.resultTypes = .pointOfInterest
+        request.pointOfInterestFilter = MKPointOfInterestFilter(including: [.airport])
+        if let region = searchRegion {
+            request.region = region
+        }
+        
+        MKLocalSearch(request: request).start { response, _ in
+            let items = (response?.mapItems ?? [])
+                .filter { item in
+                    if item.pointOfInterestCategory == .airport { return true }
+                    let combined = ([item.name, mapItemAddressString(item)].compactMap { $0 }.joined(separator: " ")).uppercased()
+                    return combined.contains("AIRPORT") || !airportCodeCandidate(fromText: combined).isEmpty
+                }
+            
+            DispatchQueue.main.async {
+                if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self.fallbackItems = []
+                    self.isFallbackSearching = false
+                    return
+                }
+                self.fallbackItems = Array(items.prefix(10))
+                self.isFallbackSearching = false
+            }
+        }
+    }
+    
+    private func bestAirportSubtitle(for item: MKMapItem) -> String {
+        if let city = mapItemCity(item), !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return city
+        }
+        let addr = mapItemAddressString(item)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if addr.isEmpty { return "" }
+        let parts = addr.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if parts.count >= 2 {
+            return parts[1]
+        }
+        return addr
     }
 }
 
