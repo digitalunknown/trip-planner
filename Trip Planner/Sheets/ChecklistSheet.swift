@@ -13,10 +13,10 @@ struct ChecklistSheet: View {
     var onSave: () -> Void
     
     @State private var newItemText: String = ""
-    @FocusState private var focusedItemID: UUID?
-    @State private var pendingDeleteItemID: UUID?
+    @State private var isAddFieldFocused: Bool = false
     @State private var didCopyItems: Bool = false
-    @State private var isFocusingNewItem: Bool = false
+    
+    private let addRowID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
     
     var body: some View {
         NavigationStack {
@@ -72,17 +72,6 @@ struct ChecklistSheet: View {
                                         }
                                     )
                                 )
-                                .focused($focusedItemID, equals: itemID)
-                                
-                                if focusedItemID == itemID {
-                                    Button {
-                                        pendingDeleteItemID = itemID
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
                             }
                             .id(itemID)
                             .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -97,6 +86,13 @@ struct ChecklistSheet: View {
                                 }
                                 .tint(isDone ? Color.secondary : appAccentColor)
                             }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    items.removeAll(where: { $0.id == itemID })
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                         .onDelete { offsets in
                             for offset in offsets.sorted(by: >) where offset < items.count {
@@ -107,31 +103,20 @@ struct ChecklistSheet: View {
                         HStack(spacing: 12) {
                             Image(systemName: "plus.circle.fill")
                                 .foregroundStyle(.secondary)
-                            TextField("Add item", text: $newItemText)
+                            ReturnKeyTextField(
+                                placeholder: "Add item",
+                                text: $newItemText,
+                                isFirstResponder: $isAddFieldFocused,
+                                autocapitalization: .sentences
+                            ) {
+                                addNewChecklistItem(proxy: proxy)
+                            }
                             Button("Add") {
-                                let t = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
-                                guard !t.isEmpty else { return }
-                                let newID = UUID()
-                                items.append(ChecklistEntry(id: newID, text: t, isDone: false))
-                                newItemText = ""
-                                
-                                // Ensure the newly created row becomes the active input (Form updates can steal focus).
-                                isFocusingNewItem = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        proxy.scrollTo(newID, anchor: .center)
-                                    }
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                                    focusedItemID = newID
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
-                                    focusedItemID = newID
-                                    isFocusingNewItem = false
-                                }
+                                addNewChecklistItem(proxy: proxy)
                             }
                             .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
+                        .id(addRowID)
                     }
                     
                     Section {
@@ -166,23 +151,12 @@ struct ChecklistSheet: View {
                         .disabled(didCopyItems || items.isEmpty)
                     }
                 }
-                .onChange(of: focusedItemID) { _, newValue in
-                    guard let id = newValue else { return }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                        guard items.contains(where: { $0.id == id }) else { return }
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            proxy.scrollTo(id, anchor: .center)
+                .onChange(of: isAddFieldFocused) { _, newValue in
+                    guard newValue else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        withTransaction(Transaction(animation: nil)) {
+                            proxy.scrollTo(addRowID, anchor: .bottom)
                         }
-                    }
-                }
-                .onChange(of: pendingDeleteItemID) { _, newValue in
-                    guard let id = newValue else { return }
-                    DispatchQueue.main.async {
-                        if focusedItemID == id { focusedItemID = nil }
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            items.removeAll(where: { $0.id == id })
-                        }
-                        pendingDeleteItemID = nil
                     }
                 }
             }
@@ -201,6 +175,20 @@ struct ChecklistSheet: View {
                         dismiss()
                     }
                 }
+            }
+        }
+    }
+    
+    private func addNewChecklistItem(proxy: ScrollViewProxy) {
+        let t = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        items.append(ChecklistEntry(id: UUID(), text: t, isDone: false))
+        newItemText = ""
+        isAddFieldFocused = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+            withTransaction(Transaction(animation: nil)) {
+                proxy.scrollTo(addRowID, anchor: .bottom)
             }
         }
     }

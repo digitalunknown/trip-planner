@@ -1,0 +1,120 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/TripSettingsSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Trip",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trip Details",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dates",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cover Image",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trip Name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 29
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set Dates",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Date",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "End Date",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Number of Days",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Cover Image",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Ideas",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Options",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 111
+        }
+      },
+      {
+        "comment": "",
+        "key": "An extra space for ideation",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 113
+        }
+      }
+    ]
+  },
+  "version": 1
+}

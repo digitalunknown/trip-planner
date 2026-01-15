@@ -1,0 +1,23 @@
+{
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/PasteImportPreviewView.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportPreviewView.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportPreviewView.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportPreviewView.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportPreviewView.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportPreviewView.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/PasteImportSheet.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportSheet.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportSheet.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportSheet.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportSheet.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/PasteImportSheet.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/SettingsView.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/SettingsView.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/SettingsView.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/SettingsView.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/DerivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/x86_64/SettingsView.swiftdeps"
+  }
+}

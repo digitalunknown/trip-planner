@@ -1,0 +1,24 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/FlightCard.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": " ",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": " ",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 110
+        }
+      }
+    ]
+  },
+  "version": 1
+}

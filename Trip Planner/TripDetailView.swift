@@ -50,6 +50,7 @@ struct TripDetailView: View {
     @State private var isPresentingSettings: Bool = false
     @State private var isPresentingAdd: Bool = false
     @State private var isPresentingPasteImport: Bool = false
+    @State private var isPresentingAddMany: Bool = false
     @State private var pasteDefaultDayID: UUID?
     @State private var geocodeTask: Task<Void, Never>?
     @State private var splitRatio: CGFloat = 0.45 // Map takes 45% by default
@@ -71,6 +72,9 @@ struct TripDetailView: View {
     @State private var isPresentingReminder = false
     @State private var newReminderText: String = ""
     @State private var editingReminder: ReminderItem?
+    
+    @State private var addManyDraftText: String = ""
+    @State private var addManyItems: [String] = []
     
     @State private var parkedIdeas: [EventItem] = []
     
@@ -469,12 +473,24 @@ struct TripDetailView: View {
                     Label("Checklist", systemImage: "checklist.checked")
                 }
                 
+                Divider()
+                
                 Button {
                     let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
                     pasteDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     isPresentingPasteImport = true
                 } label: {
                     Label("Plan Day", systemImage: "sparkles")
+                }
+                
+                Button {
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    addManyDraftText = ""
+                    addManyItems = []
+                    isPresentingAddMany = true
+                } label: {
+                    Label("Add Many", systemImage: "text.badge.plus")
                 }
             } label: {
                 Image(systemName: "plus")
@@ -634,6 +650,38 @@ struct TripDetailView: View {
                 .tint(.primary)
                 .presentationDetents([.medium, .large])
             }
+            .sheet(isPresented: $isPresentingAddMany) {
+                AddManySheet(title: "Add Many") { titles in
+                    addManyActivities(titles)
+                }
+                .tint(.primary)
+                .presentationDetents([.medium, .large])
+            }
+    }
+
+    private func addManyActivities(_ titles: [String]) {
+        let trimmed = titles.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        guard !trimmed.isEmpty else { return }
+        
+        let targetID = selectedDayID ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+        guard let targetID, let idx = tripDays.firstIndex(where: { $0.id == targetID }) else { return }
+        
+        let newEvents = trimmed.map { title in
+            EventItem(
+                id: UUID(),
+                title: title,
+                description: "",
+                time: "",
+                location: "",
+                latitude: nil,
+                longitude: nil,
+                icon: "mappin.and.ellipse",
+                accent: .neutral,
+                photoData: nil
+            )
+        }
+        
+        tripDays[idx].events.append(contentsOf: newEvents)
     }
 
     private func applyPasteImportItems(_ items: [PasteImportItem]) {
@@ -1057,10 +1105,12 @@ private extension TripDetailView {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
                     ForEach(Array(tripDays.enumerated()), id: \.element.id) { index, day in
+                        let isToday = trip.isDatesSet && Calendar.current.isDate(day.date, inSameDayAs: Date())
                         DayColumn(
                             day: day,
                             totalDays: tripDays.count,
                             isUnscheduled: !trip.isDatesSet,
+                            isCurrentDay: isToday,
                             columnWidth: columnWidth,
                             columnHeight: geo.size.height - 24,
                             onTap: { event in startEditing(event: event, day: day) },

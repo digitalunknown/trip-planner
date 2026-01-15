@@ -1,0 +1,48 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/PasteImportSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Plan Day",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Plan Day Error",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "What do you have in mind?",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "Thinking…",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 100
+        }
+      }
+    ]
+  },
+  "version": 1
+}

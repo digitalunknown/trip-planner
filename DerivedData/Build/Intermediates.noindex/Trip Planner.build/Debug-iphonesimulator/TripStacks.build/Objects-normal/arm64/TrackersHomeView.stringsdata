@@ -1,0 +1,112 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Trackers/TrackersHomeView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Stats",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Stats",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 176
+        }
+      },
+      {
+        "comment": "",
+        "key": "Logged Trips",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "Logged Trips",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 261
+        }
+      },
+      {
+        "comment": "",
+        "key": "Logged Trips",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 226
+        }
+      },
+      {
+        "comment": "",
+        "key": "Complete a trip to earn your first stamp.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 303
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stamps",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 291
+        }
+      }
+    ]
+  },
+  "version": 1
+}

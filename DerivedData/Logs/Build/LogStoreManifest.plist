@@ -6,7 +6,7 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
-		<key>44A4B15F-A4A2-4CEF-A7FB-94875255DE34</key>
+		<key>04B13767-FEF3-45A2-BED4-718856004405</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,17 +15,17 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>44A4B15F-A4A2-4CEF-A7FB-94875255DE34.xcactivitylog</string>
+			<string>04B13767-FEF3-45A2-BED4-718856004405.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
 			<dict>
 				<key>highLevelStatus</key>
-				<string>S</string>
+				<string>E</string>
 				<key>totalNumberOfAnalyzerIssues</key>
 				<integer>0</integer>
 				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
+				<integer>4</integer>
 				<key>totalNumberOfTestFailures</key>
 				<integer>0</integer>
 				<key>totalNumberOfWarnings</key>
@@ -34,21 +34,21 @@
 			<key>schemeIdentifier-containerName</key>
 			<string>Trip Planner project</string>
 			<key>schemeIdentifier-schemeName</key>
-			<string>Trip Planner</string>
+			<string>TripStacks</string>
 			<key>schemeIdentifier-sharedScheme</key>
 			<integer>1</integer>
 			<key>signature</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>790148125.49968004</real>
+			<real>790196284.61026895</real>
 			<key>timeStoppedRecording</key>
-			<real>790148140.97199702</real>
+			<real>790196306.38584006</real>
 			<key>title</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>44A4B15F-A4A2-4CEF-A7FB-94875255DE34</string>
+			<string>04B13767-FEF3-45A2-BED4-718856004405</string>
 		</dict>
-		<key>9486612E-AD33-4D64-AE15-D8BEB5651415</key>
+		<key>4E0C9522-0247-4DDA-A179-5DFE9CA3D240</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -57,7 +57,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>9486612E-AD33-4D64-AE15-D8BEB5651415.xcactivitylog</string>
+			<string>4E0C9522-0247-4DDA-A179-5DFE9CA3D240.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -76,19 +76,103 @@
 			<key>schemeIdentifier-containerName</key>
 			<string>Trip Planner project</string>
 			<key>schemeIdentifier-schemeName</key>
-			<string>Trip Planner</string>
+			<string>TripStacks</string>
 			<key>schemeIdentifier-sharedScheme</key>
 			<integer>1</integer>
 			<key>signature</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>790147678.45261395</real>
+			<real>790196088.95008397</real>
 			<key>timeStoppedRecording</key>
-			<real>790147686.00100899</real>
+			<real>790196102.60863602</real>
 			<key>title</key>
-			<string>Building project Trip Planner with scheme Trip Planner and configuration Debug</string>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>9486612E-AD33-4D64-AE15-D8BEB5651415</string>
+			<string>4E0C9522-0247-4DDA-A179-5DFE9CA3D240</string>
+		</dict>
+		<key>819F4C28-CD8F-4FA5-8499-EF0ECCACA276</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>819F4C28-CD8F-4FA5-8499-EF0ECCACA276.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Trip Planner project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>TripStacks</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>790196402.77426004</real>
+			<key>timeStoppedRecording</key>
+			<real>790196416.04679</real>
+			<key>title</key>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>819F4C28-CD8F-4FA5-8499-EF0ECCACA276</string>
+		</dict>
+		<key>BE751EC5-9E66-4A65-A728-F1B7D0E7CC60</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>BE751EC5-9E66-4A65-A728-F1B7D0E7CC60.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Trip Planner project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>TripStacks</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>790196653.04651797</real>
+			<key>timeStoppedRecording</key>
+			<real>790196668.403355</real>
+			<key>title</key>
+			<string>Building project Trip Planner with scheme TripStacks and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>BE751EC5-9E66-4A65-A728-F1B7D0E7CC60</string>
 		</dict>
 	</dict>
 </dict>

@@ -1,0 +1,24 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Trips",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stats",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 29
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,40 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/AddManySheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Items",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "Activity",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add %lld",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 81
+        }
+      }
+    ]
+  },
+  "version": 1
+}

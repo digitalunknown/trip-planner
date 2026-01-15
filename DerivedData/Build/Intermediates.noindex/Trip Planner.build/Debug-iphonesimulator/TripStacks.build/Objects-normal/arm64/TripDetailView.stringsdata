@@ -1,0 +1,104 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/TripDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Activity",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 443
+        }
+      },
+      {
+        "comment": "",
+        "key": "Flight",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 452
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reminder",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 462
+        }
+      },
+      {
+        "comment": "",
+        "key": "Checklist",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 473
+        }
+      },
+      {
+        "comment": "",
+        "key": "Plan Day",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 483
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Many",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 493
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shorter date range",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 542
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 543
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove & Convert",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 550
+        }
+      },
+      {
+        "comment": "",
+        "key": "This date range is shorter and will remove items from days that no longer fit.\n\n%lld activities, %lld reminders, %lld checklists, %lld flights.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 555
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 999
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld°F",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 2150
+        }
+      }
+    ]
+  },
+  "version": 1
+}

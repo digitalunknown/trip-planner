@@ -159,7 +159,7 @@ struct TrackersHomeView: View {
         .sheet(isPresented: $showStatsSettings) {
             NavigationStack {
                 Form {
-                    Toggle("Trips Taken", isOn: Binding(
+                    Toggle("Logged Trips", isOn: Binding(
                         get: { !isStatHidden("tripsTaken") },
                         set: { setStatHidden("tripsTaken", !$0) }
                     ))
@@ -197,7 +197,7 @@ struct TrackersHomeView: View {
                     }
                     .padding(16)
                 }
-                .navigationTitle("Trips Taken")
+                .navigationTitle("Logged Trips")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -223,14 +223,9 @@ struct TrackersHomeView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Trips Taken")
+                    Text("Logged Trips")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(textPrimary)
-                        .lineLimit(1)
-                    
-                    Text("Logged in this app")
-                        .font(.caption)
-                        .foregroundStyle(textSecondary)
                         .lineLimit(1)
                 }
                 
@@ -272,7 +267,7 @@ struct TrackersHomeView: View {
             
             HStack(spacing: 4) {
                 ForEach(0..<totalBars, id: \.self) { idx in
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    Capsule(style: .continuous)
                         .fill(idx < filled ? appAccentColor : columnStroke)
                         .frame(height: 28)
                 }
@@ -293,14 +288,9 @@ struct TrackersHomeView: View {
     private var passportCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Stamps")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(textPrimary)
-                    Text("You’ve completed \(completedTrips.count) \(completedTrips.count == 1 ? "trip" : "trips")")
-                        .font(.caption)
-                        .foregroundStyle(textSecondary)
-                }
+                Text("Stamps")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(textPrimary)
                 
                 Spacer(minLength: 0)
                 

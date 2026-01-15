@@ -58,7 +58,13 @@ struct TripCardView: View {
             if daysUntilStart == 1 { return "Tomorrow" }
             return "In \(max(daysUntilStart, 0)) days"
         case .inProgress:
-            return "In progress"
+            let cal = Calendar.current
+            let today = cal.startOfDay(for: Date())
+            let start = cal.startOfDay(for: trip.startDate)
+            let dayIndex = (cal.dateComponents([.day], from: start, to: today).day ?? 0) + 1
+            let total = max(1, trip.tripDuration)
+            let clampedDay = min(max(dayIndex, 1), total)
+            return "Now: Day \(clampedDay) of \(total)"
         case .ended:
             return "Ended"
         }
@@ -73,10 +79,6 @@ struct TripCardView: View {
                     HStack {
                         Spacer()
                         HStack(spacing: 4) {
-                            if trip.daysUntilTrip == 0 {
-                                Image(systemName: "star.fill")
-                                    .font(.caption)
-                            }
                             Text(countdownText)
                         }
                         .font(.caption)

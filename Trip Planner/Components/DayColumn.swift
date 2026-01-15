@@ -4,6 +4,7 @@ struct DayColumn: View {
     let day: TripDay
     let totalDays: Int
     let isUnscheduled: Bool
+    let isCurrentDay: Bool
     let columnWidth: CGFloat
     let columnHeight: CGFloat
     let onTap: (EventItem) -> Void
@@ -32,11 +33,14 @@ struct DayColumn: View {
     let showEmptyPlaceholder: Bool
     
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.appAccentColor) private var appAccentColor
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xB5B5B5) }
+    private var highlightFillColor: Color { colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04) }
     
     private struct TimedRow: Identifiable {
         enum Kind {
@@ -294,10 +298,18 @@ struct DayColumn: View {
             }
         }
         .frame(width: columnWidth, height: columnHeight)
-        .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(dayBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(isCurrentDay ? highlightFillColor : .clear)
+                )
+        )
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(columnStroke)
+                .strokeBorder(isCurrentDay ? highlightStrokeColor : columnStroke, lineWidth: 1)
+                .shadow(color: isCurrentDay ? highlightStrokeColor.opacity(0.35) : .clear, radius: 2, x: 0, y: 0)
         }
         .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
     }

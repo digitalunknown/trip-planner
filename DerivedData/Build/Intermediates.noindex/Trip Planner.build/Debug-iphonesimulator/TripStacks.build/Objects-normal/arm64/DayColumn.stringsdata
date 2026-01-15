@@ -1,0 +1,192 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/DayColumn.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Day %lld of %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Activity",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 133
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Reminder",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Reminder",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Checklist",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 193
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Checklist",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 199
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 223
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 230
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Flight",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 238
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Flight",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 244
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 255
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Right",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 262
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Parked",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 269
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Activity",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 277
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate Activity",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 283
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Activity",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 289
+        }
+      }
+    ]
+  },
+  "version": 1
+}

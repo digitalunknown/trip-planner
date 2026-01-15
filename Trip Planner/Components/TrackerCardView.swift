@@ -50,7 +50,7 @@ struct TrackerProgressBar: View {
             
             HStack(spacing: 4) {
                 ForEach(0..<totalBars, id: \.self) { idx in
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    Capsule(style: .continuous)
                         .fill(idx < filled ? accentColor : unfilledColor)
                         .frame(height: barHeight)
                 }
@@ -87,12 +87,6 @@ struct TrackerRowCard: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(textPrimary)
                         .lineLimit(1)
-                    
-                    Text(type.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(textSecondary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.9)
                 }
                 
                 Spacer(minLength: 0)

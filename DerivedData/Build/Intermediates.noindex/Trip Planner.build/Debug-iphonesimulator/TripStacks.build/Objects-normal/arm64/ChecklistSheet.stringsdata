@@ -1,0 +1,112 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/ChecklistSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Checklist",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Checklist",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "Checklist",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Items",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "Title",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 36
+        }
+      },
+      {
+        "comment": "",
+        "key": "Item",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Undone",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copied",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy Items",
+        "location": {
+          "startingColumn": 64,
+          "startingLine": 146
+        }
+      }
+    ]
+  },
+  "version": 1
+}

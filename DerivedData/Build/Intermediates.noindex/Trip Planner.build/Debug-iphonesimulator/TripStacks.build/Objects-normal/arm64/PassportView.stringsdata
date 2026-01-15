@@ -1,0 +1,16 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Trackers/PassportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Stamps",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 47
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,56 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/ParkedIdeasColumn.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Ideas",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 23
+        }
+      },
+      {
+        "comment": "",
+        "key": "Not tied to a day",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Left",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Activity",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate Activity",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Activity",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 62
+        }
+      }
+    ]
+  },
+  "version": 1
+}
