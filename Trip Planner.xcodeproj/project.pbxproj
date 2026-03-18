@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FFB2C3D62FA1234500ABCDEF /* Sticker in Frameworks */ = {isa = PBXBuildFile; productRef = FFB2C3D52FA1234500ABCDEF /* Sticker */; };
+		FFDF4C762F1FD9B80038C817 /* Glur in Frameworks */ = {isa = PBXBuildFile; productRef = FF6A1C3B2F6A1C3B2F6A1C3C /* Glur */; };
+		FFDF51B72F2571EF0038C817 /* Inter-Italic-VariableFont_opsz,wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FFDF51B12F2571EF0038C817 /* Inter-Italic-VariableFont_opsz,wght.ttf */; };
+		FFDF51B92F2571EF0038C817 /* Inter-VariableFont_opsz,wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FFDF51B22F2571EF0038C817 /* Inter-VariableFont_opsz,wght.ttf */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		FF997AF82EF216E600B3A68E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,11 +34,31 @@
 		FF997AEA2EF216E400B3A68E /* TripStacks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TripStacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF997AF72EF216E600B3A68E /* Trip PlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Trip PlannerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF997B012EF216E600B3A68E /* Trip PlannerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Trip PlannerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFDF4CE92F215B8A0038C817 /* TripStacksRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TripStacksRelease.entitlements; sourceTree = "<group>"; };
+		FFDF51B12F2571EF0038C817 /* Inter-Italic-VariableFont_opsz,wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Inter-Italic-VariableFont_opsz,wght.ttf"; sourceTree = "<group>"; };
+		FFDF51B22F2571EF0038C817 /* Inter-VariableFont_opsz,wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Inter-VariableFont_opsz,wght.ttf"; sourceTree = "<group>"; };
+		FFDF51BA2F2572F50038C817 /* TripStacks-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TripStacks-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FFDF51BB2F25744B0038C817 /* Exceptions for "Trip Planner" folder in "TripStacks" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Fonts/Inter-Italic-VariableFont_opsz,wght.ttf",
+				"Fonts/Inter-VariableFont_opsz,wght.ttf",
+				"Fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf",
+				"Fonts/OpenSans-VariableFont_wdth,wght.ttf",
+			);
+			target = FF997AE92EF216E400B3A68E /* TripStacks */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FF997AEC2EF216E400B3A68E /* Trip Planner */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FFDF51BB2F25744B0038C817 /* Exceptions for "Trip Planner" folder in "TripStacks" target */,
+			);
 			path = "Trip Planner";
 			sourceTree = "<group>";
 		};
@@ -52,6 +79,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FFDF4C762F1FD9B80038C817 /* Glur in Frameworks */,
+				FFB2C3D62FA1234500ABCDEF /* Sticker in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +104,9 @@
 		FF997AE12EF216E400B3A68E = {
 			isa = PBXGroup;
 			children = (
+				FFDF51BA2F2572F50038C817 /* TripStacks-Info.plist */,
+				FFDF51B52F2571EF0038C817 /* Fonts */,
+				FFDF4CE92F215B8A0038C817 /* TripStacksRelease.entitlements */,
 				FF997AEC2EF216E400B3A68E /* Trip Planner */,
 				FF997AFA2EF216E600B3A68E /* Trip PlannerTests */,
 				FF997B042EF216E600B3A68E /* Trip PlannerUITests */,
@@ -90,6 +122,15 @@
 				FF997B012EF216E600B3A68E /* Trip PlannerUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FFDF51B52F2571EF0038C817 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				FFDF51B12F2571EF0038C817 /* Inter-Italic-VariableFont_opsz,wght.ttf */,
+				FFDF51B22F2571EF0038C817 /* Inter-VariableFont_opsz,wght.ttf */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +153,8 @@
 			);
 			name = TripStacks;
 			packageProductDependencies = (
+				FF6A1C3B2F6A1C3B2F6A1C3C /* Glur */,
+				FFB2C3D52FA1234500ABCDEF /* Sticker */,
 			);
 			productName = "Trip Planner";
 			productReference = FF997AEA2EF216E400B3A68E /* TripStacks.app */;
@@ -195,6 +238,10 @@
 			);
 			mainGroup = FF997AE12EF216E400B3A68E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FF6A1C3B2F6A1C3B2F6A1C3B /* XCRemoteSwiftPackageReference "Glur" */,
+				FFB2C3D42FA1234500ABCDEF /* XCRemoteSwiftPackageReference "sticker" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FF997AEB2EF216E400B3A68E /* Products */;
 			projectDirPath = "";
@@ -212,6 +259,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FFDF51B72F2571EF0038C817 /* Inter-Italic-VariableFont_opsz,wght.ttf in Resources */,
+				FFDF51B92F2571EF0038C817 /* Inter-VariableFont_opsz,wght.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -402,6 +451,9 @@
 				DEVELOPMENT_TEAM = JA9P4WR529;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "TripStacks-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = TripStacks;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Trip Planner needs access to your photo library so you can choose cover images for trips and activities.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -412,11 +464,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "digitalunknown.Trip-Planner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -431,13 +487,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Trip Planner/Trip Planner.entitlements";
+				CODE_SIGN_ENTITLEMENTS = TripStacksRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = JA9P4WR529;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "TripStacks-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = TripStacks;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Trip Planner needs access to your photo library so you can choose cover images for trips and activities.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -448,11 +507,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "digitalunknown.Trip-Planner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -586,6 +649,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FF6A1C3B2F6A1C3B2F6A1C3B /* XCRemoteSwiftPackageReference "Glur" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/joogps/Glur";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.0;
+			};
+		};
+		FFB2C3D42FA1234500ABCDEF /* XCRemoteSwiftPackageReference "sticker" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/bpisano/sticker";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FF6A1C3B2F6A1C3B2F6A1C3C /* Glur */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FF6A1C3B2F6A1C3B2F6A1C3B /* XCRemoteSwiftPackageReference "Glur" */;
+			productName = Glur;
+		};
+		FFB2C3D52FA1234500ABCDEF /* Sticker */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFB2C3D42FA1234500ABCDEF /* XCRemoteSwiftPackageReference "sticker" */;
+			productName = Sticker;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FF997AE22EF216E400B3A68E /* Project object */;
 }

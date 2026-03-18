@@ -1,15 +1,15 @@
 import Foundation
 
-enum PasteImportItemKind: String, Codable, CaseIterable, Hashable {
+enum PlanDayItemKind: String, Codable, CaseIterable, Hashable {
     case activity
     case reminder
     case checklist
     case flight
 }
 
-struct PasteImportItem: Identifiable, Hashable, Codable {
+struct PlanDayItem: Identifiable, Hashable, Codable {
     let id: UUID
-    var kind: PasteImportItemKind
+    var kind: PlanDayItemKind
     var include: Bool
     
     var dayID: UUID?
@@ -34,7 +34,7 @@ struct PasteImportItem: Identifiable, Hashable, Codable {
     
     init(
         id: UUID = UUID(),
-        kind: PasteImportItemKind,
+        kind: PlanDayItemKind,
         include: Bool = true,
         dayID: UUID? = nil,
         title: String,
@@ -69,31 +69,31 @@ struct PasteImportItem: Identifiable, Hashable, Codable {
     }
 }
 
-struct PasteImportDraft: Hashable, Codable {
-    var items: [PasteImportItem]
+struct PlanDayDraft: Hashable, Codable {
+    var items: [PlanDayItem]
     var extractedText: String
-    var extractedFacts: PasteImportFacts
+    var extractedFacts: PlanDayFacts
     
-    init(items: [PasteImportItem], extractedText: String, extractedFacts: PasteImportFacts) {
+    init(items: [PlanDayItem], extractedText: String, extractedFacts: PlanDayFacts) {
         self.items = items
         self.extractedText = extractedText
         self.extractedFacts = extractedFacts
     }
 }
 
-struct PasteImportFacts: Hashable, Codable {
-    var detectedDates: [PasteImportDetectedDate]
+struct PlanDayFacts: Hashable, Codable {
+    var detectedDates: [PlanDayDetectedDate]
     var detectedLinks: [String]
     var detectedAddresses: [String]
     
-    init(detectedDates: [PasteImportDetectedDate] = [], detectedLinks: [String] = [], detectedAddresses: [String] = []) {
+    init(detectedDates: [PlanDayDetectedDate] = [], detectedLinks: [String] = [], detectedAddresses: [String] = []) {
         self.detectedDates = detectedDates
         self.detectedLinks = detectedLinks
         self.detectedAddresses = detectedAddresses
     }
 }
 
-struct PasteImportDetectedDate: Hashable, Codable, Identifiable {
+struct PlanDayDetectedDate: Hashable, Codable, Identifiable {
     let id: UUID
     var date: Date
     var hasTime: Bool
@@ -107,7 +107,7 @@ struct PasteImportDetectedDate: Hashable, Codable, Identifiable {
     }
 }
 
-struct PasteImportTripContext: Hashable, Codable {
+struct PlanDayTripContext: Hashable, Codable {
     var isDatesSet: Bool
     var startDate: Date
     var endDate: Date
@@ -123,7 +123,7 @@ struct PasteImportTripContext: Hashable, Codable {
     }
 }
 
-struct PasteImportUserPreferences: Hashable, Codable {
+struct PlanDayUserPreferences: Hashable, Codable {
     var favoriteFoodCSV: String
     var drinksAlcohol: Bool
     var interestsCSV: String
@@ -139,4 +139,5 @@ struct PasteImportUserPreferences: Hashable, Codable {
         interestsCSV.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
+
 

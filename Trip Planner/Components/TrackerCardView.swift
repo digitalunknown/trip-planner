@@ -9,6 +9,7 @@ struct TrackerProgressBar: View {
     let totalBars: Int
     let barHeight: CGFloat
     let unfilledColor: Color
+    let useLargeTitle: Bool
     
     init(
         percent: Double,
@@ -16,7 +17,8 @@ struct TrackerProgressBar: View {
         totalCount: Int,
         totalBars: Int = 30,
         barHeight: CGFloat = 36,
-        unfilledColor: Color = Color.secondary.opacity(0.25)
+        unfilledColor: Color = Color.secondary.opacity(0.25),
+        useLargeTitle: Bool = false
     ) {
         self.percent = percent
         self.visitedCount = visitedCount
@@ -24,6 +26,7 @@ struct TrackerProgressBar: View {
         self.totalBars = totalBars
         self.barHeight = barHeight
         self.unfilledColor = unfilledColor
+        self.useLargeTitle = useLargeTitle
     }
     
     var body: some View {
@@ -34,13 +37,13 @@ struct TrackerProgressBar: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("\(visitedCount)/\(totalCount)")
-                    .font(.largeTitle.weight(.semibold))
+                    .font(useLargeTitle ? .appLargeTitle : .appTitle2)
                     .contentTransition(.numericText())
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                 
                 Text("\(pct)%")
-                    .font(.subheadline.weight(.medium))
+                    .font(.appCaption)
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
                 Spacer()
@@ -55,7 +58,6 @@ struct TrackerProgressBar: View {
                         .frame(height: barHeight)
                 }
             }
-            .padding(.bottom, 6)
             .animation(.easeInOut(duration: 0.25), value: filled)
         }
     }
@@ -84,7 +86,7 @@ struct TrackerRowCard: View {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(type.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.app(15, weight: .semibold))
                         .foregroundStyle(textPrimary)
                         .lineLimit(1)
                 }
@@ -92,7 +94,7 @@ struct TrackerRowCard: View {
                 Spacer(minLength: 0)
                 
                 Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
+                    .font(.app(13, weight: .semibold))
                     .foregroundStyle(textSecondary)
             }
             
@@ -108,7 +110,7 @@ struct TrackerRowCard: View {
                         )
                     
                     Image(systemName: type.iconSystemName)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.app(20, weight: .semibold))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [accentColor, accentColor.opacity(0.75)],
@@ -131,7 +133,7 @@ struct TrackerRowCard: View {
             )
         }
         .padding(15)
-        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -162,7 +164,7 @@ struct TrackerCardView: View {
                     .frame(width: 56, height: 56)
 
                 Image(systemName: type.iconSystemName)
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.app(24, weight: .semibold))
                     .foregroundStyle(
                         LinearGradient(
                             colors: [accentColor, accentColor.opacity(0.75)],
@@ -173,11 +175,11 @@ struct TrackerCardView: View {
             }
 
             Text(type.title)
-                .font(.subheadline.weight(.semibold))
+                .font(.app(15, weight: .semibold))
                 .foregroundStyle(.primary)
 
             Text("Visited \(visitedCount)/\(totalCount)")
-                .font(.caption)
+                .font(.appCaption)
                 .foregroundStyle(.secondary)
 
             Spacer(minLength: 0)
@@ -209,7 +211,7 @@ struct TrackerItemCard: View {
                     .fill(isVisited ? accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
 
                 Image(systemName: iconSystemName)
-                    .font(.title3)
+                    .font(.app(20, weight: .regular))
                     .foregroundStyle(isVisited ? accentColor : .secondary)
             }
             .frame(width: 40, height: 40)
@@ -221,7 +223,7 @@ struct TrackerItemCard: View {
 
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(textSecondary)
                         .lineLimit(1)
                 }
@@ -230,7 +232,7 @@ struct TrackerItemCard: View {
             Spacer(minLength: 0)
 
             Image(systemName: isVisited ? "checkmark.square.fill" : "square")
-                .font(.title3)
+                .font(.app(20, weight: .regular))
                 .foregroundStyle(isVisited ? accentColor : Color.secondary)
         }
         .padding(.horizontal, 12)

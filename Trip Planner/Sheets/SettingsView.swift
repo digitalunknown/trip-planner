@@ -1,45 +1,102 @@
 import SwiftUI
+import AuthenticationServices
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appAccentColor) private var appAccentColor
+    @EnvironmentObject private var auth: AppleSignInManager
+    @AppStorage("exploreSampleEnabled") private var exploreSampleEnabled: Bool = false
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @AppStorage("hapticsEnabled") private var hapticsEnabled: Bool = true
     @AppStorage("parallaxEffectsEnabled") private var parallaxEffectsEnabled: Bool = true
     @AppStorage("prefFood") private var prefFood: String = ""
-    @AppStorage("prefAlcohol") private var prefAlcohol: Bool = false
     @AppStorage("prefInterests") private var prefInterests: String = ""
+    @AppStorage("currencyCode") private var currencyCode: String = "USD"
     
-    private var createdByFooter: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Created by Peter Osmenda (@digitalunknown).")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            
-            Link("Send feedback on X", destination: URL(string: "https://x.com/digitalunknown")!)
-                .font(.subheadline.weight(.semibold))
-        }
+    private struct CurrencyOption: Identifiable {
+        let code: String
+        let name: String
+        var id: String { code }
+        var label: String { "\(name) (\(code))" }
     }
+    
+    private let popularCurrencies: [CurrencyOption] = [
+        CurrencyOption(code: "USD", name: "US Dollar"),
+        CurrencyOption(code: "EUR", name: "Euro"),
+        CurrencyOption(code: "GBP", name: "British Pound"),
+        CurrencyOption(code: "JPY", name: "Japanese Yen"),
+        CurrencyOption(code: "CAD", name: "Canadian Dollar"),
+        CurrencyOption(code: "AUD", name: "Australian Dollar"),
+        CurrencyOption(code: "CHF", name: "Swiss Franc"),
+        CurrencyOption(code: "CNY", name: "Chinese Yuan"),
+        CurrencyOption(code: "INR", name: "Indian Rupee"),
+        CurrencyOption(code: "SGD", name: "Singapore Dollar")
+    ]
     
     var body: some View {
         NavigationStack {
             Form {
                 Section {
+                    if auth.isSignedIn {
+                        HStack {
+                            Text("Account")
+                            Spacer()
+                            Text((auth.displayName ?? "Apple ID"))
+                                .foregroundStyle(.primary)
+                        }
+                        
+                        Button(role: .destructive) {
+                            auth.signOut()
+                        } label: {
+                            Text("Sign out")
+                        }
+                    } else {
+                        SignInWithAppleButton(.signIn) { request in
+                            request.requestedScopes = [.fullName]
+                        } onCompletion: { result in
+                            auth.handleAuthorizationResult(result)
+                            if auth.isSignedIn {
+                                exploreSampleEnabled = false
+                            }
+                        }
+                        .frame(height: 44)
+                        .signInWithAppleButtonStyle(.black)
+                    }
+                    
+                    if let err = auth.lastErrorDescription, !err.isEmpty {
+                        Text(err)
+                            .font(.appFootnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Account")
+                } footer: {
+                    Text(
+                        auth.isSignedIn
+                        ? "Your account is only used to store your trips in iCloud."
+                        : "Sign in to sync your trips and stats to iCloud. Your account is only used to store your trips in iCloud."
+                    )
+                    .font(.appFootnote)
+                    .foregroundStyle(.secondary)
+                }
+                
+                Section {
                     TextField("Favorite food, separated by commas", text: $prefFood, axis: .vertical)
                         .lineLimit(1...3)
                     
-                    Picker("Alcohol", selection: $prefAlcohol) {
-                        Text("No").tag(false)
-                        Text("Yes").tag(true)
-                    }
-                    
                     TextField("Interests, separated by commas", text: $prefInterests, axis: .vertical)
                         .lineLimit(1...3)
+                    
+                    Picker("Home Currency", selection: $currencyCode) {
+                        ForEach(popularCurrencies) { option in
+                            Text(option.label).tag(option.code)
+                        }
+                    }
                 } header: {
-                    Text("Personal Preferences")
+                    Text("Personal")
                 } footer: {
                     Text("Your preferences will be considered for trip planning and recommendations")
-                        .font(.footnote)
+                        .font(.appFootnote)
                         .foregroundStyle(.secondary)
                         .padding(.top, 2)
                 }
@@ -56,18 +113,21 @@ struct SettingsView: View {
                     Toggle("Parallax Effects", isOn: $parallaxEffectsEnabled)
                         .tint(appAccentColor)
                     
+                    Link(destination: URL(string: "https://apps.apple.com/us/app/tripstacks-travel-organizer/id6757321257?action=write-review")!) {
+                        HStack {
+                            Text("Review TripStacks")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("Beta")
+                        Text("1.2")
                             .foregroundStyle(.secondary)
                     }
-                }
-                
-                Section {
-                    createdByFooter
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 2)
                 }
             }
             .navigationTitle("Settings")
@@ -83,7 +143,16 @@ struct SettingsView: View {
         }
         .preferredColorScheme(appearanceMode.preferredColorScheme)
         .tint(.primary)
+        .onChange(of: appearanceMode) { _, _ in saveSettingsToICloudIfNeeded() }
+        .onChange(of: hapticsEnabled) { _, _ in saveSettingsToICloudIfNeeded() }
+        .onChange(of: parallaxEffectsEnabled) { _, _ in saveSettingsToICloudIfNeeded() }
+        .onChange(of: prefFood) { _, _ in saveSettingsToICloudIfNeeded() }
+        .onChange(of: prefInterests) { _, _ in saveSettingsToICloudIfNeeded() }
+        .onChange(of: currencyCode) { _, _ in saveSettingsToICloudIfNeeded() }
         .onAppear {
+            SettingsCloudSync.shared.start { snapshot in
+                applySettingsSnapshot(snapshot)
+            }
             if UserDefaults.standard.object(forKey: "hapticsEnabled") == nil {
                 hapticsEnabled = true
             }
@@ -91,6 +160,33 @@ struct SettingsView: View {
                 parallaxEffectsEnabled = true
             }
         }
+    }
+    
+    private func currentSnapshot() -> SettingsSnapshot {
+        SettingsSnapshot(
+            appearanceModeRaw: appearanceMode.rawValue,
+            hapticsEnabled: hapticsEnabled,
+            parallaxEffectsEnabled: parallaxEffectsEnabled,
+            prefFood: prefFood,
+            prefInterests: prefInterests,
+            currencyCode: currencyCode
+        )
+    }
+    
+    private func saveSettingsToICloudIfNeeded() {
+        guard auth.isSignedIn else { return }
+        SettingsCloudSync.shared.scheduleSave(currentSnapshot())
+    }
+    
+    private func applySettingsSnapshot(_ snapshot: SettingsSnapshot) {
+        if let mode = AppearanceMode(rawValue: snapshot.appearanceModeRaw) {
+            appearanceMode = mode
+        }
+        hapticsEnabled = snapshot.hapticsEnabled
+        parallaxEffectsEnabled = snapshot.parallaxEffectsEnabled
+        prefFood = snapshot.prefFood
+        prefInterests = snapshot.prefInterests
+        currencyCode = snapshot.currencyCode
     }
 }
 

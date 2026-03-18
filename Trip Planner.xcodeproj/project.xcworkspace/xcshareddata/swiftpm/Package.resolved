@@ -1,0 +1,24 @@
+{
+  "originHash" : "8a0f9dcbdf34323dbdc9df4fa95b8f5ec5cca0f22d7b7a00f23a5a00f5bfebf3",
+  "pins" : [
+    {
+      "identity" : "glur",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/joogps/Glur",
+      "state" : {
+        "revision" : "178af6499ed7957c7f91187fdee2b09d322f5b87",
+        "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "sticker",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/bpisano/sticker",
+      "state" : {
+        "revision" : "301b9e0fb802c01edb2ed25695b3ba62e9c61da3",
+        "version" : "1.4.0"
+      }
+    }
+  ],
+  "version" : 3
+}

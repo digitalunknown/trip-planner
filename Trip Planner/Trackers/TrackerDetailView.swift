@@ -13,6 +13,8 @@ struct TrackerDetailView: View {
         return primary.opacity(colorScheme == .dark ? 0.72 : 0.62)
     }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
+    private var pillBackground: Color { colorScheme == .dark ? Color(hex: 0x2C2C2E) : Color(hex: 0xE5E5EA) }
+    private var pillHighlight: Color { colorScheme == .dark ? Color(hex: 0x3A3A3C) : Color(hex: 0xD1D1D6) }
     
     init(type: TrackerType, store: TrackerStore) {
         self.type = type
@@ -25,7 +27,9 @@ struct TrackerDetailView: View {
         let filtered = q.isEmpty ? all : all.filter { item in
             item.name.lowercased().contains(q) || (item.subtitle?.lowercased().contains(q) ?? false)
         }
-        
+        if type == .nationalParks {
+            return filtered.sorted { $0.name < $1.name }
+        }
         return filtered
     }
     
@@ -43,7 +47,8 @@ struct TrackerDetailView: View {
                     visitedCount: store.visitedCount(in: type),
                     totalCount: TrackerData.items(for: type).count,
                     barHeight: 40,
-                    unfilledColor: columnStroke
+                    unfilledColor: columnStroke,
+                    useLargeTitle: true
                 )
                 .padding(.top, 6)
                 .padding(.bottom, 10)
@@ -70,16 +75,19 @@ struct TrackerDetailView: View {
                 .overlay { Capsule().strokeBorder(columnStroke) }
                 .padding(.bottom, 2)
 
-                VStack(spacing: 0) {
+                VStack(spacing: 1) {
                     ForEach(items.indices, id: \.self) { idx in
                         let item = items[idx]
                         TrackerItemRow(
                             title: item.name,
                             subtitle: item.subtitle,
                             isVisited: store.isVisited(item.id, in: type),
-                            iconSystemName: icon(for: type)
+                            iconSystemName: icon(for: type),
+                            pillBackground: pillBackground,
+                            pillHighlight: pillHighlight,
+                            textPrimary: textPrimary,
+                            textSecondary: textSecondary
                         )
-                        .contentShape(Rectangle())
                         .onTapGesture {
                             let wasVisited = store.isVisited(item.id, in: type)
                             withAnimation(.easeInOut(duration: 0.12)) {
@@ -89,9 +97,26 @@ struct TrackerDetailView: View {
                                 Haptics.bump()
                             }
                         }
-                        
-                        if idx != items.count - 1 {
-                            Divider()
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button {
+                                let wasVisited = store.isVisited(item.id, in: type)
+                                withAnimation(.easeInOut(duration: 0.12)) {
+                                    store.toggleVisited(item.id, in: type)
+                                }
+                                if !wasVisited {
+                                    Haptics.bump()
+                                }
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.orange)
+                                    Image(systemName: store.isVisited(item.id, in: type) ? "arrow.uturn.left" : "checkmark")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
+                                .frame(width: 44, height: 44)
+                            }
+                            .tint(.clear)
                         }
                     }
                 }
@@ -112,51 +137,48 @@ struct TrackerDetailView: View {
         case .nationalParks: return "mountain.2.fill"
         }
     }
+    
 }
 
 private struct TrackerItemRow: View {
     @Environment(\.appAccentColor) private var accentColor
-    @Environment(\.colorScheme) private var colorScheme
     
     let title: String
     let subtitle: String?
     let isVisited: Bool
     let iconSystemName: String
-    
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    let pillBackground: Color
+    let pillHighlight: Color
+    let textPrimary: Color
+    let textSecondary: Color
     
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isVisited ? accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
-                Image(systemName: iconSystemName)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(isVisited ? accentColor : textSecondary)
-            }
-            .frame(width: 34, height: 34)
+            Image(systemName: isVisited ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 20))
+                .foregroundStyle(textPrimary)
             
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(12, weight: .regular))
                     .foregroundStyle(textPrimary)
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(textSecondary)
                         .lineLimit(1)
                 }
             }
             
             Spacer(minLength: 0)
-            
-            Image(systemName: isVisited ? "checkmark.square.fill" : "square")
-                .font(.title3)
-                .foregroundStyle(isVisited ? accentColor : Color.secondary)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            Capsule()
+                .fill(isVisited ? pillHighlight : pillBackground)
+        )
+        .contentShape(Capsule())
     }
 }
 

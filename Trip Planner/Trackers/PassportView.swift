@@ -4,10 +4,10 @@ struct PassportView: View {
     @Environment(TripStore.self) private var tripStore
     @Environment(\.colorScheme) private var colorScheme
     
-    private let passportStampSize: CGFloat = 200
+    private let passportStampSize: CGFloat = 220
     
     private var pageBackground: Color { colorScheme == .dark ? Color(hex: 0x0A0A0A) : Color(hex: 0xE0E0E0) }
-    private var dotColor: Color { colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.06) }
+    private var dotColor: Color { colorScheme == .dark ? Color.white.opacity(0.09) : Color.black.opacity(0.08) }
     
     private var completedTrips: [Trip] {
         let calendar = Calendar.current
@@ -24,23 +24,36 @@ struct PassportView: View {
     var body: some View {
         ZStack {
             pageBackground.ignoresSafeArea()
-            DotGridBackground(color: dotColor, spacing: 18, dotDiameter: 2)
+            DotGridBackground(color: dotColor, spacing: 18, dotDiameter: 2.3)
                 .ignoresSafeArea()
             
             ScrollView(.vertical, showsIndicators: true) {
                 LazyVStack(spacing: 28) {
-                    ForEach(completedTrips) { trip in
+                    if completedTrips.isEmpty {
                         PassportStampView(
-                            destination: trip.destination,
-                            iconSystemName: "globe",
-                            date: trip.endDate,
+                            destination: "TripStacks",
+                            iconSystemName: "sparkles",
+                            date: Date(),
                             size: passportStampSize,
                             tint: .primary
                         )
                         .frame(maxWidth: .infinity, alignment: .center)
+                    } else {
+                        ForEach(completedTrips) { trip in
+                            PassportStampView(
+                                destination: trip.destination,
+                                iconSystemName: "globe",
+                                date: trip.endDate,
+                                size: passportStampSize,
+                                tint: .primary
+                            )
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        }
                     }
                 }
-                .padding(.vertical, 20)
+                // Extra bottom padding so the last stamp's shadow isn't clipped by the ScrollView bounds.
+                .padding(.top, 24)
+                .padding(.bottom, 56)
                 .padding(.horizontal, 16)
             }
         }

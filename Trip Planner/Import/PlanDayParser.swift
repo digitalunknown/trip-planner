@@ -1,17 +1,17 @@
 import Foundation
 
-struct PasteParser {
+struct PlanDayParser {
     static func parse(
         text: String,
-        tripContext: PasteImportTripContext,
+        tripContext: PlanDayTripContext,
         dayOptions: [DayOption],
         defaultDayID: UUID?
-    ) -> PasteImportDraft {
+    ) -> PlanDayDraft {
         let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let facts = extractFacts(from: normalized)
         let lines = splitLines(normalized)
         
-        var items: [PasteImportItem] = []
+        var items: [PlanDayItem] = []
         items.reserveCapacity(max(8, lines.count))
         
         let fallbackDayID = defaultDayID ?? firstNonIdeasDayID(in: dayOptions)
@@ -27,7 +27,7 @@ struct PasteParser {
                     let title = "Checklist"
                     let checklistText = checklistItemText(from: trimmed)
                     items.append(
-                        PasteImportItem(
+                        PlanDayItem(
                             kind: .checklist,
                             dayID: fallbackDayID,
                             title: title,
@@ -42,7 +42,7 @@ struct PasteParser {
                     let parsed = parseFlightLike(trimmed)
                     let dayID = dayIDForDetectedDate(in: trimmed, facts: facts, tripContext: tripContext, dayOptions: dayOptions) ?? fallbackDayID
                     items.append(
-                        PasteImportItem(
+                        PlanDayItem(
                             kind: .flight,
                             dayID: dayID,
                             title: parsed.displayTitle,
@@ -61,7 +61,7 @@ struct PasteParser {
                 if isReminderLike(trimmed) {
                     let dayID = dayIDForDetectedDate(in: trimmed, facts: facts, tripContext: tripContext, dayOptions: dayOptions) ?? fallbackDayID
                     items.append(
-                        PasteImportItem(
+                        PlanDayItem(
                             kind: .reminder,
                             dayID: dayID,
                             title: trimmed,
@@ -75,7 +75,7 @@ struct PasteParser {
                 let (title, location) = splitTitleLocation(from: trimmed)
                 let time = bestTimeForLine(trimmed, facts: facts)
                 items.append(
-                    PasteImportItem(
+                    PlanDayItem(
                         kind: .activity,
                         dayID: dayID,
                         title: title,
@@ -87,11 +87,11 @@ struct PasteParser {
             }
         }
         
-        return PasteImportDraft(items: items, extractedText: normalized, extractedFacts: facts)
+        return PlanDayDraft(items: items, extractedText: normalized, extractedFacts: facts)
     }
     
-    private static func extractFacts(from text: String) -> PasteImportFacts {
-        var detectedDates: [PasteImportDetectedDate] = []
+    private static func extractFacts(from text: String) -> PlanDayFacts {
+        var detectedDates: [PlanDayDetectedDate] = []
         var detectedLinks: [String] = []
         var detectedAddresses: [String] = []
         
@@ -102,7 +102,7 @@ struct PasteParser {
                 guard let date = m.date else { continue }
                 let snippet = ns.substring(with: m.range)
                 let hasTime = (m.duration > 0) || snippet.range(of: #"(\d{1,2}:\d{2})|(\d{1,2}\s?(am|pm))"#, options: [.regularExpression, .caseInsensitive]) != nil
-                detectedDates.append(PasteImportDetectedDate(date: date, hasTime: hasTime, snippet: snippet))
+                detectedDates.append(PlanDayDetectedDate(date: date, hasTime: hasTime, snippet: snippet))
             }
         }
         
@@ -130,7 +130,7 @@ struct PasteParser {
         detectedLinks = Array(Set(detectedLinks)).sorted()
         detectedAddresses = Array(Set(detectedAddresses)).sorted()
         
-        return PasteImportFacts(detectedDates: detectedDates, detectedLinks: detectedLinks, detectedAddresses: detectedAddresses)
+        return PlanDayFacts(detectedDates: detectedDates, detectedLinks: detectedLinks, detectedAddresses: detectedAddresses)
     }
     
     private static func splitLines(_ text: String) -> [String] {
@@ -147,13 +147,13 @@ struct PasteParser {
         options.first(where: { !$0.isParkedIdeas })?.id
     }
     
-    private static func buildChecklistIfApplicable(lines: [String], facts: PasteImportFacts, fallbackDayID: UUID?) -> PasteImportItem? {
+    private static func buildChecklistIfApplicable(lines: [String], facts: PlanDayFacts, fallbackDayID: UUID?) -> PlanDayItem? {
         let checklistLines = lines.filter { isChecklistLine($0) }
         guard checklistLines.count >= 3 else { return nil }
         let items = checklistLines.map { checklistItemText(from: $0) }.joined(separator: "\n")
         let title = "Checklist"
         let source = checklistLines.prefix(6).joined(separator: "\n")
-        return PasteImportItem(kind: .checklist, dayID: fallbackDayID, title: title, checklistItemsText: items, sourceSnippet: source)
+        return PlanDayItem(kind: .checklist, dayID: fallbackDayID, title: title, checklistItemsText: items, sourceSnippet: source)
     }
     
     private static func isChecklistLine(_ line: String) -> Bool {
@@ -242,7 +242,7 @@ struct PasteParser {
         return (line, "")
     }
     
-    private static func bestTimeForLine(_ line: String, facts: PasteImportFacts) -> Date? {
+    private static func bestTimeForLine(_ line: String, facts: PlanDayFacts) -> Date? {
         let lower = line.lowercased()
         for d in facts.detectedDates {
             let snippet = d.snippet.lowercased()
@@ -253,8 +253,8 @@ struct PasteParser {
     
     private static func dayIDForDetectedDate(
         in line: String,
-        facts: PasteImportFacts,
-        tripContext: PasteImportTripContext,
+        facts: PlanDayFacts,
+        tripContext: PlanDayTripContext,
         dayOptions: [DayOption]
     ) -> UUID? {
         guard tripContext.isDatesSet else { return nil }
@@ -273,7 +273,7 @@ struct PasteParser {
         return nil
     }
     
-    private static func dayID(for date: Date, tripContext: PasteImportTripContext, dayOptions: [DayOption]) -> UUID? {
+    private static func dayID(for date: Date, tripContext: PlanDayTripContext, dayOptions: [DayOption]) -> UUID? {
         guard tripContext.isDatesSet else { return nil }
         let cal = Calendar.current
         let target = cal.startOfDay(for: date)

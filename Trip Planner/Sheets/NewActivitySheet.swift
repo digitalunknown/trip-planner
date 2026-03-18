@@ -1,0 +1,1079 @@
+import SwiftUI
+import MapKit
+import UIKit
+import UniformTypeIdentifiers
+import QuickLook
+
+struct NewActivitySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.appAccentColor) private var appAccentColor
+    @Environment(\.openURL) private var openURL
+    @Binding var title: String
+    @Binding var location: String
+    @Binding var latitude: Double?
+    @Binding var longitude: Double?
+    @Binding var description: String
+    @Binding var icon: String
+    @Binding var accent: EventAccent
+    @Binding var startTime: Date
+    @Binding var endTime: Date
+    @Binding var documents: [EventDocument]
+    @Binding var rating: Int
+    @Binding var cost: Double?
+    @Binding var costCurrencyCode: String?
+    @Binding var selectedDayID: UUID?
+    let dayOptions: [DayOption]
+    let tripLocationRegion: MKCoordinateRegion?
+    var onAdd: () -> Void
+    var onDelete: (() -> Void)?
+    var isEditing: Bool = false
+    
+    @State private var showDocumentImagePicker = false
+    @State private var showDocumentCameraPicker = false
+    @State private var showDocumentFileImporter = false
+    @State private var isExtractingDocumentText = false
+    @State private var hasEndTime = false
+    @State private var showCostSheet = false
+    @State private var showIconPickerSheet = false
+    @State private var pendingDocumentImage: UIImage?
+    @State private var pendingDocumentCameraImage: UIImage?
+    @State private var extractionReviewResult: DocumentTextExtractor.ExtractionResult?
+    @State private var selectedPreviewDocumentID: UUID?
+    @State private var selectedQuickLookDocument: EventDocument?
+    @State private var draftIcon: String = ""
+    @State private var draftAccent: EventAccent = .purple
+    @FocusState private var isTitleFocused: Bool
+    @FocusState private var isNotesFocused: Bool
+    
+    private var googleMapsURL: URL? {
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !loc.isEmpty else { return nil }
+        // Always use the location/address only (not the activity title) so results are accurate.
+        let query = loc
+        
+        var comps = URLComponents()
+        comps.scheme = "https"
+        comps.host = "www.google.com"
+        comps.path = "/maps/search/"
+        comps.queryItems = [
+            URLQueryItem(name: "api", value: "1"),
+            URLQueryItem(name: "query", value: query)
+        ]
+        return comps.url
+    }
+    
+    private var appleMapsURL: URL? {
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !loc.isEmpty else { return nil }
+
+        var comps = URLComponents()
+        // Use Apple Maps deep link. Keep query to the *destination only* (not the activity title),
+        // otherwise results can become ambiguous (e.g. “Check in…” + hotel name).
+        comps.scheme = "maps"
+        comps.host = ""
+        comps.path = "/"
+        
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "q", value: loc)
+        ]
+        if let lat = latitude, let lon = longitude {
+            items.append(URLQueryItem(name: "ll", value: "\(lat),\(lon)"))
+        }
+        comps.queryItems = items
+        return comps.url
+    }
+    
+    private var uberURL: URL? {
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !loc.isEmpty else { return nil }
+        
+        var comps = URLComponents()
+        comps.scheme = "uber"
+        comps.host = ""
+        comps.path = "/"
+        
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "action", value: "setPickup")
+        ]
+        
+        if let lat = latitude, let lon = longitude {
+            items.append(URLQueryItem(name: "dropoff[latitude]", value: String(lat)))
+            items.append(URLQueryItem(name: "dropoff[longitude]", value: String(lon)))
+        }
+        items.append(URLQueryItem(name: "dropoff[formatted_address]", value: loc))
+        
+        comps.queryItems = items
+        return comps.url
+    }
+    
+    private var lyftURL: URL? {
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !loc.isEmpty else { return nil }
+        
+        var comps = URLComponents()
+        comps.scheme = "lyft"
+        comps.host = "ridetype"
+        comps.queryItems = [
+            URLQueryItem(name: "id", value: "lyft"),
+            URLQueryItem(name: "destination[formatted_address]", value: loc)
+        ]
+        if let lat = latitude, let lon = longitude {
+            comps.queryItems?.append(URLQueryItem(name: "destination[latitude]", value: String(lat)))
+            comps.queryItems?.append(URLQueryItem(name: "destination[longitude]", value: String(lon)))
+        }
+        return comps.url
+    }
+    
+    private var durationString: String? {
+        let interval = endTime.timeIntervalSince(startTime)
+        guard interval > 0 else { return nil }
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = interval >= 3600 ? [.hour, .minute] : [.minute]
+        formatter.unitsStyle = .short
+        return formatter.string(from: interval)
+    }
+    
+    private func clampRating(_ value: Int) -> Int {
+        min(max(value, 0), 5)
+    }
+    
+    private func starsText(_ value: Int) -> String {
+        let r = clampRating(value)
+        return String(repeating: "★", count: r) + String(repeating: "☆", count: 5 - r)
+    }
+    
+    private var ratingSummaryText: String {
+        let r = clampRating(rating)
+        if r == 0 { return "None" }
+        return "\(starsText(r)) \(r)"
+    }
+    
+    private func isImageDocument(_ document: EventDocument) -> Bool {
+        if let mime = document.mimeType?.lowercased(), mime.hasPrefix("image/") {
+            return true
+        }
+        if let type = UTType(filenameExtension: document.fileExtension.lowercased()) {
+            return type.conforms(to: .image)
+        }
+        return false
+    }
+    
+    private func openDocument(_ document: EventDocument) {
+        selectedPreviewDocumentID = document.id
+    }
+    
+    private func addDocumentFromImportedURL(_ url: URL) {
+        do {
+            let saved = try ActivityDocumentStore.saveImportedFile(from: url, source: .files)
+            documents.append(saved)
+            if isEditing { onAdd() }
+        } catch {
+            return
+        }
+    }
+    
+    private func addDocumentFromImage(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+        do {
+            let saved = try ActivityDocumentStore.saveImageData(
+                data,
+                source: .photoLibrary,
+                preferredFileName: "Photo-\(Date().timeIntervalSince1970).jpg"
+            )
+            documents.append(saved)
+            if isEditing { onAdd() }
+        } catch {
+            return
+        }
+    }
+    
+    private func removeDocument(_ document: EventDocument) {
+        documents.removeAll { $0.id == document.id }
+        ActivityDocumentStore.delete(document: document)
+        if isEditing { onAdd() }
+    }
+
+    private func applying(
+        _ components: DateComponents,
+        to baseDate: Date
+    ) -> Date? {
+        guard let hour = components.hour, let minute = components.minute else { return nil }
+        return Calendar.current.date(
+            bySettingHour: hour,
+            minute: minute,
+            second: 0,
+            of: baseDate
+        )
+    }
+
+    private func appendToNotes(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let existing = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        description = existing.isEmpty ? trimmed : "\(description)\n\n\(trimmed)"
+    }
+
+    private func applyExtractionSelections(
+        _ selections: [DocumentTextExtractor.SuggestedField],
+        from result: DocumentTextExtractor.ExtractionResult
+    ) {
+        var appliedValues: [String] = []
+
+        for suggestion in selections {
+            switch suggestion.type {
+            case .startTime:
+                if let components = suggestion.timeComponents,
+                   let detectedStart = applying(components, to: startTime) {
+                    startTime = detectedStart
+                    appliedValues.append(suggestion.value)
+                }
+            case .endTime:
+                if let components = suggestion.timeComponents,
+                   let detectedEnd = applying(components, to: startTime) {
+                    hasEndTime = true
+                    endTime = max(detectedEnd, startTime)
+                    appliedValues.append(suggestion.value)
+                }
+            case .cost:
+                if let amount = suggestion.numericAmount {
+                    cost = amount
+                    appliedValues.append(suggestion.value)
+                }
+            case .currencyCode:
+                costCurrencyCode = suggestion.value.uppercased()
+                appliedValues.append(suggestion.value)
+            case .referenceCode:
+                appendToNotes("Reference: \(suggestion.value)")
+                appliedValues.append(suggestion.value)
+            }
+        }
+
+        let notesBlock = result.notesBlock(excluding: appliedValues)
+        appendToNotes(notesBlock)
+
+        if isEditing { onAdd() }
+        extractionReviewResult = nil
+    }
+    
+    private func extractInfoFromDocuments() {
+        guard !documents.isEmpty, !isExtractingDocumentText else { return }
+        
+        isExtractingDocumentText = true
+        Task {
+            let extraction = await DocumentTextExtractor.extractInfo(from: documents)
+            
+            await MainActor.run {
+                if extraction.hasContent {
+                    extractionReviewResult = extraction
+                }
+                isExtractingDocumentText = false
+            }
+        }
+    }
+
+    private func removeCurrentlyPreviewedDocument() {
+        guard let selectedPreviewDocumentID else { return }
+        guard let currentIndex = documents.firstIndex(where: { $0.id == selectedPreviewDocumentID }) else {
+            self.selectedPreviewDocumentID = nil
+            return
+        }
+        
+        let doc = documents[currentIndex]
+        documents.removeAll { $0.id == doc.id }
+        ActivityDocumentStore.delete(document: doc)
+        
+        if documents.isEmpty {
+            self.selectedPreviewDocumentID = nil
+        } else {
+            let nextIndex = min(currentIndex, documents.count - 1)
+            self.selectedPreviewDocumentID = documents[nextIndex].id
+        }
+        if isEditing { onAdd() }
+    }
+    
+    private var currentPreviewDocument: EventDocument? {
+        guard let selectedPreviewDocumentID else { return nil }
+        return documents.first(where: { $0.id == selectedPreviewDocumentID })
+    }
+    
+    private func previewPage(_ document: EventDocument) -> some View {
+        Group {
+            if isImageDocument(document),
+               let data = try? Data(contentsOf: ActivityDocumentStore.fileURL(for: document.localRelativePath)),
+               let uiImage = UIImage(data: data) {
+                VStack {
+                    Spacer(minLength: 0)
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Spacer(minLength: 0)
+                }
+                .padding()
+            } else {
+                VStack(spacing: 14) {
+                    Image(systemName: "doc.fill")
+                        .font(.app(44, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Button("Open File") {
+                        selectedQuickLookDocument = document
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            }
+        }
+    }
+
+    private let iconOptions: [String] = [
+        "mappin.and.ellipse",
+        "globe",
+        
+        "fork.knife",
+        "carrot.fill",
+        "cup.and.saucer.fill",
+        "mug.fill",
+        "takeoutbag.and.cup.and.straw.fill",
+        "wineglass.fill",
+        "waterbottle",
+        "birthday.cake.fill",
+        
+        "airplane",
+        "suitcase.fill",
+        "car.fill",
+        "cablecar.fill",
+        "bus.fill",
+        "bus.doubledecker.fill",
+        "tram.fill",
+        "train.side.front.car",
+        "ferry.fill",
+        "scooter",
+        "motorcycle.fill",
+        "truck.box.fill",
+        "fuelpump.fill",
+        "bicycle",
+        "figure.walk",
+        
+        "cart.fill",
+        "bag.fill",
+        "duffle.bag.fill",
+        "creditcard.fill",
+        "gift.fill",
+        "tag.fill",
+        
+        "bed.double.fill",
+        "house.fill",
+        "building.2.fill",
+        "tent.fill",
+        "mountain.2.fill",
+        "water.waves",
+        "leaf.fill",
+        "sun.max.fill",
+        "sunrise",
+        "sunset",
+        "beach.umbrella.fill",
+        "cloud.sun.rain.fill",
+        "cloud.rain.fill",
+        "cloud.snow.fill",
+        "cloud.bolt.rain.fill",
+        "wind",
+        "camera.fill",
+        "ticket.fill",
+        "theatermasks.fill",
+        "movieclapper",
+        "gamecontroller.fill",
+        "figure.hiking",
+        "dumbbell.fill",
+        "trophy.fill",
+        "heart.fill",
+        "figure.run",
+        "figure.yoga",
+        "building.columns.fill",
+        "airpods.max",
+        "stroller.fill",
+        "drone.fill",
+        "sunglasses.fill",
+        "shoe.fill",
+        "tshirt.fill",
+        "jacket.fill"
+    ]
+    
+    private func deleteEvent() {
+        onDelete?()
+        dismiss()
+    }
+    
+    private var documentsSection: some View {
+        Section("Documents") {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(documents) { document in
+                        Button {
+                            openDocument(document)
+                        } label: {
+                            documentCard(document)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    Menu {
+                        Button {
+                            showDocumentFileImporter = true
+                        } label: {
+                            Label("Upload from Files", systemImage: "folder")
+                        }
+                        Button {
+                            showDocumentImagePicker = true
+                        } label: {
+                            Label("Upload from Photos", systemImage: "photo.on.rectangle")
+                        }
+                        Button {
+                            showDocumentCameraPicker = true
+                        } label: {
+                            Label("Take Photo", systemImage: "camera")
+                        }
+                    } label: {
+                        addDocumentCard
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 2)
+            }
+            
+            if !documents.isEmpty {
+                Button {
+                    extractInfoFromDocuments()
+                } label: {
+                    HStack {
+                        if isExtractingDocumentText {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Extracting…")
+                        } else {
+                            Text("Extract information from documents")
+                        }
+                    }
+                }
+                .disabled(isExtractingDocumentText)
+            }
+        }
+    }
+    
+    private func documentCard(_ document: EventDocument) -> some View {
+        let previewSize: CGFloat = 92
+        return Group {
+            if isImageDocument(document),
+               let thumbnail = document.thumbnailData,
+               let image = UIImage(data: thumbnail) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Rectangle()
+                    .fill(Color(.tertiarySystemGroupedBackground))
+                    .overlay {
+                        Image(systemName: "doc.fill")
+                            .font(.app(18, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+            }
+        }
+        .frame(width: previewSize, height: previewSize)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+    
+    private var addDocumentCard: some View {
+        let previewSize: CGFloat = 92
+        return ZStack {
+            Rectangle()
+                .fill(Color(.tertiarySystemGroupedBackground))
+            Image(systemName: "plus")
+                .font(.app(16, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: previewSize, height: previewSize)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+    
+    private var titleHeaderSection: some View {
+        Section {
+            VStack(spacing: 12) {
+                Button {
+                    draftIcon = icon
+                    draftAccent = accent
+                    showIconPickerSheet = true
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(accent.color.opacity(0.18))
+                        Image(systemName: icon)
+                            .foregroundStyle(accent.color)
+                            .font(.app(52, weight: .semibold))
+                    }
+                    .frame(width: 112, height: 112)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Choose icon and color")
+                
+                TextField(
+                    "",
+                    text: $title,
+                    prompt: Text("Activity")
+                        .font(.app(40, weight: .semibold))
+                        .foregroundStyle(.secondary),
+                    axis: .vertical
+                )
+                .font(.app(40, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.primary)
+                .tint(appAccentColor) // caret color
+                .focused($isTitleFocused)
+                .padding(.horizontal, 18)
+                .frame(minHeight: 72, maxHeight: 120)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 6)
+            .padding(.bottom, 10)
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .listRowBackground(Color.clear)
+    }
+    
+    private var timingSection: some View {
+        Section {
+            Picker("Day", selection: $selectedDayID) {
+                ForEach(dayOptions) { option in
+                    Text(option.title)
+                        .tag(Optional(option.id))
+                }
+            }
+            DatePicker("From", selection: $startTime, displayedComponents: .hourAndMinute)
+            
+            Toggle("Add end time", isOn: $hasEndTime)
+                .tint(appAccentColor)
+                .onChange(of: hasEndTime) { _, newValue in
+                    if !newValue {
+                        endTime = startTime
+                    } else if endTime <= startTime {
+                        endTime = startTime.addingTimeInterval(60 * 60)
+                    }
+                }
+            
+            if hasEndTime {
+                DatePicker("To", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+            }
+            if let durationText = durationString {
+                Text("Duration: \(durationText)")
+                    .font(.appFootnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+    
+    private var activityForm: some View {
+        Form {
+            titleHeaderSection
+            
+            Section {
+                LocationSearchField(
+                    text: $location,
+                    latitude: $latitude,
+                    longitude: $longitude,
+                    searchRegion: tripLocationRegion
+                )
+                
+                if isEditing, !location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Menu {
+                        if let url = googleMapsURL {
+                            Button("Google Maps") { openURL(url) }
+                        }
+                        if let url = appleMapsURL {
+                            Button("Apple Maps") { openURL(url) }
+                        }
+                        if let url = lyftURL {
+                            Button("Lyft") { openURL(url) }
+                        }
+                        if let url = uberURL {
+                            Button("Uber") { openURL(url) }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Open In")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.app(11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            timingSection
+            
+            Section {
+                Button {
+                    showCostSheet = true
+                } label: {
+                    HStack {
+                        Text("Cost")
+                        Spacer()
+                        Text(CurrencyFormatting.string(for: cost, currencyCode: costCurrencyCode))
+                            .foregroundStyle(.primary)
+                            .monospacedDigit()
+                    }
+                }
+            }
+            
+            documentsSection
+            
+            Section {
+                TextField("Notes", text: $description, axis: .vertical)
+                    .lineLimit(3...12)
+                    .textInputAutocapitalization(.sentences)
+                    .focused($isNotesFocused)
+            }
+            
+            Section {
+                InteractiveRatingView(rating: $rating)
+            }
+            .listRowBackground(Color.clear)
+            
+            if isEditing {
+                Section {
+                    Button(role: .destructive) {
+                        deleteEvent()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Delete Activity")
+                            Spacer()
+                        }
+                    }
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+    
+    @ViewBuilder
+    private func documentPreviewScreen() -> some View {
+        NavigationStack {
+            TabView(selection: $selectedPreviewDocumentID) {
+                ForEach(documents) { document in
+                    previewPage(document)
+                        .tag(Optional(document.id))
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .navigationTitle("Preview")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    LiquidGlassIconButton(systemName: "xmark") {
+                        self.selectedPreviewDocumentID = nil
+                    }
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button(role: .destructive) {
+                        removeCurrentlyPreviewedDocument()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.app(14, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+    
+    private var contentStack: some View {
+        ZStack(alignment: .top) {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
+            
+            LinearGradient(
+                colors: [
+                    accent.color.opacity(0.18),
+                    accent.color.opacity(0.10),
+                    .clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 260)
+            .ignoresSafeArea(edges: [.top, .horizontal])
+            .allowsHitTesting(false)
+            
+            activityForm
+        }
+    }
+    
+    private func applySheetAndAlertModifiers<V: View>(to view: V) -> some View {
+        view
+            .sheet(isPresented: $showDocumentImagePicker) {
+                ImagePicker(image: $pendingDocumentImage)
+                    .tint(.primary)
+            }
+            .sheet(isPresented: $showDocumentCameraPicker) {
+                ImagePicker(image: $pendingDocumentCameraImage, sourceType: .camera)
+                    .tint(.primary)
+            }
+            .fileImporter(
+                isPresented: $showDocumentFileImporter,
+                allowedContentTypes: [.item],
+                allowsMultipleSelection: true
+            ) { result in
+                if case .success(let urls) = result {
+                    urls.forEach(addDocumentFromImportedURL(_:))
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { selectedPreviewDocumentID != nil },
+                set: { if !$0 { selectedPreviewDocumentID = nil } }
+            )) {
+                documentPreviewScreen()
+            }
+            .sheet(item: $selectedQuickLookDocument) { document in
+                QuickLookPreview(url: ActivityDocumentStore.fileURL(for: document.localRelativePath))
+            }
+            .sheet(item: $extractionReviewResult) { result in
+                ExtractionReviewSheet(
+                    suggestions: result.suggestions,
+                    allowedFieldTypes: [.startTime, .endTime, .cost, .currencyCode],
+                    onApplySelected: { selections in
+                        applyExtractionSelections(selections, from: result)
+                    },
+                    onSkip: {
+                        let notesBlock = result.notesBlock(excluding: [])
+                        appendToNotes(notesBlock)
+                        if isEditing { onAdd() }
+                        extractionReviewResult = nil
+                    }
+                )
+                .presentationDetents([.medium, .large])
+                .tint(.primary)
+            }
+            .sheet(isPresented: $showCostSheet) {
+                CostEntrySheet(
+                    cost: $cost,
+                    currencyCode: Binding(
+                        get: { costCurrencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD") },
+                        set: { costCurrencyCode = $0 }
+                    )
+                )
+                    .tint(.primary)
+                    .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showIconPickerSheet) {
+                IconAndColorPickerSheet(
+                    icon: $draftIcon,
+                    accent: $draftAccent,
+                    iconOptions: iconOptions,
+                    onCancel: { showIconPickerSheet = false },
+                    onDone: {
+                        icon = draftIcon
+                        accent = draftAccent
+                        showIconPickerSheet = false
+                    }
+                )
+                .presentationDetents([.large])
+                .tint(.primary)
+            }
+    }
+
+    var body: some View {
+        applySheetAndAlertModifiers(to:
+            NavigationStack {
+                contentStack
+            .navigationTitle({
+                ""
+            }())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    LiquidGlassIconButton(systemName: "xmark") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    LiquidGlassIconButton(systemName: "checkmark") {
+                        onAdd()
+                        dismiss()
+                    }
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) {
+                if isNotesFocused {
+                    Color.clear.frame(height: 36)
+                }
+            }
+            .onAppear {
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        isTitleFocused = true
+                    }
+                }
+                if isEditing {
+                    hasEndTime = endTime > startTime
+                } else {
+                    hasEndTime = false
+                    endTime = startTime
+                }
+            }
+            .onChange(of: hasEndTime) { _, newValue in
+                if !newValue {
+                    endTime = startTime
+                } else if endTime <= startTime {
+                    endTime = startTime.addingTimeInterval(60 * 60)
+                }
+            }
+            .onChange(of: startTime) { _, newValue in
+                if !hasEndTime {
+                    endTime = newValue
+                }
+            }
+            .onChange(of: title) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: location) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: description) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: icon) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: accent) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: pendingDocumentImage) { _, image in
+                guard let image else { return }
+                addDocumentFromImage(image)
+                pendingDocumentImage = nil
+            }
+            .onChange(of: pendingDocumentCameraImage) { _, image in
+                guard let image else { return }
+                addDocumentFromImage(image)
+                pendingDocumentCameraImage = nil
+            }
+            .onChange(of: documents) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: startTime) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: endTime) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: cost) { _, _ in if isEditing { onAdd() } }
+            .onChange(of: selectedDayID) { _, _ in if isEditing { onAdd() } }
+        }
+        )
+    }
+}
+
+private struct IconAndColorPickerSheet: View {
+    @Environment(\.appAccentColor) private var appAccentColor
+    
+    @Binding var icon: String
+    @Binding var accent: EventAccent
+    let iconOptions: [String]
+    let onCancel: () -> Void
+    let onDone: () -> Void
+    
+    private let gridSpacing: CGFloat = 12
+    private let columnsCount: Int = 6
+    private var gridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: gridSpacing), count: columnsCount)
+    }
+    
+    private let tileHeight: CGFloat = 48
+    
+    private var colorOptions: [EventAccent] {
+        Array(EventAccent.allCases.reversed())
+    }
+    
+    private struct IconCategory: Identifiable {
+        let title: String
+        let symbols: [String]
+        var id: String { title }
+    }
+    
+    private var iconCategories: [IconCategory] {
+        let all = iconOptions
+        var used = Set<String>()
+        
+        func cat(_ title: String, _ symbols: [String]) -> IconCategory {
+            for s in symbols { used.insert(s) }
+            return IconCategory(title: title, symbols: symbols.filter { all.contains($0) })
+        }
+        
+        var categories: [IconCategory] = []
+        
+        categories.append(cat("Places", [
+            "mappin.and.ellipse",
+            "bed.double.fill",
+            "house.fill",
+            "building.2.fill",
+            "building.columns.fill",
+            "tent.fill"
+        ]))
+        
+        categories.append(cat("Transportation", [
+            "airplane",
+            "car.fill",
+            "fuelpump.fill",
+            "motorcycle.fill",
+            "scooter",
+            "truck.box.fill",
+            "bus.fill",
+            "bus.doubledecker.fill",
+            "tram.fill",
+            "cablecar.fill",
+            "train.side.front.car",
+            "ferry.fill",
+            "bicycle",
+            "figure.walk"
+        ]))
+        
+        categories.append(cat("Food & Drink", [
+            "fork.knife",
+            "carrot.fill",
+            "birthday.cake.fill",
+            "cup.and.saucer.fill",
+            "mug.fill",
+            "takeoutbag.and.cup.and.straw.fill",
+            "waterbottle",
+            "wineglass.fill"
+        ]))
+        
+        categories.append(cat("Nature", [
+            "mountain.2.fill",
+            "water.waves",
+            "leaf.fill",
+            "sun.max.fill",
+            "sunrise",
+            "sunset",
+            "beach.umbrella.fill",
+            "cloud.sun.rain.fill",
+            "cloud.rain.fill",
+            "cloud.snow.fill",
+            "cloud.bolt.rain.fill",
+            "wind"
+        ]))
+        
+        categories.append(cat("Shopping", [
+            "cart.fill",
+            "bag.fill",
+            "duffle.bag.fill",
+            "creditcard.fill",
+            "gift.fill",
+            "tag.fill"
+        ]))
+        
+        categories.append(cat("Entertainment", [
+            "camera.fill",
+            "ticket.fill",
+            "theatermasks.fill",
+            "movieclapper",
+            "airpods.max",
+            "gamecontroller.fill"
+        ]))
+        
+        categories.append(cat("Lifestyle", [
+            "figure.hiking",
+            "dumbbell.fill",
+            "trophy.fill",
+            "figure.run",
+            "figure.yoga",
+            "heart.fill"
+        ]))
+        
+        // Remove any empty categories (in case icons list changes).
+        return categories.filter { !$0.symbols.isEmpty }
+    }
+    
+    private func iconGrid(for symbols: [String]) -> some View {
+        LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
+            ForEach(symbols, id: \.self) { symbol in
+                Button {
+                    icon = symbol
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(accent.color.opacity(icon == symbol ? 0.22 : 0.10))
+                            .overlay {
+                                if icon == symbol {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(Color.primary, lineWidth: 2.5)
+                                }
+                            }
+                        
+                        Image(systemName: symbol)
+                            .font(.app(22, weight: .semibold))
+                            .foregroundStyle(accent.color.opacity(icon == symbol ? 1.0 : 0.78))
+                    }
+                    .frame(height: tileHeight)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Icon")
+            }
+        }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Color")
+                            .font(.appFootnote)
+                            .foregroundStyle(.secondary)
+                        
+                        LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
+                            ForEach(colorOptions, id: \.self) { option in
+                                Button {
+                                    accent = option
+                                } label: {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(option.color)
+                                        .frame(height: tileHeight)
+                                        .overlay {
+                                            if option == accent {
+                                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                    .strokeBorder(Color.primary, lineWidth: 2.5)
+                                            }
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Color")
+                            }
+                        }
+                    }
+                }
+                
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            ForEach(iconCategories) { category in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text(category.title)
+                                        .font(.appFootnote)
+                                        .foregroundStyle(.secondary)
+                                    
+                                    iconGrid(for: category.symbols)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Icon")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    LiquidGlassIconButton(systemName: "xmark") { onCancel() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    LiquidGlassIconButton(systemName: "checkmark") { onDone() }
+                }
+            }
+        }
+        .tint(.primary)
+    }
+}
+
+private struct EventVisualsSectionHeader: ViewModifier {
+    let isEditing: Bool
+    
+    func body(content: Content) -> some View {
+        Section { content }
+    }
+}
+

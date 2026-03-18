@@ -9,8 +9,8 @@ struct FlightCard: View {
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     private var iconColor: Color { flight.accent.color }
     
-    private var fromCode: String { flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased().isEmpty ? "—" : flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
-    private var toCode: String { flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased().isEmpty ? "—" : flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+    private var fromCode: String { endpointPrimaryText(code: flight.fromCode, name: flight.fromName, city: flight.fromCity) }
+    private var toCode: String { endpointPrimaryText(code: flight.toCode, name: flight.toName, city: flight.toCity) }
     
     private var departureText: String {
         let f = DateFormatter()
@@ -27,9 +27,9 @@ struct FlightCard: View {
         return f.string(from: flight.endTime)
     }
     
-    private var flightNumberText: String? {
+    private var referenceText: String? {
         let t = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? nil : t.uppercased()
+        return t.isEmpty ? nil : (flight.travelMode == .drive || flight.travelMode == .walk ? t : t.uppercased())
     }
     
     var body: some View {
@@ -37,7 +37,7 @@ struct FlightCard: View {
             HStack(alignment: .center, spacing: 8) {
                 airportTopBlock(
                     code: fromCode,
-                    city: flight.fromCity,
+                    city: endpointSecondaryText(name: flight.fromName, city: flight.fromCity),
                     alignment: .leading
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -67,69 +67,106 @@ struct FlightCard: View {
                             )
                     }
                     
-                    Image(systemName: "airplane")
-                        .font(.system(size: 20, weight: .regular))
+                    Image(systemName: flight.travelMode.systemImageName)
+                        .font(.app(20, weight: .regular))
                         .foregroundStyle(iconColor)
+                        .scaleEffect(x: flight.travelMode == .drive ? -1 : 1, y: 1)
                 }
                 .frame(width: 110)
                 .layoutPriority(0)
                 
                 airportTopBlock(
                     code: toCode,
-                    city: flight.toCity,
+                    city: endpointSecondaryText(name: flight.toName, city: flight.toCity),
                     alignment: .trailing
                 )
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .layoutPriority(1)
             }
             
-            HStack(alignment: .lastTextBaseline) {
-                Text(departureText)
-                    .font(.caption)
-                    .foregroundStyle(textSecondary)
-                
-                Spacer(minLength: 0)
-                
-                if let flightNumberText {
-                    Text(flightNumberText)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(textPrimary)
-                } else {
-                    Text(" ")
-                        .font(.subheadline.weight(.semibold))
-                        .hidden()
-                }
-                
-                Spacer(minLength: 0)
-                
-                if let arrivalText {
-                    Text(arrivalText)
-                        .font(.caption)
+            ZStack {
+                HStack(alignment: .lastTextBaseline) {
+                    Text(departureText)
+                        .font(.appCaption)
                         .foregroundStyle(textSecondary)
-                } else {
-                    Text(" ")
-                        .font(.caption)
-                        .hidden()
+                    
+                    Spacer(minLength: 0)
+                    
+                    if let arrivalText {
+                        Text(arrivalText)
+                            .font(.appCaption)
+                            .foregroundStyle(textSecondary)
+                    } else {
+                        Text(" ")
+                            .font(.appCaption)
+                            .hidden()
+                    }
                 }
+                
+                Group {
+                    if let referenceText {
+                        Text(referenceText)
+                            .font(.app(12, weight: .semibold))
+                            .foregroundStyle(textPrimary)
+                    } else {
+                        Text(flight.travelMode.title)
+                            .font(.app(12, weight: .semibold))
+                            .foregroundStyle(textPrimary.opacity(0.82))
+                    }
+                }
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 56)
             }
         }
+        .frame(minHeight: 52, alignment: .center)
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
     
+    private func endpointPrimaryText(code: String, name: String, city: String) -> String {
+        if flight.travelMode == .flight {
+            let normalizedCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            if !normalizedCode.isEmpty {
+                return normalizedCode
+            }
+            return "—"
+        }
+        let cityText = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cityText.isEmpty { return cityText }
+        let nameText = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return nameText.isEmpty ? "—" : nameText
+    }
+    
+    private func endpointSecondaryText(name: String, city: String) -> String {
+        if flight.travelMode == .flight {
+            return city
+        }
+        let cityText = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nameText = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cityText.isEmpty && !nameText.isEmpty && cityText.caseInsensitiveCompare(nameText) != .orderedSame {
+            return nameText
+        }
+        return ""
+    }
+    
     private func airportTopBlock(code: String, city: String, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 4) {
             Text(code)
-                .font(.title3.weight(.bold))
+                .font(flight.travelMode == .flight ? .app(20, weight: .semibold) : .app(12, weight: .semibold))
                 .foregroundStyle(textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Text(city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : city)
-                .font(.caption)
-                .foregroundStyle(textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+            let secondary = city.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !secondary.isEmpty {
+                Text(secondary)
+                    .font(.appCaption)
+                    .foregroundStyle(textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
         }
     }
 }

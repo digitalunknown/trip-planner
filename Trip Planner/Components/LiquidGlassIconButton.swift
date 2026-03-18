@@ -10,7 +10,7 @@ struct LiquidGlassIconButton: View {
             action()
         } label: {
             Image(systemName: systemName)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.app(14, weight: .semibold))
                 .foregroundStyle(.primary)
                 .frame(width: 36, height: 36)
                 .contentShape(Circle())

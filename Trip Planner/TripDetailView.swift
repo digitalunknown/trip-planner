@@ -48,8 +48,8 @@ struct TripDetailView: View {
     
     @State private var tripDays: [TripDay] = []
     @State private var isPresentingSettings: Bool = false
-    @State private var isPresentingAdd: Bool = false
-    @State private var isPresentingPasteImport: Bool = false
+    @State private var isPresentingNewActivity: Bool = false
+    @State private var isPresentingPlanDay: Bool = false
     @State private var isPresentingAddMany: Bool = false
     @State private var pasteDefaultDayID: UUID?
     @State private var geocodeTask: Task<Void, Never>?
@@ -60,16 +60,21 @@ struct TripDetailView: View {
     @State private var newEventLongitude: Double?
     @State private var newEventDescription: String = ""
     @State private var newEventIcon: String = "mappin.and.ellipse"
-    @State private var newEventAccent: EventAccent = .neutral
+    @State private var newEventAccent: EventAccent = .purple
     @State private var newEventStart: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     @State private var newEventEnd: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(10 * 3600)
     @State private var newEventPhoto: UIImage?
+    @State private var newEventDocuments: [EventDocument] = []
+    @State private var newEventRating: Int = 0
+    @State private var newEventCost: Double?
+    @State private var newEventCostCurrencyCode: String?
     @State private var selectedDayID: UUID?
     @State private var editingEvent: EventItem?
+    @State private var activitySheetDetent: PresentationDetent = .medium
     @State private var mapPosition: MapCameraPosition
     @State private var showMap = false
     
-    @State private var isPresentingReminder = false
+    @State private var isPresentingNewReminder = false
     @State private var newReminderText: String = ""
     @State private var editingReminder: ReminderItem?
     
@@ -78,12 +83,12 @@ struct TripDetailView: View {
     
     @State private var parkedIdeas: [EventItem] = []
     
-    @State private var isPresentingChecklist = false
+    @State private var isPresentingNewChecklist = false
     @State private var editingChecklist: ChecklistItem?
     @State private var checklistTitle: String = ""
     @State private var checklistDraftItems: [ChecklistEntry] = []
 
-    @State private var isPresentingFlight = false
+    @State private var isPresentingNewFlight = false
     @State private var editingFlight: FlightItem?
     @State private var flightFromName: String = ""
     @State private var flightFromCode: String = ""
@@ -99,11 +104,15 @@ struct TripDetailView: View {
     @State private var flightFromGate: String = ""
     @State private var flightToTerminal: String = ""
     @State private var flightToGate: String = ""
+    @State private var travelMode: TravelMode = .flight
     @State private var flightNumber: String = ""
     @State private var flightNotes: String = ""
-    @State private var flightAccent: EventAccent = .neutral
+    @State private var flightDocuments: [EventDocument] = []
+    @State private var flightAccent: EventAccent = .purple
     @State private var flightStartTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     @State private var flightEndTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
+    @State private var flightCost: Double?
+    @State private var flightCostCurrencyCode: String?
     
     @State private var isEdgeSwipingBack: Bool = false
     
@@ -123,6 +132,7 @@ struct TripDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var boardDividerColor: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
+    private var dayBoardBackgroundColor: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     
     private static let parkedIdeasColumnID = UUID(uuidString: "00000000-0000-0000-0000-000000000999")!
     
@@ -264,6 +274,10 @@ struct TripDetailView: View {
         }
     }
     
+    private func clampRating(_ value: Int) -> Int {
+        min(max(value, 0), 5)
+    }
+    
     private var mapLayer: some View {
         Map(position: $mapPosition, interactionModes: mapModes) {
             ForEach(visibleAnnotations) { annotation in
@@ -272,16 +286,24 @@ struct TripDetailView: View {
                         openEventFromMarker(annotation.event)
                     } label: {
                         ZStack {
+                            if let photoData = annotation.event.photoData, let uiImage = UIImage(data: photoData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 36, height: 36)
+                                    .clipShape(Circle())
+                            } else {
+                                Circle()
+                                    .fill(annotation.color)
+                                    .frame(width: 36, height: 36)
+                                
+                                Image(systemName: annotation.event.icon)
+                                    .font(.app(16, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+                            
                             Circle()
-                                .fill(annotation.color)
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Circle()
-                                        .stroke(.white.opacity(0.9), lineWidth: 1.5)
-                                )
-                            Image(systemName: annotation.event.icon)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
+                                .stroke(dayBoardBackgroundColor, lineWidth: 1.5)
                         }
                         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
@@ -300,6 +322,7 @@ struct TripDetailView: View {
         }
         return eventAnnotations
     }
+    
     
     @ViewBuilder
     private var mapPlaceholder: some View {
@@ -438,18 +461,25 @@ struct TripDetailView: View {
                         selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     }
                     prepareNewEventDefaults()
-                    isPresentingAdd = true
+                    activitySheetDetent = .large
+                    isPresentingNewActivity = true
                 } label: {
                     Label("Activity", systemImage: "calendar.badge.plus")
                 }
                 
-                Button {
-                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    prepareNewFlightDefaults()
-                    isPresentingFlight = true
+                Menu {
+                    ForEach(TravelMode.allCases, id: \.self) { mode in
+                        Button {
+                            let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                            selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                            prepareNewFlightDefaults(mode: mode)
+                            isPresentingNewFlight = true
+                        } label: {
+                            Label(mode.title, systemImage: mode.systemImageName)
+                        }
+                    }
                 } label: {
-                    Label("Flight", systemImage: "airplane")
+                    Label("Travel", systemImage: "arrow.left.arrow.right")
                 }
                 
                 Button {
@@ -457,7 +487,7 @@ struct TripDetailView: View {
                     selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     newReminderText = ""
                     editingReminder = nil
-                    isPresentingReminder = true
+                    isPresentingNewReminder = true
                 } label: {
                     Label("Reminder", systemImage: "pin.fill")
                 }
@@ -468,7 +498,7 @@ struct TripDetailView: View {
                     checklistTitle = ""
                     checklistDraftItems = []
                     editingChecklist = nil
-                    isPresentingChecklist = true
+                    isPresentingNewChecklist = true
                 } label: {
                     Label("Checklist", systemImage: "checklist.checked")
                 }
@@ -478,7 +508,7 @@ struct TripDetailView: View {
                 Button {
                     let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
                     pasteDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    isPresentingPasteImport = true
+                    isPresentingPlanDay = true
                 } label: {
                     Label("Plan Day", systemImage: "sparkles")
                 }
@@ -503,12 +533,16 @@ struct TripDetailView: View {
         }
         ToolbarItem(placement: .principal) {
             VStack(spacing: 2) {
-                Text(tripName)
-                    .font(.headline.weight(.semibold))
+                Text(trip.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trip" : trip.name)
+                    .font(.app(17, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .multilineTextAlignment(.center)
                 Text(tripDateRangeText)
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -518,6 +552,205 @@ struct TripDetailView: View {
             center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
             span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
         )
+    }
+    
+    private var settingsCostItems: [TotalCostsSheet.LineItem] {
+        var items: [TotalCostsSheet.LineItem] = []
+        
+        func add(id: String, title: String, subtitle: String?, amount: Double?, currencyCode: String?) {
+            guard let amount else { return }
+            let code = currencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD")
+            items.append(.init(id: id, title: title, subtitle: subtitle, amount: amount, currencyCode: code))
+        }
+        
+        // Days
+        for day in tripDays {
+            let dayLabel = trip.isDatesSet ? day.displayTitle : "Day \(day.order)"
+            
+            for event in day.events {
+                add(
+                    id: "event-\(event.id.uuidString)",
+                    title: event.title,
+                    subtitle: [dayLabel, event.location].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " • "),
+                    amount: event.cost,
+                    currencyCode: event.costCurrencyCode
+                )
+            }
+            
+            for flight in day.flights {
+                let title = travelListTitle(for: flight)
+                let route = travelRouteText(for: flight)
+                
+                add(
+                    id: "flight-\(flight.id.uuidString)",
+                    title: title,
+                    subtitle: [dayLabel, route].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " • "),
+                    amount: flight.cost,
+                    currencyCode: flight.costCurrencyCode
+                )
+            }
+        }
+        
+        // Ideas
+        for idea in parkedIdeas {
+            add(
+                id: "idea-\(idea.id.uuidString)",
+                title: idea.title,
+                subtitle: ["Ideas", idea.location].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " • "),
+                amount: idea.cost,
+                currencyCode: idea.costCurrencyCode
+            )
+        }
+        
+        return items.sorted { a, b in
+            if a.title != b.title { return a.title < b.title }
+            return a.id < b.id
+        }
+    }
+    
+    private var settingsDocumentItems: [TripSettingsSheet.DocumentItem] {
+        var rows: [TripSettingsSheet.DocumentItem] = []
+        
+        func appendDocuments(from event: EventItem, dayLabel: String, isIdeas: Bool) {
+            let activityTitle = event.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled Activity" : event.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            for document in event.documents {
+                rows.append(
+                    .init(
+                        id: "\(event.id.uuidString)-\(document.id.uuidString)",
+                        activityID: event.id,
+                        activityTitle: activityTitle,
+                        dayLabel: dayLabel,
+                        isIdeas: isIdeas,
+                        document: document
+                    )
+                )
+            }
+        }
+
+        func appendDocuments(from flight: FlightItem, dayLabel: String) {
+            let travelTitle = travelListTitle(for: flight).trimmingCharacters(in: .whitespacesAndNewlines)
+            let activityTitle = travelTitle.isEmpty ? flight.travelMode.title : travelTitle
+            for document in flight.documents {
+                rows.append(
+                    .init(
+                        id: "\(flight.id.uuidString)-\(document.id.uuidString)",
+                        activityID: flight.id,
+                        activityTitle: activityTitle,
+                        dayLabel: dayLabel,
+                        isIdeas: false,
+                        document: document
+                    )
+                )
+            }
+        }
+        
+        for day in tripDays {
+            let dayLabel = trip.isDatesSet ? day.displayTitle : "Day \(day.order)"
+            for event in day.events {
+                appendDocuments(from: event, dayLabel: dayLabel, isIdeas: false)
+            }
+            for flight in day.flights {
+                appendDocuments(from: flight, dayLabel: dayLabel)
+            }
+        }
+        for idea in parkedIdeas {
+            appendDocuments(from: idea, dayLabel: "Ideas", isIdeas: true)
+        }
+        
+        return rows.sorted { lhs, rhs in
+            if lhs.dayLabel != rhs.dayLabel { return lhs.dayLabel < rhs.dayLabel }
+            if lhs.activityTitle != rhs.activityTitle { return lhs.activityTitle < rhs.activityTitle }
+            return lhs.document.fileName < rhs.document.fileName
+        }
+    }
+
+    private var itineraryClipboardText: String {
+        var lines: [String] = []
+        
+        let tripName = trip.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dest = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if !tripName.isEmpty || !dest.isEmpty {
+            let header = [tripName, dest].filter { !$0.isEmpty }.joined(separator: " — ")
+            if !header.isEmpty { lines.append(header) }
+        }
+        
+        if trip.isDatesSet {
+            let f = DateFormatter()
+            f.dateStyle = .medium
+            f.timeStyle = .none
+            lines.append("\(f.string(from: trip.startDate)) – \(f.string(from: trip.endDate))")
+        }
+        
+        lines.append("")
+        
+        let time = DateFormatter()
+        time.dateStyle = .none
+        time.timeStyle = .short
+        
+        for day in tripDays.sorted(by: { $0.order < $1.order }) {
+            let dayTitle = trip.isDatesSet ? day.displayTitle : "Day \(day.order)"
+            let subtitle = day.label.trimmingCharacters(in: .whitespacesAndNewlines)
+            lines.append(subtitle.isEmpty ? dayTitle : "\(dayTitle) — \(subtitle)")
+            
+            let events = day.events.sorted(by: { $0.startTimeMinutes < $1.startTimeMinutes })
+            for e in events {
+                let t = e.time.trimmingCharacters(in: .whitespacesAndNewlines)
+                let name = e.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                let loc = e.location.trimmingCharacters(in: .whitespacesAndNewlines)
+                let bits = [t, name].filter { !$0.isEmpty }.joined(separator: " ")
+                let line = loc.isEmpty ? bits : "\(bits) • \(loc)"
+                if !line.isEmpty { lines.append("- \(line)") }
+            }
+            
+            for r in day.reminders {
+                let text = r.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty { lines.append("- \(text)") }
+            }
+            
+            for c in day.checklists {
+                let ct = c.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !ct.isEmpty { lines.append("- \(ct)") }
+                for entry in c.items {
+                    let et = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !et.isEmpty else { continue }
+                    lines.append("  - \(entry.isDone ? "✓ " : "")\(et)")
+                }
+            }
+            
+            for fItem in day.flights.sorted(by: { $0.startTime < $1.startTime }) {
+                let ref = fItem.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+                let route = travelRouteText(for: fItem)
+                let start = time.string(from: fItem.startTime)
+                let end = fItem.hasEndTime ? time.string(from: fItem.endTime) : ""
+                let times = end.isEmpty ? start : "\(start) - \(end)"
+                
+                let headBits = [ref.isEmpty ? fItem.travelMode.title : ref, route].filter { !$0.isEmpty }.joined(separator: " ")
+                let flightLine = [headBits, times].filter { !$0.isEmpty }.joined(separator: " • ")
+                if !flightLine.isEmpty { lines.append("- \(flightLine)") }
+            }
+            
+            lines.append("")
+        }
+        
+        if trip.showParkedIdeas {
+            let ideas = parkedIdeas
+            if !ideas.isEmpty {
+                lines.append("Ideas")
+                for e in ideas {
+                    let t = e.time.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let name = e.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let loc = e.location.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let bits = [t, name].filter { !$0.isEmpty }.joined(separator: " ")
+                    let line = loc.isEmpty ? bits : "\(bits) • \(loc)"
+                    if !line.isEmpty { lines.append("- \(line)") }
+                }
+            }
+        }
+        
+        // Trim trailing blank lines.
+        while lines.last == "" { _ = lines.popLast() }
+        return lines.joined(separator: "\n")
     }
     
     private func applySheets<V: View>(to view: V) -> some View {
@@ -534,7 +767,11 @@ struct TripDetailView: View {
                     isDatesSet: $trip.isDatesSet,
                     unscheduledDaysCount: $trip.unscheduledDaysCount,
                     coverImageData: $trip.coverImageData,
+                    tripID: trip.id,
                     showParkedIdeas: $trip.showParkedIdeas,
+                    costItems: settingsCostItems,
+                    documentItems: settingsDocumentItems,
+                    itineraryText: itineraryClipboardText,
                     onApply: applyTripSettingsFromSheet
                 )
                 .tint(.primary)
@@ -554,10 +791,10 @@ struct TripDetailView: View {
             } message: {
                 Text("This date range is shorter and will remove items from days that no longer fit.\n\n\(pendingConvertDroppedCounts.activities) activities, \(pendingConvertDroppedCounts.reminders) reminders, \(pendingConvertDroppedCounts.checklists) checklists, \(pendingConvertDroppedCounts.flights) flights.")
             }
-            .sheet(isPresented: $isPresentingAdd, onDismiss: {
+            .sheet(isPresented: $isPresentingNewActivity, onDismiss: {
                 editingEvent = nil
             }) {
-                AddEventSheet(
+                NewActivitySheet(
                     title: $newEventTitle,
                     location: $newEventLocation,
                     latitude: $newEventLatitude,
@@ -567,7 +804,10 @@ struct TripDetailView: View {
                     accent: $newEventAccent,
                     startTime: $newEventStart,
                     endTime: $newEventEnd,
-                    photo: $newEventPhoto,
+                    documents: $newEventDocuments,
+                    rating: $newEventRating,
+                    cost: $newEventCost,
+                    costCurrencyCode: $newEventCostCurrencyCode,
                     selectedDayID: $selectedDayID,
                     dayOptions: dayOptions,
                     tripLocationRegion: eventSheetTripRegion,
@@ -576,10 +816,13 @@ struct TripDetailView: View {
                     isEditing: editingEvent != nil
                 )
                 .tint(.primary)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(
+                    UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large],
+                    selection: $activitySheetDetent
+                )
             }
-            .sheet(isPresented: $isPresentingReminder) {
-                AddReminderSheet(
+            .sheet(isPresented: $isPresentingNewReminder) {
+                NewReminderSheet(
                     reminderText: $newReminderText,
                     selectedDayID: $selectedDayID,
                     dayOptions: dayOptions,
@@ -587,10 +830,10 @@ struct TripDetailView: View {
                     onAdd: addReminder
                 )
                 .tint(.primary)
-                .presentationDetents([.medium])
+                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium])
             }
-            .sheet(isPresented: $isPresentingChecklist) {
-                ChecklistSheet(
+            .sheet(isPresented: $isPresentingNewChecklist) {
+                NewChecklistSheet(
                     title: $checklistTitle,
                     items: $checklistDraftItems,
                     selectedDayID: $selectedDayID,
@@ -599,13 +842,13 @@ struct TripDetailView: View {
                     onSave: saveChecklist
                 )
                 .tint(.primary)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
             }
-            .sheet(isPresented: $isPresentingFlight, onDismiss: {
+            .sheet(isPresented: $isPresentingNewFlight, onDismiss: {
                 editingFlight = nil
             }) {
                 let deleteHandler: (() -> Void)? = (editingFlight != nil) ? { deleteCurrentFlight() } : nil
-                AddFlightSheet(
+                NewFlightSheet(
                     fromName: $flightFromName,
                     fromCode: $flightFromCode,
                     fromCity: $flightFromCity,
@@ -620,11 +863,15 @@ struct TripDetailView: View {
                     toLongitude: $flightToLongitude,
                     toTerminal: $flightToTerminal,
                     toGate: $flightToGate,
+                    travelMode: $travelMode,
                     flightNumber: $flightNumber,
                     notes: $flightNotes,
+                    documents: $flightDocuments,
                     accent: $flightAccent,
                     startTime: $flightStartTime,
                     endTime: $flightEndTime,
+                    cost: $flightCost,
+                    costCurrencyCode: $flightCostCurrencyCode,
                     selectedDayID: $selectedDayID,
                     dayOptions: dayOptions,
                     isEditing: editingFlight != nil,
@@ -632,11 +879,11 @@ struct TripDetailView: View {
                     onDelete: deleteHandler
                 )
                 .tint(.primary)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
             }
-            .sheet(isPresented: $isPresentingPasteImport) {
-                PasteImportSheet(
-                    tripContext: PasteImportTripContext(
+            .sheet(isPresented: $isPresentingPlanDay) {
+                PlanDaySheet(
+                    tripContext: PlanDayTripContext(
                         isDatesSet: trip.isDatesSet,
                         startDate: trip.startDate,
                         endDate: trip.endDate,
@@ -645,13 +892,13 @@ struct TripDetailView: View {
                     ),
                     dayOptions: dayOptions,
                     defaultDayID: pasteDefaultDayID,
-                    onCommit: applyPasteImportItems
+                    onCommit: applyPlanDayItems
                 )
                 .tint(.primary)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
             }
             .sheet(isPresented: $isPresentingAddMany) {
-                AddManySheet(title: "Add Many") { titles in
+                NewManySheet(title: "Add Many") { titles in
                     addManyActivities(titles)
                 }
                 .tint(.primary)
@@ -684,7 +931,7 @@ struct TripDetailView: View {
         tripDays[idx].events.append(contentsOf: newEvents)
     }
 
-    private func applyPasteImportItems(_ items: [PasteImportItem]) {
+    private func applyPlanDayItems(_ items: [PlanDayItem]) {
         let now = Date()
         
         let ideasID: UUID? = trip.showParkedIdeas ? Self.parkedIdeasColumnID : nil
@@ -698,7 +945,7 @@ struct TripDetailView: View {
             f.timeStyle = .short
             let s = f.string(from: start)
             if let end, end > start {
-                return "\(s)–\(f.string(from: end))"
+                return "\(s) - \(f.string(from: end))"
             }
             return s
         }
@@ -786,6 +1033,7 @@ struct TripDetailView: View {
                     toLongitude: nil,
                     toTerminal: "",
                     toGate: "",
+                    travelMode: .flight,
                     flightNumber: item.flightNumber,
                     notes: item.notes,
                     accent: .neutral,
@@ -1004,13 +1252,13 @@ struct TripDetailView: View {
             .tint(.primary)
             .simultaneousGesture(edgeSwipeGesture)
             .toolbar { tripDetailToolbar }
-        .onChange(of: isPresentingReminder) { _, isPresented in
+        .onChange(of: isPresentingNewReminder) { _, isPresented in
             if !isPresented {
                 editingReminder = nil
                 newReminderText = ""
             }
         }
-        .onChange(of: isPresentingChecklist) { _, isPresented in
+        .onChange(of: isPresentingNewChecklist) { _, isPresented in
             if !isPresented {
                 editingChecklist = nil
                 checklistTitle = ""
@@ -1055,23 +1303,34 @@ struct TripDetailView: View {
             }()
             
             pendingMarkerTransition?.cancel()
-            withAnimation(.easeInOut(duration: 0.18)) {
+            // Fade markers out first, then animate the camera, then fade markers in.
+            withAnimation(.easeInOut(duration: 0.14)) {
                 markersOpacity = 0.0
             }
+            
+            let targetRegion: MKCoordinateRegion = {
+                if let dayID = targetDayID, let region = regionFitting(annotations(for: dayID)) {
+                    return region
+                }
+                return appropriateMapRegion
+            }()
+            
             let work = DispatchWorkItem {
                 displayedDayIDForMarkers = targetDayID
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    markersOpacity = 1.0
+                
+                // Smooth pan/zoom from current camera.
+                setMapRegion(targetRegion, animated: true, duration: 0.42)
+                
+                // Fade markers in after the camera is mostly settled.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        markersOpacity = 1.0
+                    }
                 }
             }
-            pendingMarkerTransition = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: work)
             
-            if let dayID = targetDayID, let region = regionFitting(annotations(for: dayID)) {
-                setMapRegion(region, animated: true, duration: 0.25)
-            } else {
-                setMapRegion(appropriateMapRegion, animated: false)
-            }
+            pendingMarkerTransition = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.14, execute: work)
         }
         .onChange(of: tripDays) { _, newDays in
             trip.days = newDays
@@ -1098,7 +1357,13 @@ private extension TripDetailView {
 
     func kanbanBoard() -> some View {
         GeometryReader { geo in
-            let columnWidth = geo.size.width * 0.78
+            let columnWidth: CGFloat = {
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    return 400
+                } else {
+                    return geo.size.width * 0.8
+                }
+            }()
             let tripHasNoItems = tripDays.allSatisfy { $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty && $0.flights.isEmpty }
             let viewport = CGRect(x: 0, y: 0, width: geo.size.width, height: geo.size.height)
             
@@ -1138,7 +1403,8 @@ private extension TripDetailView {
                             onAddEvent: {
                                 selectedDayID = day.id
                                 prepareNewEventDefaults()
-                                isPresentingAdd = true
+                                activitySheetDetent = .large
+                                isPresentingNewActivity = true
                             },
                             showEmptyPlaceholder: index == 0 && tripHasNoItems
                         )
@@ -1165,7 +1431,8 @@ private extension TripDetailView {
                                 editingEvent = nil
                                 selectedDayID = Self.parkedIdeasColumnID
                                 prepareNewEventDefaults()
-                                isPresentingAdd = true
+                                activitySheetDetent = .large
+                                isPresentingNewActivity = true
                             },
                             onMoveLeftToLastDay: (tripDays.count > 0) ? { event in moveParkedIdeaLeftToLastDay(event) } : nil
                         )
@@ -1387,8 +1654,12 @@ private extension TripDetailView {
         newEventLongitude = nil
         newEventDescription = ""
         newEventIcon = "mappin.and.ellipse"
-        newEventAccent = .neutral
+        newEventAccent = .purple
         newEventPhoto = nil
+        newEventDocuments = []
+        newEventRating = 0
+        newEventCost = nil
+        newEventCostCurrencyCode = UserDefaults.standard.string(forKey: "currencyCode") ?? "USD"
         let base = Calendar.current.startOfDay(for: Date())
         newEventStart = base.addingTimeInterval(9 * 3600)
         newEventEnd = newEventStart
@@ -1400,12 +1671,16 @@ private extension TripDetailView {
         formatter.timeStyle = .short
         let hasEndTime = abs(newEventEnd.timeIntervalSince(newEventStart)) >= 60
         let timeText = hasEndTime
-            ? "\(formatter.string(from: newEventStart)) – \(formatter.string(from: newEventEnd))"
+            ? "\(formatter.string(from: newEventStart)) - \(formatter.string(from: newEventEnd))"
             : "\(formatter.string(from: newEventStart))"
         
         let photoData = newEventPhoto?.jpegData(compressionQuality: 0.8)
+        let rating = clampRating(newEventRating)
 
         if let editingEvent {
+            let removedDocuments = editingEvent.documents.filter { existing in
+                !newEventDocuments.contains(where: { $0.id == existing.id })
+            }
             let updated = EventItem(
                 id: editingEvent.id,
                 title: newEventTitle.isEmpty ? "Untitled" : newEventTitle,
@@ -1416,8 +1691,13 @@ private extension TripDetailView {
                 longitude: newEventLongitude,
                 icon: newEventIcon,
                 accent: newEventAccent,
-                photoData: photoData
+                photoData: photoData,
+                documents: newEventDocuments,
+                rating: rating,
+                cost: newEventCost,
+                costCurrencyCode: newEventCostCurrencyCode
             )
+            ActivityDocumentStore.delete(documents: removedDocuments)
             
             for idx in tripDays.indices {
                 tripDays[idx].events.removeAll { $0.id == editingEvent.id }
@@ -1449,7 +1729,11 @@ private extension TripDetailView {
             longitude: newEventLongitude,
             icon: newEventIcon,
             accent: newEventAccent,
-            photoData: photoData
+            photoData: photoData,
+            documents: newEventDocuments,
+            rating: rating,
+            cost: newEventCost,
+            costCurrencyCode: newEventCostCurrencyCode
         )
         
         if targetID == Self.parkedIdeasColumnID {
@@ -1462,7 +1746,8 @@ private extension TripDetailView {
             withAnimation {
                 setMapRegion(MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                    // Zoom in more when a newly-added activity has a location.
+                    span: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006)
                 ), animated: false)
             }
         }
@@ -1603,7 +1888,7 @@ private extension TripDetailView {
         checklistTitle = checklist.title
         checklistDraftItems = checklist.items
         editingChecklist = checklist
-        isPresentingChecklist = true
+        isPresentingNewChecklist = true
     }
     
     func deleteChecklist(_ checklist: ChecklistItem) {
@@ -1616,7 +1901,7 @@ private extension TripDetailView {
         selectedDayID = day.id
         newReminderText = reminder.text
         editingReminder = reminder
-        isPresentingReminder = true
+        isPresentingNewReminder = true
     }
     
     func deleteReminder(_ reminder: ReminderItem) {
@@ -1628,6 +1913,7 @@ private extension TripDetailView {
     func startEditing(event: EventItem, day: TripDay) {
         editingEvent = event
         selectedDayID = day.id
+        activitySheetDetent = .medium
         newEventTitle = event.title
         newEventLocation = event.location
         newEventLatitude = event.latitude
@@ -1635,6 +1921,10 @@ private extension TripDetailView {
         newEventDescription = event.description
         newEventIcon = event.icon
         newEventAccent = event.accent
+        newEventDocuments = event.documents
+        newEventCost = event.cost
+        newEventCostCurrencyCode = event.costCurrencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD")
+        newEventRating = event.rating
         
         if let photoData = event.photoData {
             newEventPhoto = UIImage(data: photoData)
@@ -1642,7 +1932,10 @@ private extension TripDetailView {
             newEventPhoto = nil
         }
 
-        let parts = event.time.split(separator: "–").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let normalized = event.time.replacingOccurrences(of: "–", with: "-")
+        let parts = normalized
+            .split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
         
         let short = DateFormatter()
         short.dateStyle = .none
@@ -1675,12 +1968,13 @@ private extension TripDetailView {
             )
         }
         
-        isPresentingAdd = true
+        isPresentingNewActivity = true
     }
     
     func startEditingParkedIdea(_ event: EventItem) {
         editingEvent = event
         selectedDayID = Self.parkedIdeasColumnID
+        activitySheetDetent = .medium
         newEventTitle = event.title
         newEventLocation = event.location
         newEventLatitude = event.latitude
@@ -1688,6 +1982,10 @@ private extension TripDetailView {
         newEventDescription = event.description
         newEventIcon = event.icon
         newEventAccent = event.accent
+        newEventDocuments = event.documents
+        newEventCost = event.cost
+        newEventCostCurrencyCode = event.costCurrencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD")
+        newEventRating = event.rating
         
         if let photoData = event.photoData {
             newEventPhoto = UIImage(data: photoData)
@@ -1695,7 +1993,10 @@ private extension TripDetailView {
             newEventPhoto = nil
         }
         
-        let parts = event.time.split(separator: "–").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let normalized = event.time.replacingOccurrences(of: "–", with: "-")
+        let parts = normalized
+            .split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
         
         let short = DateFormatter()
         short.dateStyle = .none
@@ -1717,7 +2018,7 @@ private extension TripDetailView {
             }
         }
         
-        isPresentingAdd = true
+        isPresentingNewActivity = true
     }
     
     func openEventFromMarker(_ event: EventItem) {
@@ -1732,6 +2033,7 @@ private extension TripDetailView {
     
     func deleteCurrentEvent() {
         guard let event = editingEvent else { return }
+        ActivityDocumentStore.delete(documents: event.documents)
         if parkedIdeas.contains(where: { $0.id == event.id }) {
             parkedIdeas.removeAll { $0.id == event.id }
             editingEvent = nil
@@ -1749,6 +2051,7 @@ private extension TripDetailView {
     }
     
     func deleteEvent(_ event: EventItem) {
+        ActivityDocumentStore.delete(documents: event.documents)
         if parkedIdeas.contains(event) {
             parkedIdeas.removeAll { $0.id == event.id }
             return
@@ -1775,7 +2078,10 @@ private extension TripDetailView {
             longitude: event.longitude,
             icon: event.icon,
             accent: event.accent,
-            photoData: event.photoData
+            photoData: event.photoData,
+            documents: event.documents,
+            rating: event.rating,
+            cost: event.cost
         )
         
         tripDays[dayIndex].events.insert(duplicated, at: min(eventIndex + 1, tripDays[dayIndex].events.count))
@@ -1794,17 +2100,45 @@ private extension TripDetailView {
             longitude: event.longitude,
             icon: event.icon,
             accent: event.accent,
-            photoData: event.photoData
+            photoData: event.photoData,
+            documents: event.documents,
+            rating: event.rating,
+            cost: event.cost
         )
         
         parkedIdeas.insert(duplicated, at: min(idx + 1, parkedIdeas.count))
     }
+    
+    private func travelRouteText(for flight: FlightItem) -> String {
+        let from = flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let to = flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if !from.isEmpty || !to.isEmpty {
+            if !from.isEmpty && !to.isEmpty { return "\(from) → \(to)" }
+            return !from.isEmpty ? from : to
+        }
+        
+        let fromName = flight.fromName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let toName = flight.toName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !fromName.isEmpty && !toName.isEmpty {
+            return "\(fromName) → \(toName)"
+        }
+        return [fromName, toName].first { !$0.isEmpty } ?? ""
+    }
+    
+    private func travelListTitle(for flight: FlightItem) -> String {
+        let ref = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        if ref.isEmpty {
+            return flight.travelMode.title
+        }
+        return flight.travelMode == .drive || flight.travelMode == .walk ? ref : ref.uppercased()
+    }
 
-    func prepareNewFlightDefaults() {
+    func prepareNewFlightDefaults(mode: TravelMode = .flight) {
         if selectedDayID == nil {
             selectedDayID = tripDays.first?.id
         }
         editingFlight = nil
+        travelMode = mode
         flightFromName = ""
         flightFromCode = ""
         flightFromCity = ""
@@ -1821,7 +2155,10 @@ private extension TripDetailView {
         flightToGate = ""
         flightNumber = ""
         flightNotes = ""
-        flightAccent = .neutral
+        flightDocuments = []
+        flightAccent = .purple
+        flightCost = nil
+        flightCostCurrencyCode = UserDefaults.standard.string(forKey: "currencyCode") ?? "USD"
         let base = Calendar.current.startOfDay(for: Date())
         flightStartTime = base.addingTimeInterval(9 * 3600)
         flightEndTime = flightStartTime
@@ -1829,6 +2166,9 @@ private extension TripDetailView {
 
     func saveFlight() {
         if let editingFlight {
+            let removedDocuments = editingFlight.documents.filter { existing in
+                !flightDocuments.contains(where: { $0.id == existing.id })
+            }
             let updated = FlightItem(
                 id: editingFlight.id,
                 fromName: flightFromName,
@@ -1845,12 +2185,17 @@ private extension TripDetailView {
                 toLongitude: flightToLongitude,
                 toTerminal: flightToTerminal,
                 toGate: flightToGate,
+                travelMode: travelMode,
                 flightNumber: flightNumber,
                 notes: flightNotes,
+                documents: flightDocuments,
                 accent: flightAccent,
                 startTime: flightStartTime,
-                endTime: flightEndTime
+                endTime: flightEndTime,
+                cost: flightCost,
+                costCurrencyCode: flightCostCurrencyCode
             )
+            ActivityDocumentStore.delete(documents: removedDocuments)
             
             for idx in tripDays.indices {
                 tripDays[idx].flights.removeAll { $0.id == editingFlight.id }
@@ -1862,12 +2207,10 @@ private extension TripDetailView {
                 f.timeStyle = .short
                 let dep = f.string(from: updated.startTime)
                 let arr = updated.hasEndTime ? f.string(from: updated.endTime) : ""
-                let time = arr.isEmpty ? dep : "\(dep) – \(arr)"
+                let time = arr.isEmpty ? dep : "\(dep) - \(arr)"
                 
-                let from = updated.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                let to = updated.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                let loc = (!from.isEmpty && !to.isEmpty) ? "\(from) → \(to)" : ""
-                let title = updated.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Flight" : updated.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let loc = travelRouteText(for: updated)
+                let title = travelListTitle(for: updated)
                 
                 let parked = EventItem(
                     id: UUID(),
@@ -1877,9 +2220,10 @@ private extension TripDetailView {
                     location: loc,
                     latitude: nil,
                     longitude: nil,
-                    icon: "airplane",
+                    icon: updated.travelMode.systemImageName,
                     accent: updated.accent,
-                    photoData: nil
+                    photoData: nil,
+                    documents: updated.documents
                 )
                 parkedIdeas.insert(parked, at: 0)
                 return
@@ -1904,11 +2248,15 @@ private extension TripDetailView {
                 toLongitude: flightToLongitude,
                 toTerminal: flightToTerminal,
                 toGate: flightToGate,
+                travelMode: travelMode,
                 flightNumber: flightNumber,
                 notes: flightNotes,
+                documents: flightDocuments,
                 accent: flightAccent,
                 startTime: flightStartTime,
-                endTime: flightEndTime
+                endTime: flightEndTime,
+                cost: flightCost,
+                costCurrencyCode: flightCostCurrencyCode
             )
             
             if selectedDayID == Self.parkedIdeasColumnID {
@@ -1917,12 +2265,10 @@ private extension TripDetailView {
                 f.timeStyle = .short
                 let dep = f.string(from: flight.startTime)
                 let arr = flight.hasEndTime ? f.string(from: flight.endTime) : ""
-                let time = arr.isEmpty ? dep : "\(dep) – \(arr)"
+                let time = arr.isEmpty ? dep : "\(dep) - \(arr)"
                 
-                let from = flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                let to = flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                let loc = (!from.isEmpty && !to.isEmpty) ? "\(from) → \(to)" : ""
-                let title = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Flight" : flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let loc = travelRouteText(for: flight)
+                let title = travelListTitle(for: flight)
                 
                 let parked = EventItem(
                     id: UUID(),
@@ -1932,9 +2278,10 @@ private extension TripDetailView {
                     location: loc,
                     latitude: nil,
                     longitude: nil,
-                    icon: "airplane",
+                    icon: flight.travelMode.systemImageName,
                     accent: flight.accent,
-                    photoData: nil
+                    photoData: nil,
+                    documents: flight.documents
                 )
                 parkedIdeas.insert(parked, at: 0)
                 return
@@ -1963,15 +2310,20 @@ private extension TripDetailView {
         flightToLongitude = flight.toLongitude
         flightToTerminal = flight.toTerminal
         flightToGate = flight.toGate
+        travelMode = flight.travelMode
         flightNumber = flight.flightNumber
         flightNotes = flight.notes
+        flightDocuments = flight.documents
         flightAccent = flight.accent
         flightStartTime = flight.startTime
         flightEndTime = flight.endTime
-        isPresentingFlight = true
+        flightCost = flight.cost
+        flightCostCurrencyCode = flight.costCurrencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD")
+        isPresentingNewFlight = true
     }
 
     func deleteFlight(_ flight: FlightItem) {
+        ActivityDocumentStore.delete(documents: flight.documents)
         for dayIndex in tripDays.indices {
             if let idx = tripDays[dayIndex].flights.firstIndex(where: { $0.id == flight.id }) {
                 tripDays[dayIndex].flights.remove(at: idx)
@@ -2081,12 +2433,10 @@ private extension TripDetailView {
         f.timeStyle = .short
         let dep = f.string(from: flight.startTime)
         let arr = flight.hasEndTime ? f.string(from: flight.endTime) : ""
-        let time = arr.isEmpty ? dep : "\(dep) – \(arr)"
+        let time = arr.isEmpty ? dep : "\(dep) - \(arr)"
         
-        let from = flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let to = flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let loc = (!from.isEmpty && !to.isEmpty) ? "\(from) → \(to)" : ""
-        let title = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Flight" : flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let loc = travelRouteText(for: flight)
+        let title = travelListTitle(for: flight)
         
         let parked = EventItem(
             id: UUID(),
@@ -2096,9 +2446,10 @@ private extension TripDetailView {
             location: loc,
             latitude: nil,
             longitude: nil,
-            icon: "airplane",
+            icon: flight.travelMode.systemImageName,
             accent: flight.accent,
-            photoData: nil
+            photoData: nil,
+            documents: flight.documents
         )
         parkedIdeas.insert(parked, at: 0)
     }
@@ -2146,23 +2497,23 @@ struct WeatherPill: View {
             case .conditions:
                 HStack(spacing: 6) {
                     Image(systemName: fallbackIcon)
-                        .font(.caption)
+                        .font(.appCaption)
                     Text("\(fallbackTempF)°F")
-                        .font(.caption.weight(.semibold))
+                        .font(.app(12, weight: .semibold))
                 }
             case .sunrise:
                 HStack(spacing: 6) {
                     Image(systemName: "sunrise.fill")
-                        .font(.caption)
+                        .font(.appCaption)
                     Text(sunrise.map { timeFormatter.string(from: $0) } ?? "—")
-                        .font(.caption.weight(.semibold))
+                        .font(.app(12, weight: .semibold))
                 }
             case .sunset:
                 HStack(spacing: 6) {
                     Image(systemName: "sunset.fill")
-                        .font(.caption)
+                        .font(.appCaption)
                     Text(sunset.map { timeFormatter.string(from: $0) } ?? "—")
-                        .font(.caption.weight(.semibold))
+                        .font(.app(12, weight: .semibold))
                 }
             }
         }
@@ -2196,12 +2547,12 @@ struct EventDetailView: View {
                         )
                     VStack(alignment: .leading, spacing: 10) {
                         Text(event.title)
-                            .font(.title2.weight(.bold))
+                            .font(.app(22, weight: .semibold))
                         Text(event.location)
-                            .font(.subheadline)
+                            .font(.appSubheadline)
                             .foregroundStyle(.secondary)
                         Text(event.time)
-                            .font(.headline)
+                            .font(.appHeadline)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -2212,11 +2563,11 @@ struct EventDetailView: View {
                     Label(event.location, systemImage: "mappin.and.ellipse")
                     Label(event.time, systemImage: "clock")
                 }
-                .font(.headline)
+                .font(.appHeadline)
 
                 if !event.description.isEmpty {
                     Text(event.description)
-                        .font(.body)
+                        .font(.appBody)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -2246,7 +2597,7 @@ struct IconCarousel: View {
                             .frame(width: 44, height: 44)
                             .overlay(
                                 Image(systemName: icon)
-                                    .font(.system(size: 18, weight: .medium))
+                                    .font(.app(18, weight: .regular))
                                     .foregroundStyle(selection == icon ? accentColor : .secondary)
                             )
                             .overlay(
@@ -2258,6 +2609,8 @@ struct IconCarousel: View {
                 }
             }
             .padding(.vertical, 2)
+            // Prevent selection stroke from clipping at edges.
+            .padding(.horizontal, 2)
         }
     }
 }
@@ -2268,7 +2621,7 @@ struct ColorChips: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(EventAccent.allCases, id: \.self) { accent in
+                ForEach(Array(EventAccent.allCases.reversed()), id: \.self) { accent in
                     Button {
                         selection = accent
                     } label: {
@@ -2285,6 +2638,8 @@ struct ColorChips: View {
                 }
             }
             .padding(.vertical, 2)
+            // Prevent selection ring from clipping at edges.
+            .padding(.horizontal, 2)
         }
     }
 }
@@ -2306,7 +2661,7 @@ struct FloatingAddButton: View {
                     }
                 
                 Image(systemName: "plus")
-                    .font(.title2.weight(.bold))
+                    .font(.app(22, weight: .semibold))
                     .foregroundStyle(.primary)
             }
             .frame(width: 56, height: 56)
@@ -2319,12 +2674,13 @@ struct FloatingAddButton: View {
 
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
+    var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @Environment(\.dismiss) private var dismiss
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
-        picker.sourceType = .photoLibrary
+        picker.sourceType = UIImagePickerController.isSourceTypeAvailable(sourceType) ? sourceType : .photoLibrary
         return picker
     }
     
@@ -2363,6 +2719,44 @@ struct EventAnnotation: Identifiable {
     let color: Color
 }
 
+// (Map clustering removed)
+
+enum EventDocumentSource: String, Codable, Hashable {
+    case files
+    case photoLibrary
+}
+
+struct EventDocument: Identifiable, Hashable, Codable {
+    let id: UUID
+    var fileName: String
+    var fileExtension: String
+    var mimeType: String?
+    var localRelativePath: String
+    var source: EventDocumentSource
+    var createdAt: Date
+    var thumbnailData: Data?
+    
+    init(
+        id: UUID = UUID(),
+        fileName: String,
+        fileExtension: String = "",
+        mimeType: String? = nil,
+        localRelativePath: String,
+        source: EventDocumentSource,
+        createdAt: Date = Date(),
+        thumbnailData: Data? = nil
+    ) {
+        self.id = id
+        self.fileName = fileName
+        self.fileExtension = fileExtension
+        self.mimeType = mimeType
+        self.localRelativePath = localRelativePath
+        self.source = source
+        self.createdAt = createdAt
+        self.thumbnailData = thumbnailData
+    }
+}
+
 struct EventItem: Identifiable, Hashable, Codable, Transferable {
     let id: UUID
     var title: String
@@ -2374,12 +2768,53 @@ struct EventItem: Identifiable, Hashable, Codable, Transferable {
     var icon: String
     var accent: EventAccent
     var photoData: Data?
+    var documents: [EventDocument] = []
+    var rating: Int = 0
+    var cost: Double? = nil
+    var costCurrencyCode: String? = nil
 
     var accentColor: Color { accent.color }
     
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, time, location, latitude, longitude, icon, accent, photoData, documents, rating, cost, costCurrencyCode
+    }
+    
+    init(
+        id: UUID = UUID(),
+        title: String,
+        description: String,
+        time: String,
+        location: String,
+        latitude: Double?,
+        longitude: Double?,
+        icon: String,
+        accent: EventAccent,
+        photoData: Data?,
+        documents: [EventDocument] = [],
+        rating: Int = 0,
+        cost: Double? = nil,
+        costCurrencyCode: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.time = time
+        self.location = location
+        self.latitude = latitude
+        self.longitude = longitude
+        self.icon = icon
+        self.accent = accent
+        self.photoData = photoData
+        self.documents = documents
+        self.rating = rating
+        self.cost = cost
+        self.costCurrencyCode = costCurrencyCode
+    }
+    
     var startTimeMinutes: Int {
-        let startText = time
-            .split(separator: "–")
+        let normalized = time.replacingOccurrences(of: "–", with: "-")
+        let startText = normalized
+            .split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true)
             .first?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         
@@ -2403,6 +2838,42 @@ struct EventItem: Identifiable, Hashable, Codable, Transferable {
 
     static var transferRepresentation: some TransferRepresentation {
         CodableRepresentation(contentType: .eventItem)
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        description = try c.decode(String.self, forKey: .description)
+        time = try c.decode(String.self, forKey: .time)
+        location = try c.decode(String.self, forKey: .location)
+        latitude = try c.decodeIfPresent(Double.self, forKey: .latitude)
+        longitude = try c.decodeIfPresent(Double.self, forKey: .longitude)
+        icon = try c.decode(String.self, forKey: .icon)
+        accent = try c.decode(EventAccent.self, forKey: .accent)
+        photoData = try c.decodeIfPresent(Data.self, forKey: .photoData)
+        documents = try c.decodeIfPresent([EventDocument].self, forKey: .documents) ?? []
+        rating = try c.decodeIfPresent(Int.self, forKey: .rating) ?? 0
+        cost = try c.decodeIfPresent(Double.self, forKey: .cost)
+        costCurrencyCode = try c.decodeIfPresent(String.self, forKey: .costCurrencyCode)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(description, forKey: .description)
+        try c.encode(time, forKey: .time)
+        try c.encode(location, forKey: .location)
+        try c.encode(latitude, forKey: .latitude)
+        try c.encode(longitude, forKey: .longitude)
+        try c.encode(icon, forKey: .icon)
+        try c.encode(accent, forKey: .accent)
+        try c.encode(photoData, forKey: .photoData)
+        try c.encode(documents, forKey: .documents)
+        try c.encode(rating, forKey: .rating)
+        try c.encode(cost, forKey: .cost)
+        try c.encode(costCurrencyCode, forKey: .costCurrencyCode)
     }
 }
 
@@ -2518,11 +2989,15 @@ struct FlightItem: Identifiable, Hashable, Codable {
     var toTerminal: String
     var toGate: String
     
+    var travelMode: TravelMode
     var flightNumber: String
     var notes: String
+    var documents: [EventDocument] = []
     var accent: EventAccent
     var startTime: Date
     var endTime: Date
+    var cost: Double? = nil
+    var costCurrencyCode: String? = nil
     
     var hasEndTime: Bool { endTime > startTime }
     
@@ -2530,7 +3005,7 @@ struct FlightItem: Identifiable, Hashable, Codable {
         case id
         case fromName, fromCode, fromCity, fromLatitude, fromLongitude, fromTerminal, fromGate
         case toName, toCode, toCity, toLatitude, toLongitude, toTerminal, toGate
-        case flightNumber, notes, accent, startTime, endTime
+        case travelMode, flightNumber, notes, documents, accent, startTime, endTime, cost, costCurrencyCode
     }
     
     init(
@@ -2549,11 +3024,15 @@ struct FlightItem: Identifiable, Hashable, Codable {
         toLongitude: Double? = nil,
         toTerminal: String = "",
         toGate: String = "",
+        travelMode: TravelMode = .flight,
         flightNumber: String = "",
         notes: String = "",
+        documents: [EventDocument] = [],
         accent: EventAccent = .neutral,
         startTime: Date = Date(),
-        endTime: Date = Date()
+        endTime: Date = Date(),
+        cost: Double? = nil,
+        costCurrencyCode: String? = nil
     ) {
         self.id = id
         self.fromName = fromName
@@ -2570,11 +3049,15 @@ struct FlightItem: Identifiable, Hashable, Codable {
         self.toLongitude = toLongitude
         self.toTerminal = toTerminal
         self.toGate = toGate
+        self.travelMode = travelMode
         self.flightNumber = flightNumber
         self.notes = notes
+        self.documents = documents
         self.accent = accent
         self.startTime = startTime
         self.endTime = endTime
+        self.cost = cost
+        self.costCurrencyCode = costCurrencyCode
     }
     
     init(from decoder: Decoder) throws {
@@ -2597,11 +3080,15 @@ struct FlightItem: Identifiable, Hashable, Codable {
         toTerminal = try c.decodeIfPresent(String.self, forKey: .toTerminal) ?? ""
         toGate = try c.decodeIfPresent(String.self, forKey: .toGate) ?? ""
         
+        travelMode = try c.decodeIfPresent(TravelMode.self, forKey: .travelMode) ?? .flight
         flightNumber = try c.decode(String.self, forKey: .flightNumber)
         notes = try c.decode(String.self, forKey: .notes)
+        documents = try c.decodeIfPresent([EventDocument].self, forKey: .documents) ?? []
         accent = try c.decode(EventAccent.self, forKey: .accent)
         startTime = try c.decode(Date.self, forKey: .startTime)
         endTime = try c.decode(Date.self, forKey: .endTime)
+        cost = try c.decodeIfPresent(Double.self, forKey: .cost)
+        costCurrencyCode = try c.decodeIfPresent(String.self, forKey: .costCurrencyCode)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -2624,11 +3111,40 @@ struct FlightItem: Identifiable, Hashable, Codable {
         try c.encode(toTerminal, forKey: .toTerminal)
         try c.encode(toGate, forKey: .toGate)
         
+        try c.encode(travelMode, forKey: .travelMode)
         try c.encode(flightNumber, forKey: .flightNumber)
         try c.encode(notes, forKey: .notes)
+        try c.encode(documents, forKey: .documents)
         try c.encode(accent, forKey: .accent)
         try c.encode(startTime, forKey: .startTime)
         try c.encode(endTime, forKey: .endTime)
+        try c.encode(cost, forKey: .cost)
+        try c.encode(costCurrencyCode, forKey: .costCurrencyCode)
+    }
+}
+
+enum TravelMode: String, Codable, CaseIterable, Hashable {
+    case flight
+    case drive
+    case train
+    case walk
+    
+    var title: String {
+        switch self {
+        case .flight: return "Flight"
+        case .drive: return "Drive"
+        case .train: return "Train"
+        case .walk: return "Walk"
+        }
+    }
+    
+    var systemImageName: String {
+        switch self {
+        case .flight: return "airplane"
+        case .drive: return "car.side.fill"
+        case .train: return "train.side.front.car"
+        case .walk: return "figure.walk"
+        }
     }
 }
 

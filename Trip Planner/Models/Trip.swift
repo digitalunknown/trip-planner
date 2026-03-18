@@ -166,3 +166,99 @@ struct Trip: Identifiable, Hashable, Codable {
     }
 }
 
+extension Trip {
+    func duplicatedTrip() -> Trip {
+        let duplicatedDays: [TripDay] = days.map { day in
+            TripDay(
+                id: UUID(),
+                date: day.date,
+                events: day.events.map { $0.duplicatedItem() },
+                reminders: day.reminders.map { ReminderItem(id: UUID(), text: $0.text, createdAt: $0.createdAt) },
+                checklists: day.checklists.map { checklist in
+                    ChecklistItem(
+                        id: UUID(),
+                        title: checklist.title,
+                        items: checklist.items.map { ChecklistEntry(id: UUID(), text: $0.text, isDone: $0.isDone) },
+                        createdAt: checklist.createdAt
+                    )
+                },
+                flights: day.flights.map { $0.duplicatedItem() },
+                label: day.label,
+                order: day.order,
+                weatherIcon: day.weatherIcon,
+                temperatureF: day.temperatureF
+            )
+        }
+        
+        let duplicatedParkedIdeas: [EventItem] = parkedIdeas.map { $0.duplicatedItem() }
+        
+        return Trip(
+            id: UUID(),
+            name: "Copy of \(name)",
+            destination: destination,
+            startDate: startDate,
+            endDate: endDate,
+            latitude: latitude,
+            longitude: longitude,
+            mapSpan: mapSpan,
+            isDatesSet: isDatesSet,
+            unscheduledDaysCount: unscheduledDaysCount,
+            days: duplicatedDays,
+            coverImageData: coverImageData,
+            showParkedIdeas: showParkedIdeas,
+            parkedIdeas: duplicatedParkedIdeas
+        )
+    }
+}
+
+private extension EventItem {
+    func duplicatedItem() -> EventItem {
+        EventItem(
+            id: UUID(),
+            title: title,
+            description: description,
+            time: time,
+            location: location,
+            latitude: latitude,
+            longitude: longitude,
+            icon: icon,
+            accent: accent,
+            photoData: photoData,
+            documents: documents,
+            rating: rating,
+            cost: cost,
+            costCurrencyCode: costCurrencyCode
+        )
+    }
+}
+
+private extension FlightItem {
+    func duplicatedItem() -> FlightItem {
+        FlightItem(
+            id: UUID(),
+            fromName: fromName,
+            fromCode: fromCode,
+            fromCity: fromCity,
+            fromLatitude: fromLatitude,
+            fromLongitude: fromLongitude,
+            fromTerminal: fromTerminal,
+            fromGate: fromGate,
+            toName: toName,
+            toCode: toCode,
+            toCity: toCity,
+            toLatitude: toLatitude,
+            toLongitude: toLongitude,
+            toTerminal: toTerminal,
+            toGate: toGate,
+            travelMode: travelMode,
+            flightNumber: flightNumber,
+            notes: notes,
+            documents: documents,
+            accent: accent,
+            startTime: startTime,
+            endTime: endTime,
+            cost: cost,
+            costCurrencyCode: costCurrencyCode
+        )
+    }
+}

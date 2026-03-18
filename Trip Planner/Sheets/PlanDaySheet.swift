@@ -1,24 +1,32 @@
 import SwiftUI
 
-struct PasteImportSheet: View {
+struct PlanDaySheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("prefFood") private var prefFood: String = ""
     @AppStorage("prefAlcohol") private var prefAlcohol: Bool = false
     @AppStorage("prefInterests") private var prefInterests: String = ""
     
-    let tripContext: PasteImportTripContext
+    let tripContext: PlanDayTripContext
     let dayOptions: [DayOption]
     let defaultDayID: UUID?
-    let onCommit: ([PasteImportItem]) -> Void
+    let onCommit: ([PlanDayItem]) -> Void
     
     @State private var promptText: String = ""
-    @State private var draft: PasteImportDraft?
+    @State private var draft: PlanDayDraft?
     @State private var showPreview: Bool = false
     
     @State private var isProcessing: Bool = false
     @State private var errorText: String?
+    @State private var loaderStep: Int = 0
     
     private let geminiEndpoint = URL(string: "https://trip-planner-ai-proxy.vercel.app/api/parsePaste")!
+    
+    private let loaderLabels: [String] = [
+        "Thinking",
+        "Applying preferences",
+        "Researching spots",
+        "Organizing day"
+    ]
     
     var body: some View {
         NavigationStack {
@@ -77,15 +85,43 @@ struct PasteImportSheet: View {
                 if isProcessing {
                     ZStack {
                         Color.black.opacity(0.12).ignoresSafeArea()
-                        ProgressView("Thinking…")
-                            .padding(16)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        VStack(spacing: 12) {
+                            ProgressView()
+                                .controlSize(.large)
+                            
+                            Text(loaderLabels[loaderStep])
+                                .font(.app(15, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .id(loaderStep)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        }
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 18)
+                        .frame(minWidth: 260)
+                        .frame(minHeight: 120)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                    .task(id: isProcessing) {
+                        guard isProcessing else { return }
+                        await MainActor.run {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                loaderStep = 0
+                            }
+                        }
+                        while !Task.isCancelled {
+                            try? await Task.sleep(nanoseconds: 1_900_000_000)
+                            await MainActor.run {
+                                withAnimation(.easeInOut(duration: 0.35)) {
+                                    loaderStep = (loaderStep + 1) % loaderLabels.count
+                                }
+                            }
+                        }
                     }
                 }
             }
             .navigationDestination(isPresented: $showPreview) {
                 if let draft {
-                    PasteImportPreviewView(
+                    PlanDayPreviewView(
                         draft: draft,
                         dayOptions: dayOptions,
                         onCancel: { dismiss() },
@@ -109,7 +145,7 @@ struct PasteImportSheet: View {
             Task { await runPlan(for: text) }
         } label: {
             Label(text, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
+                .font(.app(15, weight: .semibold))
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -137,11 +173,11 @@ struct PasteImportSheet: View {
         guard shouldRun else { return }
         
         let expandedPrompt = promptExpandedText(from: raw)
-        let draftForAI = PasteImportDraft(items: [], extractedText: expandedPrompt, extractedFacts: PasteImportFacts())
+        let draftForAI = PlanDayDraft(items: [], extractedText: expandedPrompt, extractedFacts: PlanDayFacts())
         
         do {
-            let enhancer = GeminiPasteEnhancer(endpoint: geminiEndpoint)
-            let prefs = PasteImportUserPreferences(favoriteFoodCSV: prefFood, drinksAlcohol: prefAlcohol, interestsCSV: prefInterests)
+            let enhancer = GeminiPlanDayEnhancer(endpoint: geminiEndpoint)
+            let prefs = PlanDayUserPreferences(favoriteFoodCSV: prefFood, drinksAlcohol: prefAlcohol, interestsCSV: prefInterests)
             let enhanced = try await enhancer.enhance(draft: draftForAI, tripContext: tripContext, preferences: prefs.isEmpty ? nil : prefs)
             let sanitized = sanitizeAIResponse(enhanced)
             guard !sanitized.items.isEmpty else {
@@ -165,7 +201,7 @@ struct PasteImportSheet: View {
     }
     
     private func userFriendlyError(_ error: Error) -> String {
-        if let e = error as? GeminiPasteEnhancerError,
+        if let e = error as? GeminiPlanDayEnhancerError,
            case let .http(status, body) = e {
             if status == 429 {
                 let retrySeconds = retryDelaySeconds(from: body)
@@ -223,7 +259,7 @@ Return JSON only.
 """
     }
     
-    private func applyingDefaultDay(to draft: PasteImportDraft) -> PasteImportDraft {
+    private func applyingDefaultDay(to draft: PlanDayDraft) -> PlanDayDraft {
         guard let id = defaultDayID else { return draft }
         var updated = draft
         for idx in updated.items.indices {
@@ -234,7 +270,7 @@ Return JSON only.
         return updated
     }
 
-    private func sanitizeAIResponse(_ draft: PasteImportDraft) -> PasteImportDraft {
+    private func sanitizeAIResponse(_ draft: PlanDayDraft) -> PlanDayDraft {
         var updated = draft
         updated.items = updated.items
             .map { item in

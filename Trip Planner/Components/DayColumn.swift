@@ -56,8 +56,16 @@ struct DayColumn: View {
     
     private var timelineRows: [TimedRow] {
         let flightRows = day.flights.enumerated().map { idx, flight in
-            let comps = Calendar.current.dateComponents([.hour, .minute], from: flight.startTime)
-            let minutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+            let cal = Calendar.current
+            let comps = cal.dateComponents([.hour, .minute], from: flight.startTime)
+            var minutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+            
+            // If a flight started the previous night but is attached to this day,
+            // force it to appear at the top of the timeline.
+            if !cal.isDate(flight.startTime, inSameDayAs: day.date),
+               flight.startTime < cal.startOfDay(for: day.date) {
+                minutes = -1
+            }
             return TimedRow(id: "flight-\(flight.id)", minutes: minutes, orderIndex: idx, kind: .flight(flight))
         }
         
@@ -81,10 +89,10 @@ struct DayColumn: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(isUnscheduled ? "No Date" : day.displayTitle)
-                    .font(.headline)
+                    .font(.app(17, weight: .semibold))
                     .foregroundStyle(textPrimary)
                 Text("Day \(day.order) of \(totalDays)")
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(textSecondary)
             }
             .padding(14)
@@ -98,7 +106,7 @@ struct DayColumn: View {
                             onAddEvent()
                         } label: {
                             Text("Add Activity")
-                                .font(.subheadline.weight(.medium))
+                                .font(.appSubheadline)
                                 .foregroundStyle(textSecondary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 24)
@@ -137,7 +145,7 @@ struct DayColumn: View {
                                             Button {
                                                 moveToParked(reminder)
                                             } label: {
-                                                Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                                Label("Move to Ideas", systemImage: "arrow.right")
                                             }
                                         }
                                         Divider()
@@ -153,6 +161,7 @@ struct DayColumn: View {
                                         } label: {
                                             Label("Delete Reminder", systemImage: "trash")
                                         }
+                                        .tint(.red)
                                     }
                             }
                         }
@@ -182,7 +191,7 @@ struct DayColumn: View {
                                             Button {
                                                 moveToParked(checklist)
                                             } label: {
-                                                Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                                Label("Move to Ideas", systemImage: "arrow.right")
                                             }
                                         }
                                         Divider()
@@ -198,6 +207,7 @@ struct DayColumn: View {
                                         } label: {
                                             Label("Delete Checklist", systemImage: "trash")
                                         }
+                                        .tint(.red)
                                     }
                             }
                         }
@@ -227,7 +237,7 @@ struct DayColumn: View {
                                         Button {
                                             moveToParked(flight)
                                         } label: {
-                                            Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                            Label("Move to Ideas", systemImage: "arrow.right")
                                         }
                                     }
                                     Divider()
@@ -235,14 +245,15 @@ struct DayColumn: View {
                                     Button {
                                         onTapFlight(flight)
                                     } label: {
-                                        Label("Edit Flight", systemImage: "pencil")
+                                        Label("Edit Travel", systemImage: "pencil")
                                     }
                                     
                                     Button(role: .destructive) {
                                         onDeleteFlight(flight)
                                     } label: {
-                                        Label("Delete Flight", systemImage: "trash")
+                                        Label("Delete Travel", systemImage: "trash")
                                     }
+                                    .tint(.red)
                                 }
                         case .activity(let event):
                             EventCard(event: event)
@@ -266,7 +277,7 @@ struct DayColumn: View {
                                         Button {
                                             moveToParked(event)
                                         } label: {
-                                            Label("Move to Parked", systemImage: "tray.and.arrow.down")
+                                            Label("Move to Ideas", systemImage: "arrow.right")
                                         }
                                     }
                                     Divider()
@@ -288,6 +299,7 @@ struct DayColumn: View {
                                     } label: {
                                         Label("Delete Activity", systemImage: "trash")
                                     }
+                                    .tint(.red)
                                 }
                         }
                     }

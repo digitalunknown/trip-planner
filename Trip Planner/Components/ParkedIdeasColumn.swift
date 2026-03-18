@@ -21,10 +21,10 @@ struct ParkedIdeasColumn: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Ideas")
-                    .font(.headline)
+                    .font(.appHeadline)
                     .foregroundStyle(textPrimary)
                 Text("Not tied to a day")
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(textSecondary)
             }
             .padding(14)

@@ -19,7 +19,7 @@ struct TrackersHomeView: View {
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     private var inactivePageDotColor: Color { colorScheme == .dark ? columnStroke : Color(.systemGray3) }
     
-    private let passportStampSize: CGFloat = 200
+    private let passportStampSize: CGFloat = 220
     
     private var completedTrips: [Trip] {
         let calendar = Calendar.current
@@ -74,12 +74,6 @@ struct TrackersHomeView: View {
                     if !isStatHidden("tripsTaken") {
                         tripsTakenCard
                             .contextMenu {
-                                Button {
-                                    showCompletedTrips = true
-                                } label: {
-                                    Label("View", systemImage: "arrow.right.circle")
-                                }
-                                
                                 Button {
                                     setStatHidden("tripsTaken", true)
                                 } label: {
@@ -224,7 +218,7 @@ struct TrackersHomeView: View {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Logged Trips")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.app(15, weight: .semibold))
                         .foregroundStyle(textPrimary)
                         .lineLimit(1)
                 }
@@ -244,7 +238,7 @@ struct TrackersHomeView: View {
                         )
                     
                     Image(systemName: "suitcase.fill")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.app(20, weight: .semibold))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [appAccentColor, appAccentColor.opacity(0.75)],
@@ -259,7 +253,7 @@ struct TrackersHomeView: View {
             }
             
             Text("\(tripsTaken)")
-                .font(.largeTitle.weight(.semibold))
+                .font(.appTitle2)
                 .foregroundStyle(textPrimary)
                 .contentTransition(.numericText())
                 .lineLimit(1)
@@ -272,11 +266,10 @@ struct TrackersHomeView: View {
                         .frame(height: 28)
                 }
             }
-            .padding(.bottom, 6)
             .animation(.easeInOut(duration: 0.25), value: filled)
         }
         .padding(15)
-        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -289,7 +282,7 @@ struct TrackersHomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
                 Text("Stamps")
-                    .font(.headline.weight(.semibold))
+                    .font(.appHeadline)
                     .foregroundStyle(textPrimary)
                 
                 Spacer(minLength: 0)
@@ -301,7 +294,7 @@ struct TrackersHomeView: View {
             
             if completedTrips.isEmpty {
                 Text("Complete a trip to earn your first stamp.")
-                    .font(.subheadline)
+                    .font(.appSubheadline)
                     .foregroundStyle(textSecondary)
                     .padding(.vertical, 18)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -318,12 +311,15 @@ struct TrackersHomeView: View {
                             tint: .primary
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        // Give the stamp's shadow room so it doesn't clip at the bottom.
                         .padding(.top, 6)
+                        .padding(.bottom, 30)
                         .tag(idx)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: passportStampSize + 18)
+                // Taller frame + no clipping so the shadow can render fully.
+                .frame(height: passportStampSize + 84)
                 .padding(.top, 2)
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 8)
@@ -334,17 +330,18 @@ struct TrackersHomeView: View {
                             }
                         }
                 )
-                
-                HStack(spacing: 7) {
-                    ForEach(0..<trips.count, id: \.self) { idx in
-                        Capsule(style: .continuous)
-                            .fill(idx == passportPageIndex ? textPrimary : inactivePageDotColor)
-                            .frame(width: idx == passportPageIndex ? 16 : 7, height: 7)
-                            .animation(.easeInOut(duration: 0.18), value: passportPageIndex)
+                if trips.count > 1 {
+                    HStack(spacing: 7) {
+                        ForEach(0..<trips.count, id: \.self) { idx in
+                            Capsule(style: .continuous)
+                                .fill(idx == passportPageIndex ? textPrimary : inactivePageDotColor)
+                                .frame(width: idx == passportPageIndex ? 16 : 7, height: 7)
+                                .animation(.easeInOut(duration: 0.18), value: passportPageIndex)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 10)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 10)
             }
         }
         .padding(15)

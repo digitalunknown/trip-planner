@@ -24,7 +24,7 @@ struct EventCard: View {
                             .fill(event.accentColor.opacity(0.18))
                         Image(systemName: event.icon)
                             .foregroundStyle(event.accentColor)
-                            .font(.title3)
+                            .font(.app(20, weight: .regular))
                     }
                     .frame(width: 52, height: 52)
                 }
@@ -32,17 +32,17 @@ struct EventCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(event.title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(12, weight: .semibold))
                     .foregroundStyle(textPrimary)
                 if !event.location.isEmpty {
                     Text(event.location)
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(textSecondary)
                         .lineLimit(1)
                 }
                 if !event.time.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(event.time)
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(textSecondary)
                 }
             }

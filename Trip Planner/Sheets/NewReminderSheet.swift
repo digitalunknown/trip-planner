@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AddReminderSheet: View {
+struct NewReminderSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var reminderText: String
     @Binding var selectedDayID: UUID?
@@ -20,17 +20,34 @@ struct AddReminderSheet: View {
                     }
                 }
                 
-                Section("Reminder") {
-                    HStack {
-                        TextField("Add a reminder", text: $reminderText)
-                        if !reminderText.isEmpty {
-                            Button {
-                                reminderText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
+                if isEditing {
+                    Section {
+                        HStack {
+                            TextField("Add a reminder", text: $reminderText)
+                            if !reminderText.isEmpty {
+                                Button {
+                                    reminderText = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                        }
+                    }
+                } else {
+                    Section {
+                        HStack {
+                            TextField("Add a reminder", text: $reminderText)
+                            if !reminderText.isEmpty {
+                                Button {
+                                    reminderText = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }

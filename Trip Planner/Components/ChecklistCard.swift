@@ -35,14 +35,14 @@ struct ChecklistCard: View {
                 
                 HStack(alignment: .firstTextBaseline) {
                     Text(checklist.title)
-                        .font(.subheadline.weight(.semibold)) // match event card title style
+                        .font(.app(12, weight: .semibold))
                         .foregroundStyle(textColor)
                         .lineLimit(1)
                     
                     Spacer()
                     
                     Text(completedText)
-                        .font(.subheadline.weight(.semibold)) // match event card title style
+                        .font(.app(12, weight: .semibold))
                         .foregroundStyle(textColor)
                 }
                 .padding(.horizontal, 16)
@@ -61,17 +61,17 @@ struct ChecklistCard: View {
                         
                         HStack(spacing: 6) {
                             if idx < previewItems.count {
-                                Image(systemName: isDone ? "checkmark.square.fill" : "square")
-                                    .font(.subheadline.weight(.semibold))
+                                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 16))
                                     .foregroundStyle(textColor.opacity(isDone ? 0.85 : 0.55))
                             } else {
-                                Image(systemName: "square")
-                                    .font(.subheadline.weight(.semibold))
+                                Image(systemName: "circle")
+                                    .font(.system(size: 16))
                                     .foregroundStyle(textColor.opacity(0.0))
                             }
                             
                             Text(text)
-                                .font(.subheadline)
+                                .font(.appCaption)
                                 .foregroundStyle(textColor)
                                 .lineLimit(1)
                                 .strikethrough(isDone, color: textColor.opacity(0.6))

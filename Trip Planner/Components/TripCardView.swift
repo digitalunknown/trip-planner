@@ -50,6 +50,10 @@ struct TripCardView: View {
         return false
     }
     
+    private var coverAttributionName: String? {
+        TripCoverAttribution.name(for: trip.id)
+    }
+    
     private var countdownText: String {
         guard trip.isDatesSet else { return "Unscheduled" }
         switch tripStatus {
@@ -74,6 +78,20 @@ struct TripCardView: View {
         ZStack {
             backgroundLayer
             
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black.opacity(0.35), location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 110)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            
             VStack {
                 if trip.isDatesSet {
                     HStack {
@@ -81,14 +99,12 @@ struct TripCardView: View {
                         HStack(spacing: 4) {
                             Text(countdownText)
                         }
-                        .font(.caption)
+                        .font(.appCaption)
                         .fontWeight(.medium)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(
-                            isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(.ultraThinMaterial)
-                        )
+                        .background(isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(Color.black.opacity(0.35)))
                         .clipShape(Capsule())
                     }
                     .padding(12)
@@ -100,19 +116,28 @@ struct TripCardView: View {
                 Spacer()
                 
                 Text(trip.name)
-                    .font(.title2)
+                    .font(.appHeadline)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .lineLimit(2)
                     .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 4)
                 
-                Text(trip.destination)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .shadow(color: .black.opacity(0.30), radius: 8, x: 0, y: 3)
+                Group {
+                    if let coverAttributionName {
+                        (Text(trip.destination)
+                         + Text(" · ")
+                         + Text(Image(systemName: "camera.fill"))
+                         + Text(" \(coverAttributionName)"))
+                    } else {
+                        Text(trip.destination)
+                    }
+                }
+                .font(.appCaption)
+                .foregroundStyle(.white.opacity(0.85))
+                .shadow(color: .black.opacity(0.30), radius: 8, x: 0, y: 3)
                 
                 Text(trip.isDatesSet ? trip.formattedDateRange : "Unscheduled")
-                    .font(.subheadline)
+                    .font(.appCaption)
                     .foregroundStyle(.white.opacity(0.85))
                     .shadow(color: .black.opacity(0.30), radius: 8, x: 0, y: 3)
             }
@@ -120,7 +145,7 @@ struct TripCardView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(height: 280)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
     }
     

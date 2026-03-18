@@ -1,16 +1,16 @@
 import SwiftUI
 
-struct PasteImportPreviewView: View {
-    @State private var draft: PasteImportDraft
+struct PlanDayPreviewView: View {
+    @State private var draft: PlanDayDraft
     let dayOptions: [DayOption]
     let onCancel: () -> Void
-    let onConfirm: ([PasteImportItem]) -> Void
+    let onConfirm: ([PlanDayItem]) -> Void
     
     init(
-        draft: PasteImportDraft,
+        draft: PlanDayDraft,
         dayOptions: [DayOption],
         onCancel: @escaping () -> Void,
-        onConfirm: @escaping ([PasteImportItem]) -> Void
+        onConfirm: @escaping ([PlanDayItem]) -> Void
     ) {
         var d = draft
         let defaultAssignID = dayOptions.first(where: { !$0.isParkedIdeas })?.id ?? dayOptions.first?.id
@@ -31,7 +31,7 @@ struct PasteImportPreviewView: View {
         List {
             ForEach(draft.items) { item in
                 Section {
-                    PasteImportItemEditor(
+                    PlanDayItemEditor(
                         item: binding(for: item.id),
                         dayOptions: dayOptions
                     )
@@ -39,7 +39,7 @@ struct PasteImportPreviewView: View {
             }
         }
         .listSectionSpacing(16)
-        .navigationTitle("Preview")
+        .navigationTitle("Suggestions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -57,10 +57,10 @@ struct PasteImportPreviewView: View {
         draft.items.filter(\.include).count
     }
     
-    private func binding(for id: UUID) -> Binding<PasteImportItem> {
+    private func binding(for id: UUID) -> Binding<PlanDayItem> {
         Binding(
             get: {
-                draft.items.first(where: { $0.id == id }) ?? PasteImportItem(kind: .activity, title: "")
+                draft.items.first(where: { $0.id == id }) ?? PlanDayItem(kind: .activity, title: "")
             },
             set: { newValue in
                 if let idx = draft.items.firstIndex(where: { $0.id == id }) {
@@ -72,9 +72,9 @@ struct PasteImportPreviewView: View {
     
 }
 
-private struct PasteImportItemEditor: View {
+private struct PlanDayItemEditor: View {
     @Environment(\.appAccentColor) private var appAccentColor
-    @Binding var item: PasteImportItem
+    @Binding var item: PlanDayItem
     let dayOptions: [DayOption]
     
     var body: some View {
@@ -84,7 +84,7 @@ private struct PasteImportItemEditor: View {
                     Image(systemName: iconName(for: item.kind))
                     Text(kindTitle(item.kind))
                 }
-                .font(.callout)
+                .font(.appCallout)
                 .foregroundStyle(.primary)
                 
                 Spacer(minLength: 0)
@@ -95,7 +95,7 @@ private struct PasteImportItemEditor: View {
             }
             
             Text(item.title.isEmpty ? "Untitled" : item.title)
-                .font(.headline.weight(.semibold))
+                .font(.appHeadline)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .multilineTextAlignment(.leading)
@@ -103,7 +103,7 @@ private struct PasteImportItemEditor: View {
             if item.kind == .activity {
                 if !item.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(item.location)
-                        .font(.callout)
+                        .font(.appCallout)
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .multilineTextAlignment(.leading)
@@ -121,7 +121,7 @@ private struct PasteImportItemEditor: View {
             } else if item.kind == .checklist {
                 if !item.checklistItemsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(item.checklistItemsText)
-                        .font(.callout)
+                        .font(.appCallout)
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .multilineTextAlignment(.leading)
@@ -178,7 +178,7 @@ private struct PasteImportItemEditor: View {
             
             if !from.isEmpty || !to.isEmpty || !number.isEmpty {
                 Text("\(from.isEmpty ? "—" : from) → \(to.isEmpty ? "—" : to)  \(number)")
-                    .font(.callout.weight(.semibold))
+                    .font(.app(16, weight: .semibold))
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
@@ -195,15 +195,13 @@ private struct PasteImportItemEditor: View {
     
     private func notesBox(_ text: String) -> some View {
         Text(text)
-            .font(.callout)
+                .font(.appCallout)
             .foregroundStyle(.primary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .multilineTextAlignment(.leading)
-            .padding(.vertical, 8)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
     
-    private func kindTitle(_ kind: PasteImportItemKind) -> String {
+    private func kindTitle(_ kind: PlanDayItemKind) -> String {
         switch kind {
         case .activity: return "Activity"
         case .reminder: return "Reminder"
@@ -212,7 +210,7 @@ private struct PasteImportItemEditor: View {
         }
     }
     
-    private func iconName(for kind: PasteImportItemKind) -> String {
+    private func iconName(for kind: PlanDayItemKind) -> String {
         switch kind {
         case .activity: return "calendar"
         case .reminder: return "pin.fill"

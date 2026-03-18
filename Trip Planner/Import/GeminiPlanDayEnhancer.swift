@@ -1,14 +1,14 @@
 import Foundation
 
-struct GeminiPasteEnhancer {
+struct GeminiPlanDayEnhancer {
     let endpoint: URL
     
     init(endpoint: URL) {
         self.endpoint = endpoint
     }
     
-    func enhance(draft: PasteImportDraft, tripContext: PasteImportTripContext, preferences: PasteImportUserPreferences?) async throws -> PasteImportDraft {
-        let req = GeminiPasteEnhanceRequest(
+    func enhance(draft: PlanDayDraft, tripContext: PlanDayTripContext, preferences: PlanDayUserPreferences?) async throws -> PlanDayDraft {
+        let req = GeminiPlanDayEnhanceRequest(
             text: draft.extractedText,
             facts: draft.extractedFacts,
             tripContext: tripContext,
@@ -26,25 +26,25 @@ struct GeminiPasteEnhancer {
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         guard let http = response as? HTTPURLResponse else {
-            throw GeminiPasteEnhancerError.invalidResponse
+            throw GeminiPlanDayEnhancerError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let body = String(data: data, encoding: .utf8) ?? ""
-            throw GeminiPasteEnhancerError.http(status: http.statusCode, body: body)
+            throw GeminiPlanDayEnhancerError.http(status: http.statusCode, body: body)
         }
         
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        if let decoded = try? decoder.decode(GeminiPasteEnhanceResponse.self, from: data) {
-            return PasteImportDraft(items: decoded.items, extractedText: draft.extractedText, extractedFacts: draft.extractedFacts)
+        if let decoded = try? decoder.decode(GeminiPlanDayEnhanceResponse.self, from: data) {
+            return PlanDayDraft(items: decoded.items, extractedText: draft.extractedText, extractedFacts: draft.extractedFacts)
         }
-        let loose = try decoder.decode(GeminiPasteEnhanceResponseLoose.self, from: data)
+        let loose = try decoder.decode(GeminiPlanDayEnhanceResponseLoose.self, from: data)
         let mapped = loose.items.map { $0.toStrict() }
-        return PasteImportDraft(items: mapped, extractedText: draft.extractedText, extractedFacts: draft.extractedFacts)
+        return PlanDayDraft(items: mapped, extractedText: draft.extractedText, extractedFacts: draft.extractedFacts)
     }
 }
 
-enum GeminiPasteEnhancerError: LocalizedError {
+enum GeminiPlanDayEnhancerError: LocalizedError {
     case invalidResponse
     case http(status: Int, body: String)
     
@@ -61,23 +61,23 @@ enum GeminiPasteEnhancerError: LocalizedError {
     }
 }
 
-private struct GeminiPasteEnhanceRequest: Codable {
+private struct GeminiPlanDayEnhanceRequest: Codable {
     var text: String
-    var facts: PasteImportFacts
-    var tripContext: PasteImportTripContext
-    var preferences: PasteImportUserPreferences?
-    var existingItems: [PasteImportItem]
+    var facts: PlanDayFacts
+    var tripContext: PlanDayTripContext
+    var preferences: PlanDayUserPreferences?
+    var existingItems: [PlanDayItem]
 }
 
-private struct GeminiPasteEnhanceResponse: Codable {
-    var items: [PasteImportItem]
+private struct GeminiPlanDayEnhanceResponse: Codable {
+    var items: [PlanDayItem]
 }
 
-private struct GeminiPasteEnhanceResponseLoose: Codable {
-    var items: [PasteImportItemLoose]
+private struct GeminiPlanDayEnhanceResponseLoose: Codable {
+    var items: [PlanDayItemLoose]
 }
 
-private struct PasteImportItemLoose: Codable {
+private struct PlanDayItemLoose: Codable {
     var id: String?
     var kind: String?
     var include: BoolOrString?
@@ -95,8 +95,8 @@ private struct PasteImportItemLoose: Codable {
     var confidence: Double?
     var sourceSnippet: StringOrNull?
     
-    func toStrict() -> PasteImportItem {
-        let kindValue: PasteImportItemKind = {
+    func toStrict() -> PlanDayItem {
+        let kindValue: PlanDayItemKind = {
             switch (kind ?? "").lowercased() {
             case "reminder": return .reminder
             case "checklist": return .checklist
@@ -122,7 +122,35 @@ private struct PasteImportItemLoose: Codable {
         
         func date(_ v: StringOrNull?) -> Date? {
             if case let .value(x) = v, let x {
-                return ISO8601DateFormatter().date(from: x)
+                let trimmed = x.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty { return nil }
+                
+                if let iso = ISO8601DateFormatter().date(from: trimmed) {
+                    return iso
+                }
+                
+                let timeFormats = ["HH:mm", "H:mm", "h:mm a", "hh:mm a", "h a", "ha"]
+                let base = Calendar.current.startOfDay(for: Date())
+                
+                for fmt in timeFormats {
+                    let f = DateFormatter()
+                    f.locale = Locale(identifier: "en_US_POSIX")
+                    f.timeZone = .current
+                    f.dateFormat = fmt
+                    if let parsed = f.date(from: trimmed) {
+                        let comps = Calendar.current.dateComponents([.hour, .minute], from: parsed)
+                        if let hour = comps.hour {
+                            return Calendar.current.date(
+                                bySettingHour: hour,
+                                minute: comps.minute ?? 0,
+                                second: 0,
+                                of: base
+                            )
+                        }
+                    }
+                }
+                
+                return nil
             }
             return nil
         }
@@ -150,7 +178,7 @@ private struct PasteImportItemLoose: Codable {
             }
         }()
         
-        return PasteImportItem(
+        return PlanDayItem(
             id: uuid,
             kind: kindValue,
             include: includeValue,

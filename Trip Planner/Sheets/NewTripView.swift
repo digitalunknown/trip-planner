@@ -17,7 +17,10 @@ struct NewTripView: View {
     @State private var isDatesSet: Bool = true
     @State private var unscheduledDaysCount: Int = 5
     @State private var coverImage: UIImage?
+    @State private var pendingCoverImageData: Data?
+    @State private var pendingCoverAttributionName: String?
     @State private var showImagePicker = false
+    @State private var showUnsplashPicker = false
     @State private var showParkedIdeas: Bool = false
     
     var isValid: Bool {
@@ -31,7 +34,7 @@ struct NewTripView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Trip Details") {
+                Section {
                     HStack {
                         TextField("Trip Name", text: $name)
                         if !name.isEmpty {
@@ -53,13 +56,24 @@ struct NewTripView: View {
                     )
                 }
                 
-                Section("Dates") {
+                Section {
                     Toggle("Set Dates", isOn: $isDatesSet)
                         .tint(appAccentColor)
                     
                     if isDatesSet {
-                        DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                        DatePicker(
+                            "Start date",
+                            selection: $startDate,
+                            in: Date.distantPast...Date.distantFuture,
+                            displayedComponents: .date
+                        )
+                        
+                        DatePicker(
+                            "End date",
+                            selection: $endDate,
+                            in: startDate...Date.distantFuture,
+                            displayedComponents: .date
+                        )
                     } else {
                         Stepper(value: $unscheduledDaysCount, in: 1...30) {
                             HStack {
@@ -72,7 +86,7 @@ struct NewTripView: View {
                     }
                 }
                 
-                Section("Cover Image") {
+                Section {
                     if let img = coverImage {
                         ZStack(alignment: .topTrailing) {
                             Image(uiImage: img)
@@ -80,17 +94,33 @@ struct NewTripView: View {
                                 .scaledToFill()
                                 .frame(height: 200)
                                 .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    showImagePicker = true
+                                .overlay {
+                                    Menu {
+                                        Button {
+                                            showUnsplashPicker = true
+                                        } label: {
+                                            Label("Choose from Unsplash", systemImage: "sparkles")
+                                        }
+                                        
+                                        Button {
+                                            showImagePicker = true
+                                        } label: {
+                                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                        }
+                                    } label: {
+                                        Color.clear
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             
                             Button {
                                 coverImage = nil
+                                pendingCoverImageData = nil
+                                pendingCoverAttributionName = nil
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.title)
+                                    .font(.appTitle)
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(.white, .black.opacity(0.7))
                                     .shadow(radius: 2)
@@ -98,14 +128,27 @@ struct NewTripView: View {
                             .buttonStyle(.plain)
                             .padding(12)
                         }
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     } else {
-                        Button {
-                            showImagePicker = true
+                        Menu {
+                            Button {
+                                showUnsplashPicker = true
+                            } label: {
+                                Label("Choose from Unsplash", systemImage: "sparkles")
+                            }
+                            
+                            Button {
+                                showImagePicker = true
+                            } label: {
+                                Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                            }
                         } label: {
                             HStack {
                                 Image(systemName: "photo.badge.plus")
-                                Text("Add Cover Image")
+                                Text("Add Cover Photo")
                                 Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -114,10 +157,8 @@ struct NewTripView: View {
                 Section {
                     Toggle("Show Ideas", isOn: $showParkedIdeas)
                         .tint(appAccentColor)
-                } header: {
-                    Text("Options")
                 } footer: {
-                    Text("An extra space for ideation")
+                    Text("Include an extra column for ideation not tied to a day")
                 }
             }
             .navigationTitle("Create Trip")
@@ -149,6 +190,8 @@ struct NewTripView: View {
                             }
                         }()
                         
+                        let coverData = pendingCoverImageData ?? coverImage?.jpegData(compressionQuality: 0.8)
+                        
                         let newTrip = Trip(
                             name: name,
                             destination: destination,
@@ -160,19 +203,71 @@ struct NewTripView: View {
                             isDatesSet: isDatesSet,
                             unscheduledDaysCount: unscheduledDaysCount,
                             days: days,
-                            coverImageData: coverImage?.jpegData(compressionQuality: 0.8),
+                            coverImageData: coverData,
                             showParkedIdeas: showParkedIdeas,
                             parkedIdeas: []
                         )
                         tripStore.addTrip(newTrip)
+                        
+                        // If no cover photo was chosen, automatically pick one from Unsplash.
+                        if coverData == nil {
+                            let tripID = newTrip.id
+                            let query = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+                            Task.detached(priority: .utility) {
+                                guard !query.isEmpty else { return }
+                                
+                                let client = UnsplashAPIClient()
+                                guard let response = try? await client.searchPhotos(query: query, page: 1, perPage: 1),
+                                      let photo = response.results.first,
+                                      let urlString = photo.urls.regular ?? photo.urls.small,
+                                      let url = URL(string: urlString) else { return }
+                                
+                                if let dl = photo.download_location {
+                                    try? await client.trackDownload(downloadLocation: dl)
+                                }
+                                
+                                guard let (data, _) = try? await URLSession.shared.data(from: url) else { return }
+                                
+                                await MainActor.run {
+                                    guard let index = tripStore.trips.firstIndex(where: { $0.id == tripID }) else { return }
+                                    // Don't overwrite if the user picked something meanwhile.
+                                    guard tripStore.trips[index].coverImageData == nil else { return }
+                                    var updated = tripStore.trips[index]
+                                    updated.coverImageData = data
+                                    tripStore.trips[index] = updated
+                                    TripCoverAttribution.setName(photo.user.name, for: tripID)
+                                    tripStore.save()
+                                }
+                            }
+                        } else if let name = pendingCoverAttributionName {
+                            TripCoverAttribution.setName(name, for: newTrip.id)
+                        } else {
+                            TripCoverAttribution.clear(for: newTrip.id)
+                        }
                         onCreated(newTrip.id)
                         dismiss()
                     }
                 }
             }
             .sheet(isPresented: $showImagePicker) {
-                TripImagePicker(image: $coverImage)
+                TripImagePicker(image: Binding(
+                    get: { coverImage },
+                    set: { newImage in
+                        coverImage = newImage
+                        pendingCoverImageData = newImage?.jpegData(compressionQuality: 0.8)
+                        pendingCoverAttributionName = nil
+                    }
+                ))
                     .tint(.primary)
+            }
+            .sheet(isPresented: $showUnsplashPicker) {
+                UnsplashCoverPickerSheet(initialQuery: destination) { selection in
+                    pendingCoverImageData = selection.imageData
+                    coverImage = UIImage(data: selection.imageData)
+                    pendingCoverAttributionName = selection.photographerName
+                }
+                .presentationDetents([.large])
+                .tint(.primary)
             }
             .onChange(of: startDate) { _, newValue in
                 if isDatesSet, endDate < newValue {

@@ -10,6 +10,8 @@ struct MyTripsView: View {
     }
     
     @Environment(TripStore.self) private var tripStore
+    @EnvironmentObject private var auth: AppleSignInManager
+    @State private var isPresentingSignInGate: Bool = false
     @State private var showingNewTrip = false
     @State private var showingSettings = false
     @State private var navigationPath = NavigationPath()
@@ -18,11 +20,20 @@ struct MyTripsView: View {
     @State private var tripForImagePicker: Trip?
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
+    @State private var tripForUnsplashCoverPicker: Trip?
     @State private var selectedSegment: TripSegment = .upcoming
     @State private var segmentSwitchInFlight: Bool = false
     @State private var tripPendingDelete: Trip?
     
     private let pendingCreateTripFlagKey = "pendingCreateTripFromQuickAction"
+    
+    private func requestCreateTrip() {
+        if auth.isSignedIn {
+            showingNewTrip = true
+        } else {
+            isPresentingSignInGate = true
+        }
+    }
     
     private func availableSegments(for trips: [Trip]) -> [TripSegment] {
         let calendar = Calendar.current
@@ -48,7 +59,15 @@ struct MyTripsView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             Group {
-                if tripStore.trips.isEmpty {
+                if tripStore.isLoadingTrips {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                        Text("Loading trips")
+                            .font(.appSubheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if tripStore.trips.isEmpty {
                     emptyStateView
                 } else {
                     tripListView
@@ -78,12 +97,16 @@ struct MyTripsView: View {
                     }
                     
                     Button {
-                        showingNewTrip = true
+                        requestCreateTrip()
                     } label: {
                         Image(systemName: "plus")
                             .fontWeight(.medium)
                     }
                 }
+            }
+            .fullScreenCover(isPresented: $isPresentingSignInGate) {
+                SignInGateView()
+                    .environmentObject(auth)
             }
             .sheet(isPresented: $showingNewTrip) {
                 NewTripView(tripStore: tripStore) { newTripID in
@@ -125,6 +148,19 @@ struct MyTripsView: View {
                 TripImagePicker(image: $selectedImage)
                     .tint(.primary)
             }
+            .sheet(item: $tripForUnsplashCoverPicker) { trip in
+                UnsplashCoverPickerSheet(initialQuery: trip.destination) { selection in
+                    guard let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) else { return }
+                    var updated = tripStore.trips[index]
+                    updated.coverImageData = selection.imageData
+                    tripStore.trips[index] = updated
+                    TripCoverAttribution.setName(selection.photographerName, for: trip.id)
+                    tripStore.save()
+                    tripForUnsplashCoverPicker = nil
+                }
+                .presentationDetents([.large])
+                .tint(.primary)
+            }
             .alert(
                 "Delete Trip",
                 isPresented: Binding(
@@ -149,7 +185,10 @@ struct MyTripsView: View {
                 if let image = newImage,
                    let tripToUpdate = tripForImagePicker,
                    let index = tripStore.trips.firstIndex(where: { $0.id == tripToUpdate.id }) {
-                    tripStore.trips[index].coverImageData = image.jpegData(compressionQuality: 0.8)
+                    var updated = tripStore.trips[index]
+                    updated.coverImageData = image.jpegData(compressionQuality: 0.8)
+                    tripStore.trips[index] = updated
+                    TripCoverAttribution.clear(for: tripToUpdate.id)
                     tripStore.save()
                     selectedImage = nil
                     tripForImagePicker = nil
@@ -168,7 +207,7 @@ struct MyTripsView: View {
     private func openCreateTripSheetIfNeeded(force: Bool) {
         if force || UserDefaults.standard.bool(forKey: pendingCreateTripFlagKey) {
             UserDefaults.standard.set(false, forKey: pendingCreateTripFlagKey)
-            showingNewTrip = true
+            requestCreateTrip()
         }
     }
     
@@ -188,21 +227,21 @@ struct MyTripsView: View {
                     .frame(width: 160, height: 160)
                 
                 Image(systemName: "airplane.departure")
-                    .font(.system(size: 60))
+                    .font(.app(60, weight: .regular))
                     .foregroundStyle(gradient)
             }
             
             VStack(spacing: 25) {
                 Text("No Trips Yet")
-                    .font(.title2)
+                    .font(.appTitle2)
                     .fontWeight(.bold)
             }
             
             Button {
-                showingNewTrip = true
+                requestCreateTrip()
             } label: {
                 Text("Create Trip")
-                    .font(.subheadline)
+                    .font(.appSubheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 24)
@@ -315,11 +354,23 @@ struct MyTripsView: View {
                                     
                                     Divider()
                                     
-                                    Button {
-                                        tripForImagePicker = trip
-                                        showImagePicker = true
+                                    Menu {
+                                        Button {
+                                            tripForUnsplashCoverPicker = trip
+                                        } label: {
+                                            Label("Choose from Unsplash", systemImage: "sparkles")
+                                        }
+                                        
+                                        Button {
+                                            tripForImagePicker = trip
+                                            showImagePicker = true
+                                        } label: {
+                                            Label("Upload from Photos", systemImage: "photo.on.rectangle")
+                                        }
                                     } label: {
-                                        Label("Add Cover Image", systemImage: "photo.badge.plus")
+                                        let hasCover = trip.coverImageData != nil
+                                        Label(hasCover ? "Update Cover Image" : "Add Cover Image",
+                                              systemImage: hasCover ? "photo" : "photo.badge.plus")
                                     }
                                     
                                     Button {
@@ -328,12 +379,23 @@ struct MyTripsView: View {
                                         Label("Edit Trip", systemImage: "pencil")
                                     }
                                     
-                                    Divider()
-                                    
-                                    Button(role: .destructive) {
-                                        tripPendingDelete = trip
-                                    } label: {
-                                        Label("Delete Trip", systemImage: "trash")
+                                    if auth.isSignedIn {
+                                        Button {
+                                            withAnimation {
+                                                tripStore.addTrip(trip.duplicatedTrip())
+                                            }
+                                        } label: {
+                                            Label("Duplicate Trip", systemImage: "doc.on.doc")
+                                        }
+                                        
+                                        Divider()
+                                        
+                                        Button(role: .destructive) {
+                                            tripPendingDelete = trip
+                                        } label: {
+                                            Label("Delete Trip", systemImage: "trash")
+                                        }
+                                        .tint(.red)
                                     }
                                 }
                             }
@@ -368,11 +430,23 @@ struct MyTripsView: View {
                                         
                                         Divider()
                                         
-                                        Button {
-                                            tripForImagePicker = trip
-                                            showImagePicker = true
+                                        Menu {
+                                            Button {
+                                                tripForUnsplashCoverPicker = trip
+                                            } label: {
+                                                Label("Choose from Unsplash", systemImage: "sparkles")
+                                            }
+                                            
+                                            Button {
+                                                tripForImagePicker = trip
+                                                showImagePicker = true
+                                            } label: {
+                                                Label("Upload from Photos", systemImage: "photo.on.rectangle")
+                                            }
                                         } label: {
-                                            Label("Add Cover Image", systemImage: "photo.badge.plus")
+                                            let hasCover = trip.coverImageData != nil
+                                            Label(hasCover ? "Update Cover Image" : "Add Cover Image",
+                                                  systemImage: hasCover ? "photo" : "photo.badge.plus")
                                         }
                                         
                                         Button {
@@ -381,20 +455,30 @@ struct MyTripsView: View {
                                             Label("Edit Trip", systemImage: "pencil")
                                         }
                                         
-                                        Divider()
-                                        
-                                        Button(role: .destructive) {
-                                            tripPendingDelete = trip
-                                        } label: {
-                                            Label("Delete Trip", systemImage: "trash")
+                                        if auth.isSignedIn {
+                                            Button {
+                                                withAnimation {
+                                                    tripStore.addTrip(trip.duplicatedTrip())
+                                                }
+                                            } label: {
+                                                Label("Duplicate Trip", systemImage: "doc.on.doc")
+                                            }
+                                            
+                                            Divider()
+                                            
+                                            Button(role: .destructive) {
+                                                tripPendingDelete = trip
+                                            } label: {
+                                                Label("Delete Trip", systemImage: "trash")
+                                            }
+                                            .tint(.red)
                                         }
                                     }
                                 }
                             } header: {
                                 HStack {
                                     Text(String(year))
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
+                                        .font(.appCaption)
                                         .foregroundStyle(.secondary)
                                     Spacer()
                                 }
@@ -489,13 +573,16 @@ struct EditTripView: View {
     @State private var isDatesSet: Bool = true
     @State private var unscheduledDaysCount: Int = 5
     @State private var coverImage: UIImage?
+    @State private var pendingCoverImageData: Data?
     @State private var showImagePicker = false
+    @State private var showUnsplashPicker = false
     @State private var showDeleteConfirmation = false
     @State private var showParkedIdeas: Bool = false
     @State private var originalIsDatesSet: Bool = true
     @State private var originalDaysSnapshot: [TripDay] = []
     @State private var showConvertDatesDropAlert: Bool = false
     @State private var pendingDroppedCounts: (activities: Int, reminders: Int, checklists: Int, flights: Int) = (0, 0, 0, 0)
+    @State private var showTotalCostsSheet: Bool = false
     
     private var isValid: Bool {
         guard !(name.isEmpty || destination.isEmpty) else { return false }
@@ -505,10 +592,95 @@ struct EditTripView: View {
         return unscheduledDaysCount >= 1
     }
     
+    private var costLineItems: [TotalCostsSheet.LineItem] {
+        var items: [TotalCostsSheet.LineItem] = []
+        
+        func add(id: String, title: String, subtitle: String?, amount: Double?, currencyCode: String?) {
+            guard let amount else { return }
+            let code = currencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD")
+            items.append(.init(id: id, title: title, subtitle: subtitle, amount: amount, currencyCode: code))
+        }
+        
+        // Day items
+        for day in trip.days {
+            let dayLabel = trip.isDatesSet ? day.displayTitle : "Day \(day.order)"
+            
+            for event in day.events {
+                add(
+                    id: "event-\(event.id.uuidString)",
+                    title: event.title,
+                    subtitle: [dayLabel, event.location].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " • "),
+                    amount: event.cost,
+                    currencyCode: event.costCurrencyCode
+                )
+            }
+            
+            for flight in day.flights {
+                let title: String = {
+                    let ref = flight.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if ref.isEmpty { return flight.travelMode.title }
+                    return (flight.travelMode == .drive || flight.travelMode == .walk) ? ref : ref.uppercased()
+                }()
+                
+                let from = flight.fromCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let to = flight.toCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                let route = (!from.isEmpty && !to.isEmpty) ? "\(from) → \(to)" : ""
+                
+                add(
+                    id: "flight-\(flight.id.uuidString)",
+                    title: title,
+                    subtitle: [dayLabel, route].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " • "),
+                    amount: flight.cost,
+                    currencyCode: flight.costCurrencyCode
+                )
+            }
+        }
+        
+        // Parked ideas can also have costs (stored on Trip.parkedIdeas).
+        for idea in trip.parkedIdeas {
+            add(
+                id: "idea-\(idea.id.uuidString)",
+                title: idea.title,
+                subtitle: ["Ideas", idea.location].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: " • "),
+                amount: idea.cost,
+                currencyCode: idea.costCurrencyCode
+            )
+        }
+        
+        // Stable ordering.
+        return items.sorted { a, b in
+            if a.title != b.title { return a.title < b.title }
+            return a.id < b.id
+        }
+    }
+    
+    private var totalCostSummaryText: String? {
+        guard !costLineItems.isEmpty else { return nil }
+        let grouped = Dictionary(grouping: costLineItems, by: \.currencyCode)
+            .mapValues { $0.map(\.amount).reduce(0, +) }
+        
+        let sorted = grouped
+            .map { (currencyCode: $0.key, total: $0.value) }
+            .sorted { $0.currencyCode < $1.currencyCode }
+        
+        guard !sorted.isEmpty else { return nil }
+        if sorted.count == 1, let first = sorted.first {
+            return "\(CurrencyFormatting.string(for: first.total, currencyCode: first.currencyCode)) \(first.currencyCode)"
+        }
+        
+        let shown = Array(sorted.prefix(2))
+        let parts = shown.map { "\((CurrencyFormatting.string(for: $0.total, currencyCode: $0.currencyCode))) \($0.currencyCode)" }
+        let extra = sorted.count - shown.count
+        if extra > 0 {
+            return parts.joined(separator: " • ") + " • +\(extra)"
+        }
+        return parts.joined(separator: " • ")
+    }
+    
     var body: some View {
         NavigationStack {
             Form {
-                Section("Trip Details") {
+                Section {
                     HStack {
                         TextField("Trip Name", text: $name)
                         if !name.isEmpty {
@@ -530,13 +702,24 @@ struct EditTripView: View {
                     )
                 }
                 
-                Section("Dates") {
+                Section {
                     Toggle("Set Dates", isOn: $isDatesSet)
                         .tint(appAccentColor)
                     
                     if isDatesSet {
-                        DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                        DatePicker(
+                            "Start date",
+                            selection: $startDate,
+                            in: Date.distantPast...Date.distantFuture,
+                            displayedComponents: .date
+                        )
+                        
+                        DatePicker(
+                            "End date",
+                            selection: $endDate,
+                            in: startDate...Date.distantFuture,
+                            displayedComponents: .date
+                        )
                     } else {
                         Stepper(value: $unscheduledDaysCount, in: 1...30) {
                             HStack {
@@ -547,9 +730,23 @@ struct EditTripView: View {
                             }
                         }
                     }
+                    
+                    if let totalCostSummaryText {
+                        Button {
+                            showTotalCostsSheet = true
+                        } label: {
+                            HStack {
+                                Text("Total Cost")
+                                Spacer()
+                                Text(totalCostSummaryText)
+                                    .foregroundStyle(.primary)
+                                    .monospacedDigit()
+                            }
+                        }
+                    }
                 }
                 
-                Section("Cover Image") {
+                Section {
                     if let img = coverImage {
                         ZStack(alignment: .topTrailing) {
                             Image(uiImage: img)
@@ -557,17 +754,33 @@ struct EditTripView: View {
                                 .scaledToFill()
                                 .frame(height: 200)
                                 .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    showImagePicker = true
+                                .overlay {
+                                    Menu {
+                                        Button {
+                                            showUnsplashPicker = true
+                                        } label: {
+                                            Label("Choose from Unsplash", systemImage: "sparkles")
+                                        }
+                                        
+                                        Button {
+                                            showImagePicker = true
+                                        } label: {
+                                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                        }
+                                    } label: {
+                                        Color.clear
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             
                             Button {
                                 coverImage = nil
+                                pendingCoverImageData = nil
+                                TripCoverAttribution.clear(for: trip.id)
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.title)
+                                    .font(.appTitle)
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(.white, .black.opacity(0.7))
                                     .shadow(radius: 2)
@@ -575,14 +788,27 @@ struct EditTripView: View {
                             .buttonStyle(.plain)
                             .padding(12)
                         }
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     } else {
-                        Button {
-                            showImagePicker = true
+                        Menu {
+                            Button {
+                                showUnsplashPicker = true
+                            } label: {
+                                Label("Choose from Unsplash", systemImage: "sparkles")
+                            }
+                            
+                            Button {
+                                showImagePicker = true
+                            } label: {
+                                Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                            }
                         } label: {
                             HStack {
                                 Image(systemName: "photo.badge.plus")
-                                Text("Add Cover Image")
+                                Text("Add Cover Photo")
                                 Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -591,10 +817,8 @@ struct EditTripView: View {
                 Section {
                     Toggle("Show Ideas", isOn: $showParkedIdeas)
                         .tint(appAccentColor)
-                } header: {
-                    Text("Options")
                 } footer: {
-                    Text("An extra space for ideation")
+                    Text("Include an extra column for ideation not tied to a day")
                 }
                 
                 Section {
@@ -618,7 +842,7 @@ struct EditTripView: View {
             } message: {
                 Text("Are you sure you want to delete this trip? This action cannot be undone.")
             }
-            .navigationTitle("Edit Trip")
+            .navigationTitle(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trip" : name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -635,7 +859,27 @@ struct EditTripView: View {
                 }
             }
             .sheet(isPresented: $showImagePicker) {
-                TripImagePicker(image: $coverImage)
+                TripImagePicker(image: Binding(
+                    get: { coverImage },
+                    set: { newImage in
+                        coverImage = newImage
+                        pendingCoverImageData = newImage?.jpegData(compressionQuality: 0.8)
+                        TripCoverAttribution.clear(for: trip.id)
+                    }
+                ))
+            }
+            .sheet(isPresented: $showUnsplashPicker) {
+                UnsplashCoverPickerSheet(initialQuery: destination) { selection in
+                    pendingCoverImageData = selection.imageData
+                    coverImage = UIImage(data: selection.imageData)
+                    TripCoverAttribution.setName(selection.photographerName, for: trip.id)
+                }
+                .presentationDetents([.large])
+                .tint(.primary)
+            }
+            .sheet(isPresented: $showTotalCostsSheet) {
+                TotalCostsSheet(items: costLineItems)
+                    .presentationDetents([.medium, .large])
             }
             .onAppear {
                 name = trip.name
@@ -652,6 +896,9 @@ struct EditTripView: View {
                 originalDaysSnapshot = trip.days
                 if let imageData = trip.coverImageData {
                     coverImage = UIImage(data: imageData)
+                    pendingCoverImageData = imageData
+                } else {
+                    pendingCoverImageData = nil
                 }
             }
             .onChange(of: startDate) { _, newValue in
@@ -703,7 +950,9 @@ struct EditTripView: View {
         trip.endDate = endDate
         trip.isDatesSet = isDatesSet
         trip.unscheduledDaysCount = max(1, unscheduledDaysCount)
-        trip.coverImageData = coverImage?.jpegData(compressionQuality: 0.8)
+        
+        let coverData = pendingCoverImageData ?? coverImage?.jpegData(compressionQuality: 0.8)
+        trip.coverImageData = coverData
         trip.showParkedIdeas = showParkedIdeas
         
         if originalIsDatesSet == false, isDatesSet {

@@ -14,7 +14,7 @@ enum TrackerType: String, Codable, CaseIterable, Hashable, Identifiable {
         case .countries: return "Countries"
         case .states: return "U.S. States"
         case .continents: return "Continents"
-        case .subwaySystems: return "Subway Systems"
+        case .subwaySystems: return "Subways"
         case .nationalParks: return "U.S. National Parks"
         }
     }

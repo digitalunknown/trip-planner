@@ -5,14 +5,23 @@ final class TrackerStore: ObservableObject {
     @Published var state = TrackerVisitedState()
 
     private let ioQueue = DispatchQueue(label: "TrackerStore.ioQueue", qos: .utility)
+    private var presenter: ICloudFilePresenter?
 
-    private var saveURL: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = base.appendingPathComponent("TripPlanner", isDirectory: true)
-        return dir.appendingPathComponent("SavedTrackers.json")
-    }
+    private var urls: (active: URL, local: URL, iCloud: URL?) { CloudSyncPaths.trackersURL() }
 
     init() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSignInStateChanged),
+            name: .appleSignInStateChanged,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleICloudContainerPrimed),
+            name: .iCloudContainerPrimed,
+            object: nil
+        )
         load()
     }
     
@@ -52,7 +61,8 @@ final class TrackerStore: ObservableObject {
 
     func save() {
         let snapshot = state
-        let url = saveURL
+        let urlSet = urls
+        let url = urlSet.active
         
         let data: Data
         do {
@@ -66,9 +76,12 @@ final class TrackerStore: ObservableObject {
 
         ioQueue.async {
             do {
-                let dir = url.deletingLastPathComponent()
-                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-                try data.write(to: url, options: [.atomic])
+                try CoordinatedFileIO.writeData(data, to: url)
+                
+                // Keep a local cache even when writing to iCloud.
+                if urlSet.iCloud != nil {
+                    try CoordinatedFileIO.writeData(data, to: urlSet.local)
+                }
             } catch {
                 print("Failed to save trackers: \(error)")
             }
@@ -76,20 +89,69 @@ final class TrackerStore: ObservableObject {
     }
 
     func load() {
-        let url = saveURL
-        guard let data = try? Data(contentsOf: url) else {
-            state = TrackerVisitedState()
-            return
-        }
+        let urlSet = urls
+        configurePresenterIfNeeded(for: urlSet)
 
-        do {
-            let decoded = try JSONDecoder().decode(TrackerVisitedState.self, from: data)
-            state = decoded
-            pruneInvalidVisitedIDs()
-        } catch {
-            print("Failed to load trackers: \(error)")
-            state = TrackerVisitedState()
+        ioQueue.async {
+            // One-time migration: if iCloud is enabled but empty, seed it from local.
+            if let iCloud = urlSet.iCloud {
+                do {
+                    try CoordinatedFileIO.coordinatedCopyIfMissing(from: urlSet.local, to: iCloud)
+                } catch {
+                    print("Failed to seed iCloud trackers file: \(error)")
+                }
+            }
+            
+            let data: Data
+            do {
+                data = try CoordinatedFileIO.readData(from: urlSet.active)
+            } catch {
+                DispatchQueue.main.async { self.state = TrackerVisitedState() }
+                return
+            }
+
+            do {
+                let decoded = try JSONDecoder().decode(TrackerVisitedState.self, from: data)
+                DispatchQueue.main.async {
+                    self.state = decoded
+                    self.pruneInvalidVisitedIDs()
+                }
+            } catch {
+                print("Failed to load trackers: \(error)")
+                DispatchQueue.main.async { self.state = TrackerVisitedState() }
+            }
         }
+    }
+    
+    @objc
+    private func handleSignInStateChanged() {
+        CloudSyncPaths.primeICloudContainerIfNeeded()
+        if let presenter {
+            NSFileCoordinator.removeFilePresenter(presenter)
+            self.presenter = nil
+        }
+        load()
+    }
+    
+    @objc
+    private func handleICloudContainerPrimed() {
+        load()
+    }
+    
+    private func configurePresenterIfNeeded(for urlSet: (active: URL, local: URL, iCloud: URL?)) {
+        guard let iCloudURL = urlSet.iCloud else { return }
+        if let presenter, presenter.presentedItemURL == iCloudURL { return }
+        
+        if let presenter {
+            NSFileCoordinator.removeFilePresenter(presenter)
+            self.presenter = nil
+        }
+        
+        let newPresenter = ICloudFilePresenter(url: iCloudURL) { [weak self] in
+            self?.load()
+        }
+        self.presenter = newPresenter
+        NSFileCoordinator.addFilePresenter(newPresenter)
     }
 }
 

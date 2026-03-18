@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AddManySheet: View {
+struct NewManySheet: View {
     @Environment(\.dismiss) private var dismiss
     
     let title: String

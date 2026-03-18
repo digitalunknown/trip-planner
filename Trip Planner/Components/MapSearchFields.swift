@@ -67,11 +67,11 @@ struct LocationSearchField: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                 Text(result.title)
-                                    .font(.body)
+                                    .font(.appBody)
                                     .foregroundStyle(.primary)
                                 if !result.subtitle.isEmpty {
                                     Text(result.subtitle)
-                                        .font(.caption)
+                                        .font(.appCaption)
                                         .foregroundStyle(.secondary)
                                 }
                                 }
@@ -91,7 +91,7 @@ struct LocationSearchField: View {
                 }
             } else if showingResults && completer.results.isEmpty && !text.isEmpty {
                 Text("No results")
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(.secondary)
                     .padding(.top, 8)
             }
@@ -256,11 +256,11 @@ struct AirportSearchField: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(code.isEmpty ? airportName : "\(code) - \(airportName)")
-                                        .font(.body)
+                                        .font(.appBody)
                                         .foregroundStyle(.primary)
                                     if !result.subtitle.isEmpty {
                                         Text(result.subtitle)
-                                            .font(.caption)
+                                            .font(.appCaption)
                                             .foregroundStyle(.secondary)
                                     }
                                 }
@@ -272,7 +272,7 @@ struct AirportSearchField: View {
                                         .tint(.secondary)
                                 } else if !code.isEmpty {
                                     Text(code)
-                                        .font(.caption.weight(.semibold))
+                                        .font(.app(12, weight: .semibold))
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
@@ -305,13 +305,13 @@ struct AirportSearchField: View {
                                     let airportName = item.name ?? name
                                     let code = airportCodeCandidate(fromText: [item.name, mapItemAddressString(item)].compactMap { $0 }.joined(separator: " "))
                                     Text(code.isEmpty ? airportName : "\(code) - \(airportName)")
-                                        .font(.body)
+                                        .font(.appBody)
                                         .foregroundStyle(.primary)
                                     
                                     let subtitle = bestAirportSubtitle(for: item)
                                     if !subtitle.isEmpty {
                                         Text(subtitle)
-                                            .font(.caption)
+                                            .font(.appCaption)
                                             .foregroundStyle(.secondary)
                                     }
                                 }
@@ -321,7 +321,7 @@ struct AirportSearchField: View {
                                 let code = airportCodeCandidate(fromText: [item.name, mapItemAddressString(item)].compactMap { $0 }.joined(separator: " "))
                                 if !code.isEmpty {
                                     Text(code)
-                                        .font(.caption.weight(.semibold))
+                                        .font(.app(12, weight: .semibold))
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
@@ -345,7 +345,7 @@ struct AirportSearchField: View {
                     ProgressView()
                         .scaleEffect(0.9)
                     Text("Searching airports…")
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 8)

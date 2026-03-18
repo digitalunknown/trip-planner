@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>TripStacks uses the camera so you can capture documents and photos for activities.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TripStacks uses your photo library so you can attach images to trips and activities.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Inter-Italic-VariableFont_opsz,wght.ttf</string>
+		<string>Inter-VariableFont_opsz,wght.ttf</string>
+	</array>
+</dict>
+</plist>
