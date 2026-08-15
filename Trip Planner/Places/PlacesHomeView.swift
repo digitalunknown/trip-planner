@@ -7,6 +7,7 @@ struct PlacesHomeView: View {
     @Environment(TripStore.self) private var tripStore
     
     @State private var showAddPlace = false
+    @State private var showAIFindPlaces = false
     @State private var selectedPlaceID: UUID?
     @State private var selectedPlaceType: PlaceType?
     @State private var placeToEdit: Place?
@@ -120,11 +121,19 @@ struct PlacesHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showAddPlace = true
-                } label: {
-                    Image(systemName: "plus")
-                        .fontWeight(.medium)
+                HStack(spacing: 12) {
+                    Button {
+                        showAIFindPlaces = true
+                    } label: {
+                        Image(systemName: "sparkles")
+                            .fontWeight(.medium)
+                    }
+                    Button {
+                        showAddPlace = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.medium)
+                    }
                 }
             }
         }
@@ -135,6 +144,23 @@ struct PlacesHomeView: View {
             AddEditPlaceSheet(mode: .add) { place in
                 placeStore.add(place)
             }
+        }
+        .sheet(isPresented: $showAIFindPlaces) {
+            TripStacksAISheet(
+                mode: .placeFinder,
+                tripContext: nearestTripContext,
+                existingPlaces: placeStore.places.map {
+                    AIPlaceSummary(
+                        name: $0.name,
+                        location: $0.location,
+                        category: $0.placeType == .unspecified ? "" : $0.placeType.rawValue,
+                        note: $0.note
+                    )
+                },
+                onCommitPlaces: commitAIPlaces
+            )
+            .tint(.primary)
+            .presentationDetents([.medium, .large])
         }
         .sheet(item: $placeToEdit) { place in
             AddEditPlaceSheet(mode: .edit(place)) { updated in
@@ -316,6 +342,34 @@ struct PlacesHomeView: View {
         placeStore.update(updatedPlace, rematchMapKitIfNeeded: false)
     }
     
+    private var nearestTripContext: PlanDayTripContext? {
+        guard let trip = tripStore.trips.sorted(by: { $0.startDate > $1.startDate }).first else { return nil }
+        return PlanDayTripContext(
+            isDatesSet: trip.isDatesSet,
+            startDate: trip.startDate,
+            endDate: trip.endDate,
+            unscheduledDaysCount: trip.unscheduledDaysCount,
+            destination: trip.destination,
+            latitude: trip.latitude,
+            longitude: trip.longitude,
+            mapSpan: trip.mapSpan
+        )
+    }
+    
+    private func commitAIPlaces(_ items: [PlanDayItem]) {
+        for item in items where item.include {
+            let name = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { continue }
+            let place = Place(
+                name: name,
+                location: item.location,
+                note: item.notes,
+                placeType: PlaceType.fromAICategory(item.category)
+            )
+            placeStore.add(place)
+        }
+    }
+    
     private func setPlaceImage(_ data: Data, on place: Place) {
         guard let current = placeStore.place(id: place.id) else { return }
         var updated = current
@@ -337,15 +391,25 @@ struct PlacesHomeView: View {
                 .padding(.horizontal, 32)
             
             Button {
-                showAddPlace = true
+                showAIFindPlaces = true
             } label: {
-                Text("New Place")
+                Text("Find Places")
                     .font(.appSubheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(Color(hex: 0x2C2C2E), in: Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            
+            Button {
+                showAddPlace = true
+            } label: {
+                Text("New Place")
+                    .font(.appSubheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.white.opacity(0.85))
             }
             .buttonStyle(.plain)
             

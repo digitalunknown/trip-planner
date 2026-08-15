@@ -13,6 +13,7 @@ struct MyTripsView: View {
     @EnvironmentObject private var auth: AppleSignInManager
     @State private var isPresentingSignInGate: Bool = false
     @State private var showingNewTrip = false
+    @State private var showingAICreateTrip = false
     @State private var navigationPath = NavigationPath()
     @State private var pendingNewTripID: UUID?
     @State private var editingTrip: Trip?
@@ -98,7 +99,13 @@ struct MyTripsView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showingAICreateTrip = true
+                    } label: {
+                        Image(systemName: "sparkles")
+                            .fontWeight(.medium)
+                    }
                     Button {
                         requestCreateTrip()
                     } label: {
@@ -116,6 +123,22 @@ struct MyTripsView: View {
                     pendingNewTripID = newTripID
                 }
                 .tint(.primary)
+            }
+            .sheet(isPresented: $showingAICreateTrip) {
+                TripStacksAISheet(
+                    mode: .createTrip,
+                    existingTrips: tripStore.trips.map { trip in
+                        AITripSummary(
+                            name: trip.name,
+                            destination: trip.destination,
+                            startDate: trip.isDatesSet ? isoDate(trip.startDate) : nil,
+                            endDate: trip.isDatesSet ? isoDate(trip.endDate) : nil
+                        )
+                    },
+                    onCommitTrip: commitAITrip
+                )
+                .tint(.primary)
+                .presentationDetents([.medium, .large])
             }
             .onReceive(NotificationCenter.default.publisher(for: .openNewTripSheet)) { _ in
                 openCreateTripSheetIfNeeded(force: true)
@@ -198,8 +221,185 @@ struct MyTripsView: View {
                     navigationPath.append(id)
                 }
             }
+            .onChange(of: showingAICreateTrip) { _, isPresented in
+                if !isPresented, let id = pendingNewTripID {
+                    pendingNewTripID = nil
+                    navigationPath.append(id)
+                }
+            }
         }
         .tint(.primary)
+    }
+    
+    private func isoDate(_ date: Date) -> String {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withFullDate]
+        return f.string(from: date)
+    }
+    
+    private func parseISODate(_ raw: String?) -> Date? {
+        guard let raw, !raw.isEmpty else { return nil }
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withFullDate]
+        if let d = f.date(from: raw) { return d }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.dateFormat = "yyyy-MM-dd"
+        return df.date(from: raw)
+    }
+    
+    private func commitAITrip(_ draft: AITripDraft, seedItems: [PlanDayItem]) {
+        let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let destination = draft.destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = name.isEmpty ? (destination.isEmpty ? "New Trip" : destination) : name
+        let resolvedDestination = destination.isEmpty ? resolvedName : destination
+        
+        let isDatesSet = draft.isDatesSet
+        let start = parseISODate(draft.startDate) ?? Date()
+        let end = parseISODate(draft.endDate) ?? start.addingTimeInterval(86400 * 3)
+        let unscheduledCount = max(1, draft.unscheduledDaysCount)
+        
+        var days: [TripDay] = []
+        if isDatesSet {
+            let calendar = Calendar.current
+            let totalDays = max(1, (calendar.dateComponents([.day], from: start, to: end).day ?? 0) + 1)
+            for offset in 0..<totalDays {
+                let date = calendar.date(byAdding: .day, value: offset, to: start) ?? start
+                days.append(TripDay(
+                    id: UUID(),
+                    date: date,
+                    events: [],
+                    reminders: [],
+                    checklists: [],
+                    flights: [],
+                    label: "Day \(offset + 1)",
+                    order: offset + 1,
+                    weatherIcon: "cloud.sun.fill",
+                    temperatureF: 72
+                ))
+            }
+        } else {
+            let base = Calendar.current.startOfDay(for: Date())
+            for idx in 0..<unscheduledCount {
+                let date = Calendar.current.date(byAdding: .day, value: idx, to: base) ?? base
+                days.append(TripDay(
+                    id: UUID(),
+                    date: date,
+                    events: [],
+                    reminders: [],
+                    checklists: [],
+                    flights: [],
+                    label: "Day \(idx + 1)",
+                    order: idx + 1,
+                    weatherIcon: "cloud.sun.fill",
+                    temperatureF: 72
+                ))
+            }
+        }
+        
+        applySeedItems(seedItems, to: &days)
+        
+        let newTrip = Trip(
+            name: resolvedName,
+            destination: resolvedDestination,
+            startDate: start,
+            endDate: max(start, end),
+            isDatesSet: isDatesSet,
+            unscheduledDaysCount: isDatesSet ? 0 : unscheduledCount,
+            days: days,
+            showParkedIdeas: !seedItems.isEmpty && days.allSatisfy({ $0.events.isEmpty && $0.reminders.isEmpty }),
+            parkedIdeas: []
+        )
+        
+        // If seeds didn't land on days, park activities in Ideas.
+        var trip = newTrip
+        if trip.days.allSatisfy({ $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty && $0.flights.isEmpty }),
+           !seedItems.isEmpty {
+            trip.showParkedIdeas = true
+            trip.parkedIdeas = seedItems.compactMap { item -> EventItem? in
+                guard item.kind == .activity || item.kind == .place else { return nil }
+                return EventItem(
+                    title: item.title,
+                    description: item.notes,
+                    time: "",
+                    location: item.location,
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "mappin.and.ellipse",
+                    accent: .neutral,
+                    photoData: nil
+                )
+            }
+        }
+        
+        tripStore.addTrip(trip)
+        pendingNewTripID = trip.id
+    }
+    
+    private func applySeedItems(_ items: [PlanDayItem], to days: inout [TripDay]) {
+        guard !days.isEmpty else { return }
+        let now = Date()
+        for item in items where item.include {
+            let idx: Int = {
+                if let dayIndex = item.dayIndex, dayIndex >= 0, dayIndex < days.count {
+                    return dayIndex
+                }
+                return 0
+            }()
+            
+            switch item.kind {
+            case .activity, .place:
+                days[idx].events.append(EventItem(
+                    title: item.title,
+                    description: item.notes,
+                    time: "",
+                    location: item.location,
+                    latitude: nil,
+                    longitude: nil,
+                    icon: "mappin.and.ellipse",
+                    accent: .neutral,
+                    photoData: nil
+                ))
+            case .reminder:
+                days[idx].reminders.append(ReminderItem(id: UUID(), text: item.title, createdAt: now))
+            case .checklist:
+                let lines = item.checklistItemsText
+                    .components(separatedBy: .newlines)
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                let entries = lines.map { ChecklistEntry(id: UUID(), text: $0, isDone: false) }
+                days[idx].checklists.append(ChecklistItem(
+                    id: UUID(),
+                    title: item.title.isEmpty ? "Checklist" : item.title,
+                    items: entries,
+                    createdAt: now
+                ))
+            case .flight:
+                let start = item.startTime ?? now
+                days[idx].flights.append(FlightItem(
+                    fromName: "",
+                    fromCode: item.flightFromCode,
+                    fromCity: "",
+                    fromLatitude: nil,
+                    fromLongitude: nil,
+                    fromTerminal: "",
+                    fromGate: "",
+                    toName: "",
+                    toCode: item.flightToCode,
+                    toCity: "",
+                    toLatitude: nil,
+                    toLongitude: nil,
+                    toTerminal: "",
+                    toGate: "",
+                    travelMode: .flight,
+                    flightNumber: item.flightNumber,
+                    notes: item.notes,
+                    accent: .neutral,
+                    startTime: start,
+                    endTime: item.endTime ?? start
+                ))
+            }
+        }
     }
     
     private func openCreateTripSheetIfNeeded(force: Bool) {

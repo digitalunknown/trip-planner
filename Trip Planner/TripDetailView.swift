@@ -52,7 +52,7 @@ struct TripDetailView: View {
     @State private var isPresentingNewActivity: Bool = false
     @State private var isPresentingPlanDay: Bool = false
     @State private var isPresentingAddMany: Bool = false
-    @State private var pasteDefaultDayID: UUID?
+    @State private var planDayDefaultDayID: UUID?
     @State private var geocodeTask: Task<Void, Never>?
     @State private var splitRatio: CGFloat = 0.45 // Map takes 45% by default
     @State private var newEventTitle: String = ""
@@ -507,7 +507,7 @@ struct TripDetailView: View {
                 
                 Button {
                     let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                    pasteDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    planDayDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
                     isPresentingPlanDay = true
                 } label: {
                     Label("Plan Day", systemImage: "sparkles")
@@ -883,7 +883,8 @@ struct TripDetailView: View {
                 .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
             }
             .sheet(isPresented: $isPresentingPlanDay) {
-                PlanDaySheet(
+                TripStacksAISheet(
+                    mode: .planDay,
                     tripContext: PlanDayTripContext(
                         isDatesSet: trip.isDatesSet,
                         startDate: trip.startDate,
@@ -895,8 +896,10 @@ struct TripDetailView: View {
                         mapSpan: trip.mapSpan
                     ),
                     dayOptions: dayOptions,
-                    defaultDayID: pasteDefaultDayID,
-                    onCommit: applyPlanDayItems
+                    defaultDayID: planDayDefaultDayID,
+                    scopeHint: dayOptions.first(where: { $0.id == planDayDefaultDayID })?.title ?? "",
+                    existingItems: planDayExistingItems,
+                    onCommitPlanItems: applyPlanDayItems
                 )
                 .tint(.primary)
                 .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
@@ -934,12 +937,61 @@ struct TripDetailView: View {
         
         tripDays[idx].events.append(contentsOf: newEvents)
     }
+    
+    /// Existing itinerary snapshot for AI dedupe (focused day when available, else whole trip).
+    private var planDayExistingItems: [PlanDayItem] {
+        let focusID = planDayDefaultDayID
+        let daysToExport: [TripDay] = {
+            if let focusID, let day = tripDays.first(where: { $0.id == focusID }) {
+                return [day]
+            }
+            return tripDays
+        }()
+        
+        var items: [PlanDayItem] = []
+        for day in daysToExport {
+            for event in day.events {
+                items.append(PlanDayItem(
+                    kind: .activity,
+                    dayID: day.id,
+                    title: event.title,
+                    location: event.location,
+                    notes: event.description,
+                    sourceSnippet: event.title
+                ))
+            }
+            for reminder in day.reminders {
+                items.append(PlanDayItem(kind: .reminder, dayID: day.id, title: reminder.text, sourceSnippet: reminder.text))
+            }
+            for checklist in day.checklists {
+                items.append(PlanDayItem(
+                    kind: .checklist,
+                    dayID: day.id,
+                    title: checklist.title,
+                    checklistItemsText: checklist.items.map(\.text).joined(separator: "\n"),
+                    sourceSnippet: checklist.title
+                ))
+            }
+            for flight in day.flights {
+                items.append(PlanDayItem(
+                    kind: .flight,
+                    dayID: day.id,
+                    title: flight.flightNumber.isEmpty ? flight.travelMode.title : flight.flightNumber,
+                    flightFromCode: flight.fromCode,
+                    flightToCode: flight.toCode,
+                    flightNumber: flight.flightNumber,
+                    sourceSnippet: flight.flightNumber
+                ))
+            }
+        }
+        return items
+    }
 
     private func applyPlanDayItems(_ items: [PlanDayItem]) {
         let now = Date()
         
         let ideasID: UUID? = trip.showParkedIdeas ? Self.parkedIdeasColumnID : nil
-        let defaultDayID = pasteDefaultDayID ?? tripDays.first?.id
+        let defaultDayID = planDayDefaultDayID ?? tripDays.first?.id
         var newlyAddedEventIDs: [UUID] = []
         
         func timeText(start: Date?, end: Date?) -> String {
@@ -1051,6 +1103,10 @@ struct TripDetailView: View {
                 } else if let first = tripDays.indices.first {
                     tripDays[first].flights.append(flight)
                 }
+                
+            case .place:
+                // Place Finder items are committed via PlaceStore, not trip days.
+                continue
             }
         }
         
@@ -1447,7 +1503,7 @@ private extension TripDetailView {
                                     isPresentingNewActivity = true
                                 },
                                 onPlanDay: {
-                                    pasteDefaultDayID = day.id
+                                    planDayDefaultDayID = day.id
                                     isPresentingPlanDay = true
                                 },
                                 showEmptyPlaceholder: index == 0 && tripHasNoItems

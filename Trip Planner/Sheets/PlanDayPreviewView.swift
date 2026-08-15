@@ -3,12 +3,14 @@ import SwiftUI
 struct PlanDayPreviewView: View {
     @State private var draft: PlanDayDraft
     let dayOptions: [DayOption]
+    var intent: String = ""
     let onCancel: () -> Void
     let onConfirm: ([PlanDayItem]) -> Void
     
     init(
         draft: PlanDayDraft,
         dayOptions: [DayOption],
+        intent: String = "",
         onCancel: @escaping () -> Void,
         onConfirm: @escaping ([PlanDayItem]) -> Void
     ) {
@@ -23,12 +25,20 @@ struct PlanDayPreviewView: View {
         }
         self._draft = State(initialValue: d)
         self.dayOptions = dayOptions
+        self.intent = intent
         self.onCancel = onCancel
         self.onConfirm = onConfirm
     }
     
     var body: some View {
         List {
+            if !intent.isEmpty {
+                Section {
+                    Text(intentLabel)
+                        .font(.appCaption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             ForEach(draft.items) { item in
                 Section {
                     PlanDayItemEditor(
@@ -45,6 +55,18 @@ struct PlanDayPreviewView: View {
                 Button("Add \(includedCount)") { onConfirm(draft.items.filter(\.include)) }
                     .disabled(!canConfirm)
             }
+        }
+    }
+    
+    private var intentLabel: String {
+        switch intent {
+        case "day_plan": return "Full day plan"
+        case "multi_day_plan": return "Multi-day plan"
+        case "options_list": return "Options to choose from"
+        case "checklist": return "Checklist"
+        case "reminder": return "Reminders"
+        case "flight": return "Travel"
+        default: return intent.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
     
@@ -99,7 +121,7 @@ private struct PlanDayItemEditor: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .multilineTextAlignment(.leading)
             
-            if item.kind == .activity {
+            if item.kind == .activity || item.kind == .place {
                 if !item.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(item.location)
                         .font(.appCallout)
@@ -135,7 +157,7 @@ private struct PlanDayItemEditor: View {
             }
             
             if item.include {
-                if item.kind == .activity {
+                if item.kind == .activity || item.kind == .place {
                     let hasContext = !item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     let hasLocation = !item.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     if hasContext || hasLocation {
@@ -153,7 +175,9 @@ private struct PlanDayItemEditor: View {
                     }
                 }
                 
-                dayPicker
+                if item.kind != .place {
+                    dayPicker
+                }
             }
         }
         .padding(.vertical, 10)
@@ -206,6 +230,7 @@ private struct PlanDayItemEditor: View {
         case .reminder: return "Reminder"
         case .checklist: return "Checklist"
         case .flight: return "Flight"
+        case .place: return "Place"
         }
     }
     
@@ -215,6 +240,7 @@ private struct PlanDayItemEditor: View {
         case .reminder: return "pin.fill"
         case .checklist: return "checklist.checked"
         case .flight: return "airplane"
+        case .place: return "mappin.and.ellipse"
         }
     }
 }

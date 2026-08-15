@@ -5,6 +5,8 @@ enum PlanDayItemKind: String, Codable, CaseIterable, Hashable {
     case reminder
     case checklist
     case flight
+    /// Place Finder only — never applied via plan-day commit path.
+    case place
 }
 
 struct PlanDayItem: Identifiable, Hashable, Codable {
@@ -13,6 +15,9 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
     var include: Bool
     
     var dayID: UUID?
+    /// 0-based day offset from trip start when `dayID` is unknown (AI multi-day).
+    var dayIndex: Int?
+    var dayLabel: String
     
     var title: String
     var subtitle: String
@@ -32,11 +37,16 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
     var confidence: Double?
     var sourceSnippet: String
     
+    /// Place Finder category (`restaurant`, `hotel`, …). Empty for plan_day items.
+    var category: String
+    
     init(
         id: UUID = UUID(),
         kind: PlanDayItemKind,
         include: Bool = true,
         dayID: UUID? = nil,
+        dayIndex: Int? = nil,
+        dayLabel: String = "",
         title: String,
         subtitle: String = "",
         location: String = "",
@@ -48,12 +58,15 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
         flightToCode: String = "",
         flightNumber: String = "",
         confidence: Double? = nil,
-        sourceSnippet: String = ""
+        sourceSnippet: String = "",
+        category: String = ""
     ) {
         self.id = id
         self.kind = kind
         self.include = include
         self.dayID = dayID
+        self.dayIndex = dayIndex
+        self.dayLabel = dayLabel
         self.title = title
         self.subtitle = subtitle
         self.location = location
@@ -66,6 +79,7 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
         self.flightNumber = flightNumber
         self.confidence = confidence
         self.sourceSnippet = sourceSnippet
+        self.category = category
     }
 }
 
