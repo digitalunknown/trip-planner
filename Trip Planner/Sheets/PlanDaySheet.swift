@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PlanDaySheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("prefFood") private var prefFood: String = ""
     @AppStorage("prefAlcohol") private var prefAlcohol: Bool = false
     @AppStorage("prefInterests") private var prefInterests: String = ""
@@ -20,6 +21,11 @@ struct PlanDaySheet: View {
     @State private var errorText: String?
     @State private var loaderStep: Int = 0
     
+    /// AI intro glow on the prompt field.
+    @State private var aiGlowActive = false
+    @State private var aiGlowRotation: Double = 0
+    @State private var aiGlowPulse = false
+    
     private let geminiEndpoint = URL(string: "https://trip-planner-ai-proxy.vercel.app/api/parsePaste")!
     
     private let loaderLabels: [String] = [
@@ -29,6 +35,18 @@ struct PlanDaySheet: View {
         "Organizing day"
     ]
     
+    private var chipForeground: Color {
+        colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717)
+    }
+    
+    private var chipFallback: Color {
+        colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0)
+    }
+    
+    private var promptFieldShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+    }
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
@@ -36,11 +54,41 @@ struct PlanDaySheet: View {
                     TextEditor(text: $promptText)
                         .scrollContentBackground(.hidden)
                         .padding(12)
-                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Color(.secondarySystemGroupedBackground), in: promptFieldShape)
                         .overlay {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(Color(.separator).opacity(0.35))
+                            promptFieldShape
+                                .strokeBorder(Color(.separator).opacity(aiGlowActive ? 0 : 0.35), lineWidth: 1)
                         }
+                        .overlay {
+                            promptFieldShape
+                                .strokeBorder(
+                                    AngularGradient(
+                                        colors: [
+                                            Color(hex: 0x5AC8FA),
+                                            Color(hex: 0x7B61FF),
+                                            Color(hex: 0xFF6BCB),
+                                            Color(hex: 0x5AC8FA)
+                                        ],
+                                        center: .center,
+                                        angle: .degrees(aiGlowRotation)
+                                    ),
+                                    lineWidth: aiGlowActive ? 2.5 : 0
+                                )
+                                .opacity(aiGlowActive ? (aiGlowPulse ? 1 : 0.55) : 0)
+                                .blur(radius: aiGlowActive ? 0.4 : 0)
+                        }
+                        .shadow(
+                            color: Color(hex: 0x7B61FF).opacity(aiGlowActive ? (aiGlowPulse ? 0.45 : 0.22) : 0),
+                            radius: aiGlowActive ? (aiGlowPulse ? 18 : 10) : 0,
+                            x: 0,
+                            y: 0
+                        )
+                        .shadow(
+                            color: Color(hex: 0x5AC8FA).opacity(aiGlowActive ? (aiGlowPulse ? 0.35 : 0.16) : 0),
+                            radius: aiGlowActive ? (aiGlowPulse ? 14 : 8) : 0,
+                            x: 0,
+                            y: 0
+                        )
                     
                     if promptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text("What do you have in mind?")
@@ -51,9 +99,10 @@ struct PlanDaySheet: View {
                     }
                 }
                 .frame(minHeight: 220)
+                .onAppear { playAIGlowIntro() }
                 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         quickPromptChip("A day of sightseeing", systemImage: "binoculars.fill")
                         quickPromptChip("A food and drink focused day", systemImage: "fork.knife")
                         quickPromptChip("Fun with kids", systemImage: "figure.and.child.holdinghands")
@@ -145,15 +194,39 @@ struct PlanDaySheet: View {
         Button {
             Task { await runPlan(for: text) }
         } label: {
-            Label(text, systemImage: systemImage)
-                .font(.app(15, weight: .semibold))
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemGroupedBackground), in: Capsule())
-                .overlay { Capsule().strokeBorder(Color(.separator).opacity(0.35)) }
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(text)
+                    .font(.app(13, weight: .semibold))
+            }
+            .foregroundStyle(chipForeground.opacity(0.78))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .modifier(PlanDayChipGlassBackground(fallback: chipFallback))
         }
         .buttonStyle(.plain)
+    }
+    
+    private func playAIGlowIntro() {
+        aiGlowActive = true
+        aiGlowPulse = false
+        aiGlowRotation = 0
+        
+        withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+            aiGlowRotation = 360
+        }
+        withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+            aiGlowPulse = true
+        }
+        
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_600_000_000)
+            withAnimation(.easeOut(duration: 0.7)) {
+                aiGlowActive = false
+                aiGlowPulse = false
+            }
+        }
     }
     
     private func parseAndContinue() async {
@@ -327,6 +400,25 @@ Return JSON only.
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withFullDate]
         return f.string(from: date)
+    }
+}
+
+// MARK: - Chip glass (matches Places filter chips)
+
+private struct PlanDayChipGlassBackground: ViewModifier {
+    let fallback: Color
+    private let shape = Capsule(style: .continuous)
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: shape)
+                .clipShape(shape)
+        } else {
+            content
+                .background(fallback, in: shape)
+                .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+        }
     }
 }
 
