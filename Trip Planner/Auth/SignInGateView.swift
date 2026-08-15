@@ -33,7 +33,8 @@ struct SignInGateView: View {
                 
                 VStack(spacing: 12) {
                     SignInWithAppleButton(.signIn) { request in
-                        request.requestedScopes = [.fullName]
+                        // Name/email are only returned the first time the user authorizes this app.
+                        request.requestedScopes = [.fullName, .email]
                     } onCompletion: { result in
                         auth.handleAuthorizationResult(result)
                         if auth.isSignedIn {

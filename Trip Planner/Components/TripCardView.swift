@@ -96,16 +96,13 @@ struct TripCardView: View {
                 if trip.isDatesSet {
                     HStack {
                         Spacer()
-                        HStack(spacing: 4) {
-                            Text(countdownText)
-                        }
-                        .font(.appCaption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(Color.black.opacity(0.35)))
-                        .clipShape(Capsule())
+                        Text(countdownText)
+                            .font(.appCaption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .modifier(TripCountdownGlassBackground(isUrgent: isUrgent, accentColor: accentColor))
                     }
                     .padding(12)
                 }
@@ -172,6 +169,27 @@ struct TripCardView: View {
             MapSnapshotView(region: mapRegion)
                 .frame(height: cardHeight)
                 .clipped()
+        }
+    }
+}
+
+private struct TripCountdownGlassBackground: ViewModifier {
+    let isUrgent: Bool
+    let accentColor: Color
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    isUrgent ? .regular.tint(accentColor) : .regular,
+                    in: Capsule()
+                )
+        } else {
+            content
+                .background {
+                    Capsule()
+                        .fill(isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(.ultraThinMaterial))
+                }
         }
     }
 }

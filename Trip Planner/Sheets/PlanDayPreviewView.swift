@@ -38,7 +38,6 @@ struct PlanDayPreviewView: View {
                 }
             }
         }
-        .listSectionSpacing(16)
         .navigationTitle("Suggestions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

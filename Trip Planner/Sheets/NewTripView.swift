@@ -144,7 +144,6 @@ struct NewTripView: View {
                             }
                         } label: {
                             HStack {
-                                Image(systemName: "photo.badge.plus")
                                 Text("Add Cover Photo")
                                 Spacer()
                                 Image(systemName: "chevron.up.chevron.down")
@@ -161,7 +160,7 @@ struct NewTripView: View {
                     Text("Include an extra column for ideation not tied to a day")
                 }
             }
-            .navigationTitle("Create Trip")
+            .navigationTitle("New Trip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

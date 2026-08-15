@@ -1,0 +1,31 @@
+# Xcode / local build artifacts
+DerivedData/
+.derivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# App source (not needed for serverless proxy)
+Trip Planner/
+Trip Planner.xcodeproj/
+Trip PlannerTests/
+Trip PlannerUITests/
+Fonts/
+ThirdParty/
+TripStacks-Info.plist
+TripStacksRelease.entitlements
+PROJECT_CONTEXT.md
+TYPOGRAPHY.md
+
+# Local / secrets / tooling
+.git/
+.cursor/
+.vercel/
+.env*
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+.DS_Store

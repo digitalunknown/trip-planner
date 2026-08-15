@@ -3,14 +3,20 @@ import SwiftUI
 struct ContentView: View {
     private enum RootTab: Hashable {
         case myTrips
+        case places
         case trackers
+        case search
     }
     
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @AppStorage("exploreSampleEnabled") private var exploreSampleEnabled: Bool = false
     @AppStorage("sampleTripCoverImageData") private var sampleTripCoverImageData: Data = Data()
     @State private var selectedTab: RootTab = .myTrips
+    @State private var lastNonSearchTab: RootTab = .myTrips
+    @State private var searchText: String = ""
+    @State private var isSearchPresented: Bool = false
     @State private var tripStore = TripStore()
+    @State private var placeStore = PlaceStore()
     @StateObject private var auth = AppleSignInManager()
     @State private var isPresentingSignInGate: Bool = false
     @State private var isFetchingSampleCover: Bool = false
@@ -18,24 +24,15 @@ struct ContentView: View {
     private let accentColor: Color = .orange
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            MyTripsView()
-                .tint(.primary)
-                .tabItem {
-                Label("Trips", systemImage: "suitcase.fill")
+        Group {
+            if #available(iOS 18.0, *) {
+                modernTabView
+            } else {
+                legacyTabView
             }
-            .tag(RootTab.myTrips)
-
-            NavigationStack {
-                TrackersHomeView()
-                    .tint(.primary)
-            }
-            .tabItem {
-                Label("Stats", systemImage: "checkmark.seal.fill")
-            }
-            .tag(RootTab.trackers)
         }
         .environment(tripStore)
+        .environment(placeStore)
         .environmentObject(auth)
         .tint(accentColor)
         .environment(\.appAccentColor, accentColor)
@@ -46,6 +43,9 @@ struct ContentView: View {
             Task { await auth.refreshCredentialState() }
             updateSignInGatePresentation()
             injectSampleTripIfNeeded()
+        }
+        .onChange(of: auth.hasResolvedInitialAuthState) { _, _ in
+            updateSignInGatePresentation()
         }
         .onChange(of: auth.isSignedIn) { _, newValue in
             if newValue {
@@ -67,8 +67,24 @@ struct ContentView: View {
             SignInGateView()
                 .environmentObject(auth)
         }
-        .onChange(of: selectedTab) { _, _ in
+        .onChange(of: selectedTab) { _, newTab in
             Haptics.tabSelectionChanged()
+            if newTab == .search {
+                isSearchPresented = true
+            } else {
+                lastNonSearchTab = newTab
+                if isSearchPresented {
+                    isSearchPresented = false
+                }
+            }
+        }
+        .onChange(of: isSearchPresented) { _, presented in
+            if !presented {
+                searchText = ""
+                if selectedTab == .search {
+                    selectedTab = lastNonSearchTab
+                }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .quickActionCreateNewTrip)) { _ in
             selectedTab = .myTrips
@@ -78,7 +94,97 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Tab bars
+    
+    /// iOS 18+ `Tab` API with `role: .search` — floating magnifying glass beside the tab bar.
+    /// `.searchable` lives on the search tab only (not the TabView) so Trips/Places/Profile stay clear.
+    /// On iOS 26, that yields the liquid-glass search field above the keyboard.
+    @available(iOS 18.0, *)
+    private var modernTabView: some View {
+        TabView(selection: $selectedTab) {
+            Tab("Trips", systemImage: "suitcase.fill", value: RootTab.myTrips) {
+                MyTripsView()
+                    .tint(.primary)
+            }
+            
+            Tab("Places", systemImage: "mappin.and.ellipse", value: RootTab.places) {
+                NavigationStack {
+                    PlacesHomeView()
+                        .tint(.primary)
+                }
+            }
+            
+            Tab("Profile", systemImage: "person.fill", value: RootTab.trackers) {
+                NavigationStack {
+                    TrackersHomeView()
+                        .tint(.primary)
+                }
+            }
+            
+            Tab("Search", systemImage: "magnifyingglass", value: RootTab.search, role: .search) {
+                NavigationStack {
+                    GlobalSearchView(searchText: $searchText)
+                        .tint(.primary)
+                }
+                .searchable(
+                    text: $searchText,
+                    isPresented: $isSearchPresented,
+                    prompt: "Search trips and places"
+                )
+            }
+        }
+        .modifier(SearchTabActivationModifier())
+    }
+    
+    private var legacyTabView: some View {
+        TabView(selection: $selectedTab) {
+            MyTripsView()
+                .tint(.primary)
+                .tabItem {
+                    Label("Trips", systemImage: "suitcase.fill")
+                }
+                .tag(RootTab.myTrips)
+            
+            NavigationStack {
+                PlacesHomeView()
+                    .tint(.primary)
+            }
+            .tabItem {
+                Label("Places", systemImage: "mappin.and.ellipse")
+            }
+            .tag(RootTab.places)
+
+            NavigationStack {
+                TrackersHomeView()
+                    .tint(.primary)
+            }
+            .tabItem {
+                Label("Profile", systemImage: "person.fill")
+            }
+            .tag(RootTab.trackers)
+            
+            NavigationStack {
+                GlobalSearchView(searchText: $searchText)
+                    .tint(.primary)
+            }
+            .searchable(
+                text: $searchText,
+                isPresented: $isSearchPresented,
+                prompt: "Search trips and places"
+            )
+            .tabItem {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            .tag(RootTab.search)
+        }
+    }
+    
     private func updateSignInGatePresentation() {
+        // Wait until cached auth is restored so signed-in launches don't flash the gate.
+        guard auth.hasResolvedInitialAuthState else {
+            isPresentingSignInGate = false
+            return
+        }
         // If user is signed out and not exploring sample, gate the app.
         isPresentingSignInGate = (!auth.isSignedIn && !exploreSampleEnabled)
     }
@@ -626,6 +732,18 @@ private extension ContentView {
             }
         } catch {
             // Best-effort only; silently fail.
+        }
+    }
+}
+
+/// Activates the system search-tab morph (liquid glass field above the keyboard) on iOS 26+.
+private struct SearchTabActivationModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .tabViewSearchActivation(.searchTabSelection)
+        } else {
+            content
         }
     }
 }

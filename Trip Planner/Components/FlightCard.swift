@@ -4,7 +4,11 @@ struct FlightCard: View {
     let flight: FlightItem
     @Environment(\.colorScheme) private var colorScheme
     
-    private var cardBackground: Color { colorScheme == .dark ? Color(hex: 0x222222) : Color(hex: 0xFFFEF9) }
+    private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
+    /// Match activity cards: translucent lift over the day column.
+    private var cardFill: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.white.opacity(0.78)
+    }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     private var iconColor: Color { flight.accent.color }
@@ -50,7 +54,7 @@ struct FlightCard: View {
                             .frame(width: 9, height: 9)
                             .overlay(
                                 Circle()
-                                    .stroke(cardBackground, lineWidth: 2)
+                                    .stroke(cardFill, lineWidth: 2)
                             )
                         
                     Capsule(style: .continuous)
@@ -63,7 +67,7 @@ struct FlightCard: View {
                             .frame(width: 9, height: 9)
                             .overlay(
                                 Circle()
-                                    .stroke(cardBackground, lineWidth: 2)
+                                    .stroke(cardFill, lineWidth: 2)
                             )
                     }
                     
@@ -123,7 +127,12 @@ struct FlightCard: View {
         .frame(minHeight: 52, alignment: .center)
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background {
+            cardShape
+                .fill(cardFill)
+        }
+        .clipShape(cardShape)
+        .contentShape(cardShape)
     }
     
     private func endpointPrimaryText(code: String, name: String, city: String) -> String {

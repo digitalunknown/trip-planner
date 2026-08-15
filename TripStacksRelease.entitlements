@@ -6,6 +6,20 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.digitalunknown.Trip-Planner</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudDocuments</string>
+	</array>
+	<key>com.apple.developer.ubiquity-container-identifiers</key>
+	<array>
+		<string>iCloud.digitalunknown.Trip-Planner</string>
+	</array>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)digitalunknown.Trip-Planner</string>
 	<key>com.apple.developer.weatherkit</key>
 	<true/>
 </dict>

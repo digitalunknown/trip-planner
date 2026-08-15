@@ -30,6 +30,7 @@ struct DayColumn: View {
     let onMoveFlightRight: (FlightItem) -> Void
     let onMoveFlightToParked: ((FlightItem) -> Void)?
     let onAddEvent: () -> Void
+    var onPlanDay: (() -> Void)? = nil
     let showEmptyPlaceholder: Bool
     
     @Environment(\.colorScheme) private var colorScheme
@@ -39,6 +40,7 @@ struct DayColumn: View {
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var emptyActionFill: Color { colorScheme == .dark ? Color(hex: 0x2C2C2E) : Color(hex: 0xE8E8EA) }
     private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xB5B5B5) }
     private var highlightFillColor: Color { colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04) }
     
@@ -101,23 +103,7 @@ struct DayColumn: View {
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 10) {
                     if day.events.isEmpty && day.reminders.isEmpty && day.checklists.isEmpty && day.flights.isEmpty && showEmptyPlaceholder {
-                        // Empty state placeholder - only on first day when trip has no events
-                        Button {
-                            onAddEvent()
-                        } label: {
-                            Text("Add Activity")
-                                .font(.appSubheadline)
-                                .foregroundStyle(textSecondary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 24)
-                                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                                        .foregroundStyle(Color.secondary.opacity(0.3))
-                                )
-                        }
-                        .buttonStyle(.plain)
+                        dayEmptyState
                     }
                     
                     // Reminders always show at the top and have no time.
@@ -310,20 +296,113 @@ struct DayColumn: View {
             }
         }
         .frame(width: columnWidth, height: columnHeight)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(dayBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(isCurrentDay ? highlightFillColor : .clear)
-                )
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(isCurrentDay ? highlightStrokeColor : columnStroke, lineWidth: 1)
-                .shadow(color: isCurrentDay ? highlightStrokeColor.opacity(0.35) : .clear, radius: 2, x: 0, y: 0)
+        .modifier(DayColumnGlassChrome(
+            isCurrentDay: isCurrentDay,
+            dayBackground: dayBackground,
+            columnStroke: columnStroke,
+            highlightStrokeColor: highlightStrokeColor,
+            highlightFillColor: highlightFillColor
+        ))
+    }
+    
+    private var dayEmptyState: some View {
+        VStack(spacing: 18) {
+            Text("You haven’t added anything to this day yet")
+                .font(.app(15, weight: .semibold))
+                .foregroundStyle(textPrimary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
+            
+            HStack(spacing: 10) {
+                Button {
+                    onPlanDay?()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Plan Day")
+                            .font(.app(14, weight: .semibold))
+                    }
+                    .foregroundStyle(textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(emptyActionFill, in: Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                
+                Button {
+                    onAddEvent()
+                } label: {
+                    Text("Add")
+                        .font(.app(14, weight: .semibold))
+                        .foregroundStyle(textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(emptyActionFill, in: Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
+        .padding(.horizontal, 10)
+        .padding(.top, 28)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// Liquid glass day-column chrome on iOS 26+; solid fill fallback on earlier OS versions.
+private struct DayColumnGlassChrome: ViewModifier {
+    let isCurrentDay: Bool
+    let dayBackground: Color
+    let columnStroke: Color
+    let highlightStrokeColor: Color
+    let highlightFillColor: Color
+    
+    private let cornerRadius: CGFloat = 20
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular,
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(
+                            isCurrentDay ? highlightStrokeColor : Color.clear,
+                            lineWidth: isCurrentDay ? 1 : 0
+                        )
+                        .shadow(
+                            color: isCurrentDay ? highlightStrokeColor.opacity(0.35) : .clear,
+                            radius: 2,
+                            x: 0,
+                            y: 0
+                        )
+                }
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(dayBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                .fill(isCurrentDay ? highlightFillColor : .clear)
+                        )
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(isCurrentDay ? highlightStrokeColor : columnStroke, lineWidth: 1)
+                        .shadow(
+                            color: isCurrentDay ? highlightStrokeColor.opacity(0.35) : .clear,
+                            radius: 2,
+                            x: 0,
+                            y: 0
+                        )
+                }
+                .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
+        }
     }
 }
 

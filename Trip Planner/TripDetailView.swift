@@ -45,6 +45,7 @@ struct DayOption: Identifiable, Hashable {
 struct TripDetailView: View {
     @Binding var trip: Trip
     @Environment(\.dismiss) private var dismiss
+    @Environment(PlaceStore.self) private var placeStore
     
     @State private var tripDays: [TripDay] = []
     @State private var isPresentingSettings: Bool = false
@@ -65,9 +66,11 @@ struct TripDetailView: View {
     @State private var newEventEnd: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(10 * 3600)
     @State private var newEventPhoto: UIImage?
     @State private var newEventDocuments: [EventDocument] = []
-    @State private var newEventRating: Int = 0
     @State private var newEventCost: Double?
     @State private var newEventCostCurrencyCode: String?
+    @State private var activityAlreadyInPlaces: Bool = false
+    /// Stable ID used when Add to Places runs before the activity is saved.
+    @State private var placesLinkEventID: UUID?
     @State private var selectedDayID: UUID?
     @State private var editingEvent: EventItem?
     @State private var activitySheetDetent: PresentationDetent = .medium
@@ -118,6 +121,7 @@ struct TripDetailView: View {
     
     @State private var focusedDayID: UUID?
     @State private var hasUserScrolledDays: Bool = false
+    @State private var didScrollToActiveDay: Bool = false
     @State private var displayedDayIDForMarkers: UUID?
     @State private var markersOpacity: Double = 1.0
     @State private var pendingMarkerTransition: DispatchWorkItem?
@@ -274,10 +278,6 @@ struct TripDetailView: View {
         }
     }
     
-    private func clampRating(_ value: Int) -> Int {
-        min(max(value, 0), 5)
-    }
-    
     private var mapLayer: some View {
         Map(position: $mapPosition, interactionModes: mapModes) {
             ForEach(visibleAnnotations) { annotation in
@@ -303,7 +303,7 @@ struct TripDetailView: View {
                             }
                             
                             Circle()
-                                .stroke(dayBoardBackgroundColor, lineWidth: 1.5)
+                                .stroke(dayBoardBackgroundColor, lineWidth: 3)
                         }
                         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
@@ -805,7 +805,6 @@ struct TripDetailView: View {
                     startTime: $newEventStart,
                     endTime: $newEventEnd,
                     documents: $newEventDocuments,
-                    rating: $newEventRating,
                     cost: $newEventCost,
                     costCurrencyCode: $newEventCostCurrencyCode,
                     selectedDayID: $selectedDayID,
@@ -813,7 +812,9 @@ struct TripDetailView: View {
                     tripLocationRegion: eventSheetTripRegion,
                     onAdd: addNewEvent,
                     onDelete: deleteCurrentEvent,
-                    isEditing: editingEvent != nil
+                    onAddToPlaces: addCurrentActivityToPlaces,
+                    isEditing: editingEvent != nil,
+                    isAlreadyInPlaces: activityAlreadyInPlaces
                 )
                 .tint(.primary)
                 .presentationDetents(
@@ -888,7 +889,10 @@ struct TripDetailView: View {
                         startDate: trip.startDate,
                         endDate: trip.endDate,
                         unscheduledDaysCount: trip.unscheduledDaysCount,
-                        destination: trip.destination
+                        destination: trip.destination,
+                        latitude: trip.latitude,
+                        longitude: trip.longitude,
+                        mapSpan: trip.mapSpan
                     ),
                     dayOptions: dayOptions,
                     defaultDayID: pasteDefaultDayID,
@@ -1093,9 +1097,9 @@ struct TripDetailView: View {
             guard let payload else { continue }
             
             if Task.isCancelled { return }
-            if let coord = await searchCoordinate(for: payload.query, region: region) {
+            if let resolved = await searchPlace(for: payload.query, region: region) {
                 await MainActor.run {
-                    applyCoordinate(coord, toEventID: id, isIdeas: payload.isIdeas)
+                    applyResolvedPlace(resolved, toEventID: id, isIdeas: payload.isIdeas)
                 }
             }
             
@@ -1134,34 +1138,66 @@ struct TripDetailView: View {
         return nil
     }
     
-    private func searchCoordinate(for query: String, region: MKCoordinateRegion?) async -> CLLocationCoordinate2D? {
+    private func searchPlace(for query: String, region: MKCoordinateRegion?) async -> (coordinate: CLLocationCoordinate2D, location: String?)? {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
+        request.resultTypes = [.pointOfInterest, .address]
         if let region {
             request.region = region
         }
         
         do {
             let response = try await MKLocalSearch(request: request).start()
-            guard let item = response.mapItems.first else { return nil }
-            return mapItemCoordinate(item)
+            guard let item = response.mapItems.first,
+                  let coordinate = mapItemCoordinate(item) else { return nil }
+            
+            let address = mapItemAddressString(item)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let name = item.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let refinedLocation: String? = {
+                guard let address, !address.isEmpty else {
+                    return name.isEmpty ? nil : name
+                }
+                if !name.isEmpty, !address.localizedCaseInsensitiveContains(name) {
+                    return "\(name), \(address)"
+                }
+                return address
+            }()
+            
+            return (coordinate: coordinate, location: refinedLocation)
         } catch {
             return nil
         }
     }
     
     @MainActor
-    private func applyCoordinate(_ coord: CLLocationCoordinate2D, toEventID id: UUID, isIdeas: Bool) {
+    private func applyResolvedPlace(
+        _ place: (coordinate: CLLocationCoordinate2D, location: String?),
+        toEventID id: UUID,
+        isIdeas: Bool
+    ) {
+        let coord = place.coordinate
+        let refinedLocation = place.location?.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        func apply(to event: inout EventItem) {
+            event.latitude = coord.latitude
+            event.longitude = coord.longitude
+            if let refinedLocation, !refinedLocation.isEmpty {
+                let current = event.location.trimmingCharacters(in: .whitespacesAndNewlines)
+                let currentLooksSpecific = current.range(of: #"\b\d+\s+\p{L}"#, options: .regularExpression) != nil
+                if !currentLooksSpecific {
+                    event.location = refinedLocation
+                }
+            }
+        }
+        
         if isIdeas, let idx = parkedIdeas.firstIndex(where: { $0.id == id }) {
-            parkedIdeas[idx].latitude = coord.latitude
-            parkedIdeas[idx].longitude = coord.longitude
+            apply(to: &parkedIdeas[idx])
             return
         }
         
         for dayIdx in tripDays.indices {
             if let eventIdx = tripDays[dayIdx].events.firstIndex(where: { $0.id == id }) {
-                tripDays[dayIdx].events[eventIdx].latitude = coord.latitude
-                tripDays[dayIdx].events[eventIdx].longitude = coord.longitude
+                apply(to: &tripDays[dayIdx].events[eventIdx])
                 return
             }
         }
@@ -1270,6 +1306,9 @@ struct TripDetailView: View {
             setMapRegion(appropriateMapRegion, animated: false)
             displayedDayIDForMarkers = nil
             markersOpacity = 1.0
+            hasUserScrolledDays = false
+            didScrollToActiveDay = false
+            focusedDayID = nil
             showMap = false
             DispatchQueue.main.async {
                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -1367,123 +1406,137 @@ private extension TripDetailView {
             let tripHasNoItems = tripDays.allSatisfy { $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty && $0.flights.isEmpty }
             let viewport = CGRect(x: 0, y: 0, width: geo.size.width, height: geo.size.height)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 16) {
-                    ForEach(Array(tripDays.enumerated()), id: \.element.id) { index, day in
-                        let isToday = trip.isDatesSet && Calendar.current.isDate(day.date, inSameDayAs: Date())
-                        DayColumn(
-                            day: day,
-                            totalDays: tripDays.count,
-                            isUnscheduled: !trip.isDatesSet,
-                            isCurrentDay: isToday,
-                            columnWidth: columnWidth,
-                            columnHeight: geo.size.height - 24,
-                            onTap: { event in startEditing(event: event, day: day) },
-                            onEdit: { event in startEditing(event: event, day: day) },
-                            onDuplicate: { event in duplicateEvent(event, in: day) },
-                            onDelete: { event in deleteEvent(event) },
-                            onMoveEventLeft: { event in moveEvent(event, from: day, direction: -1) },
-                            onMoveEventRight: { event in moveEvent(event, from: day, direction: 1) },
-                            onMoveEventToParked: trip.showParkedIdeas ? { event in moveEventToParked(event, from: day) } : nil,
-                            onTapReminder: { reminder in startEditingReminder(reminder, day: day) },
-                            onDeleteReminder: { reminder in deleteReminder(reminder) },
-                            onMoveReminderLeft: { reminder in moveReminder(reminder, from: day, direction: -1) },
-                            onMoveReminderRight: { reminder in moveReminder(reminder, from: day, direction: 1) },
-                            onMoveReminderToParked: trip.showParkedIdeas ? { reminder in moveReminderToParked(reminder, from: day) } : nil,
-                            onTapChecklist: { checklist in startEditingChecklist(checklist, day: day) },
-                            onDeleteChecklist: { checklist in deleteChecklist(checklist) },
-                            onMoveChecklistLeft: { checklist in moveChecklist(checklist, from: day, direction: -1) },
-                            onMoveChecklistRight: { checklist in moveChecklist(checklist, from: day, direction: 1) },
-                            onMoveChecklistToParked: trip.showParkedIdeas ? { checklist in moveChecklistToParked(checklist, from: day) } : nil,
-                            onTapFlight: { flight in startEditingFlight(flight, day: day) },
-                            onDeleteFlight: { flight in deleteFlight(flight) },
-                            onMoveFlightLeft: { flight in moveFlight(flight, from: day, direction: -1) },
-                            onMoveFlightRight: { flight in moveFlight(flight, from: day, direction: 1) },
-                            onMoveFlightToParked: trip.showParkedIdeas ? { flight in moveFlightToParked(flight, from: day) } : nil,
-                            onAddEvent: {
-                                selectedDayID = day.id
-                                prepareNewEventDefaults()
-                                activitySheetDetent = .large
-                                isPresentingNewActivity = true
-                            },
-                            showEmptyPlaceholder: index == 0 && tripHasNoItems
-                        )
-                        .background(
-                            GeometryReader { proxy in
-                                Color.clear
-                                    .preference(
-                                        key: DayColumnFramesPreferenceKey.self,
-                                        value: [day.id: proxy.frame(in: .named("dayScroll"))]
-                                    )
-                            }
-                        )
-                    }
-                    
-                    if trip.showParkedIdeas {
-                        ParkedIdeasColumn(
-                            items: parkedIdeas,
-                            columnWidth: columnWidth,
-                            columnHeight: geo.size.height - 24,
-                            onTap: { event in startEditingParkedIdea(event) },
-                            onDuplicate: { event in duplicateParkedIdea(event) },
-                            onDelete: { event in deleteEvent(event) },
-                            onAdd: {
-                                editingEvent = nil
-                                selectedDayID = Self.parkedIdeasColumnID
-                                prepareNewEventDefaults()
-                                activitySheetDetent = .large
-                                isPresentingNewActivity = true
-                            },
-                            onMoveLeftToLastDay: (tripDays.count > 0) ? { event in moveParkedIdeaLeftToLastDay(event) } : nil
-                        )
-                        .background(
-                            GeometryReader { proxy in
-                                Color.clear
-                                    .preference(
-                                        key: DayColumnFramesPreferenceKey.self,
-                                        value: [Self.parkedIdeasColumnID: proxy.frame(in: .named("dayScroll"))]
-                                    )
-                            }
-                        )
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-            }
-            .coordinateSpace(name: "dayScroll")
-            .onPreferenceChange(DayColumnFramesPreferenceKey.self) { framesByID in
-                guard hasUserScrolledDays else { return }
-                var bestID: UUID?
-                var bestVisibleWidth: CGFloat = 0
-                
-                for (id, frame) in framesByID {
-                    let visibleFrame = frame.intersection(viewport)
-                    let visibleWidth = max(0, visibleFrame.width)
-                    if visibleWidth > bestVisibleWidth {
-                        bestVisibleWidth = visibleWidth
-                        bestID = id
-                    }
-                }
-                
-                if bestVisibleWidth <= 0 {
-                    if focusedDayID != nil { focusedDayID = nil }
-                    return
-                }
-                
-                if focusedDayID != bestID {
-                    focusedDayID = bestID
-                }
-            }
-            .scrollDisabled(isEdgeSwipingBack)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 6)
-                    .onChanged { value in
-                        if !hasUserScrolledDays,
-                           abs(value.translation.width) > abs(value.translation.height) {
-                            hasUserScrolledDays = true
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 16) {
+                        ForEach(Array(tripDays.enumerated()), id: \.element.id) { index, day in
+                            let isToday = trip.isDatesSet && Calendar.current.isDate(day.date, inSameDayAs: Date())
+                            DayColumn(
+                                day: day,
+                                totalDays: tripDays.count,
+                                isUnscheduled: !trip.isDatesSet,
+                                isCurrentDay: isToday,
+                                columnWidth: columnWidth,
+                                columnHeight: geo.size.height - 24,
+                                onTap: { event in startEditing(event: event, day: day) },
+                                onEdit: { event in startEditing(event: event, day: day) },
+                                onDuplicate: { event in duplicateEvent(event, in: day) },
+                                onDelete: { event in deleteEvent(event) },
+                                onMoveEventLeft: { event in moveEvent(event, from: day, direction: -1) },
+                                onMoveEventRight: { event in moveEvent(event, from: day, direction: 1) },
+                                onMoveEventToParked: trip.showParkedIdeas ? { event in moveEventToParked(event, from: day) } : nil,
+                                onTapReminder: { reminder in startEditingReminder(reminder, day: day) },
+                                onDeleteReminder: { reminder in deleteReminder(reminder) },
+                                onMoveReminderLeft: { reminder in moveReminder(reminder, from: day, direction: -1) },
+                                onMoveReminderRight: { reminder in moveReminder(reminder, from: day, direction: 1) },
+                                onMoveReminderToParked: trip.showParkedIdeas ? { reminder in moveReminderToParked(reminder, from: day) } : nil,
+                                onTapChecklist: { checklist in startEditingChecklist(checklist, day: day) },
+                                onDeleteChecklist: { checklist in deleteChecklist(checklist) },
+                                onMoveChecklistLeft: { checklist in moveChecklist(checklist, from: day, direction: -1) },
+                                onMoveChecklistRight: { checklist in moveChecklist(checklist, from: day, direction: 1) },
+                                onMoveChecklistToParked: trip.showParkedIdeas ? { checklist in moveChecklistToParked(checklist, from: day) } : nil,
+                                onTapFlight: { flight in startEditingFlight(flight, day: day) },
+                                onDeleteFlight: { flight in deleteFlight(flight) },
+                                onMoveFlightLeft: { flight in moveFlight(flight, from: day, direction: -1) },
+                                onMoveFlightRight: { flight in moveFlight(flight, from: day, direction: 1) },
+                                onMoveFlightToParked: trip.showParkedIdeas ? { flight in moveFlightToParked(flight, from: day) } : nil,
+                                onAddEvent: {
+                                    selectedDayID = day.id
+                                    prepareNewEventDefaults()
+                                    activitySheetDetent = .large
+                                    isPresentingNewActivity = true
+                                },
+                                onPlanDay: {
+                                    pasteDefaultDayID = day.id
+                                    isPresentingPlanDay = true
+                                },
+                                showEmptyPlaceholder: index == 0 && tripHasNoItems
+                            )
+                            .id(day.id)
+                            .background(
+                                GeometryReader { proxy in
+                                    Color.clear
+                                        .preference(
+                                            key: DayColumnFramesPreferenceKey.self,
+                                            value: [day.id: proxy.frame(in: .named("dayScroll"))]
+                                        )
+                                }
+                            )
+                        }
+                        
+                        if trip.showParkedIdeas {
+                            ParkedIdeasColumn(
+                                items: parkedIdeas,
+                                columnWidth: columnWidth,
+                                columnHeight: geo.size.height - 24,
+                                onTap: { event in startEditingParkedIdea(event) },
+                                onDuplicate: { event in duplicateParkedIdea(event) },
+                                onDelete: { event in deleteEvent(event) },
+                                onAdd: {
+                                    editingEvent = nil
+                                    selectedDayID = Self.parkedIdeasColumnID
+                                    prepareNewEventDefaults()
+                                    activitySheetDetent = .large
+                                    isPresentingNewActivity = true
+                                },
+                                onMoveLeftToLastDay: (tripDays.count > 0) ? { event in moveParkedIdeaLeftToLastDay(event) } : nil
+                            )
+                            .id(Self.parkedIdeasColumnID)
+                            .background(
+                                GeometryReader { proxy in
+                                    Color.clear
+                                        .preference(
+                                            key: DayColumnFramesPreferenceKey.self,
+                                            value: [Self.parkedIdeasColumnID: proxy.frame(in: .named("dayScroll"))]
+                                        )
+                                }
+                            )
                         }
                     }
-            )
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                }
+                .coordinateSpace(name: "dayScroll")
+                .onAppear {
+                    scrollToActiveDayIfNeeded(using: proxy)
+                }
+                .onChange(of: tripDays.map(\.id)) { _, _ in
+                    scrollToActiveDayIfNeeded(using: proxy)
+                }
+                .onPreferenceChange(DayColumnFramesPreferenceKey.self) { framesByID in
+                    guard hasUserScrolledDays else { return }
+                    var bestID: UUID?
+                    var bestVisibleWidth: CGFloat = 0
+                    
+                    for (id, frame) in framesByID {
+                        let visibleFrame = frame.intersection(viewport)
+                        let visibleWidth = max(0, visibleFrame.width)
+                        if visibleWidth > bestVisibleWidth {
+                            bestVisibleWidth = visibleWidth
+                            bestID = id
+                        }
+                    }
+                    
+                    if bestVisibleWidth <= 0 {
+                        if focusedDayID != nil { focusedDayID = nil }
+                        return
+                    }
+                    
+                    if focusedDayID != bestID {
+                        focusedDayID = bestID
+                    }
+                }
+                .scrollDisabled(isEdgeSwipingBack)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 6)
+                        .onChanged { value in
+                            if !hasUserScrolledDays,
+                               abs(value.translation.width) > abs(value.translation.height) {
+                                hasUserScrolledDays = true
+                            }
+                        }
+                )
+            }
         }
     }
 }
@@ -1526,6 +1579,34 @@ private extension TripDetailView {
         tripDays = trip.days
         parkedIdeas = trip.parkedIdeas
         updateTripDaysForDates()
+    }
+    
+    /// Today’s day column when the trip is currently in progress.
+    private var activeTripDayID: UUID? {
+        guard trip.isDatesSet else { return nil }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let start = calendar.startOfDay(for: trip.startDate)
+        let end = calendar.startOfDay(for: trip.endDate)
+        guard today >= start, today <= end else { return nil }
+        return tripDays.first(where: { calendar.isDate($0.date, inSameDayAs: today) })?.id
+    }
+    
+    private func scrollToActiveDayIfNeeded(using proxy: ScrollViewProxy) {
+        guard !didScrollToActiveDay, let dayID = activeTripDayID else { return }
+        didScrollToActiveDay = true
+        
+        DispatchQueue.main.async {
+            withTransaction(Transaction(animation: nil)) {
+                proxy.scrollTo(dayID, anchor: .center)
+            }
+            focusedDayID = dayID
+            displayedDayIDForMarkers = annotations(for: dayID).isEmpty ? nil : dayID
+            hasUserScrolledDays = true
+            if let region = regionFitting(annotations(for: dayID)) {
+                setMapRegion(region, animated: false)
+            }
+        }
     }
 
     func move(event: EventItem, to dayID: UUID, before target: EventItem?) {
@@ -1657,9 +1738,10 @@ private extension TripDetailView {
         newEventAccent = .purple
         newEventPhoto = nil
         newEventDocuments = []
-        newEventRating = 0
         newEventCost = nil
         newEventCostCurrencyCode = UserDefaults.standard.string(forKey: "currencyCode") ?? "USD"
+        activityAlreadyInPlaces = false
+        placesLinkEventID = nil
         let base = Calendar.current.startOfDay(for: Date())
         newEventStart = base.addingTimeInterval(9 * 3600)
         newEventEnd = newEventStart
@@ -1675,7 +1757,7 @@ private extension TripDetailView {
             : "\(formatter.string(from: newEventStart))"
         
         let photoData = newEventPhoto?.jpegData(compressionQuality: 0.8)
-        let rating = clampRating(newEventRating)
+        let eventIDForPlaces = editingEvent?.id ?? placesLinkEventID
 
         if let editingEvent {
             let removedDocuments = editingEvent.documents.filter { existing in
@@ -1693,7 +1775,7 @@ private extension TripDetailView {
                 accent: newEventAccent,
                 photoData: photoData,
                 documents: newEventDocuments,
-                rating: rating,
+                rating: 0,
                 cost: newEventCost,
                 costCurrencyCode: newEventCostCurrencyCode
             )
@@ -1707,6 +1789,7 @@ private extension TripDetailView {
             if selectedDayID == Self.parkedIdeasColumnID {
                 parkedIdeas.insert(updated, at: 0)
                 self.editingEvent = updated
+                placesLinkEventID = nil
                 return
             }
             
@@ -1714,13 +1797,14 @@ private extension TripDetailView {
                   let dayIndex = tripDays.firstIndex(where: { $0.id == dayID }) else { return }
             tripDays[dayIndex].events.append(updated)
             self.editingEvent = updated
+            placesLinkEventID = nil
             return
         }
         
         guard let targetID = selectedDayID else { return }
         
         let event = EventItem(
-            id: UUID(),
+            id: eventIDForPlaces ?? UUID(),
             title: newEventTitle.isEmpty ? "Untitled" : newEventTitle,
             description: newEventDescription,
             time: timeText,
@@ -1731,10 +1815,11 @@ private extension TripDetailView {
             accent: newEventAccent,
             photoData: photoData,
             documents: newEventDocuments,
-            rating: rating,
+            rating: 0,
             cost: newEventCost,
             costCurrencyCode: newEventCostCurrencyCode
         )
+        placesLinkEventID = nil
         
         if targetID == Self.parkedIdeasColumnID {
             parkedIdeas.insert(event, at: 0)
@@ -1751,6 +1836,63 @@ private extension TripDetailView {
                 ), animated: false)
             }
         }
+    }
+    
+    private func addCurrentActivityToPlaces() {
+        guard CloudSyncPaths.isSignedInToApple() else { return }
+        
+        let location = newEventLocation.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = newEventTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let inferredName = PlaceNaming.title(location: location, fallback: title)
+        guard !inferredName.isEmpty, inferredName != "Place" || !location.isEmpty || !title.isEmpty else { return }
+        
+        let linkedEventID = editingEvent?.id ?? placesLinkEventID ?? UUID()
+        if editingEvent == nil {
+            placesLinkEventID = linkedEventID
+        }
+        
+        let photoData = newEventPhoto?.jpegData(compressionQuality: 0.8)
+        let draft = EventItem(
+            id: linkedEventID,
+            title: title.isEmpty ? "Untitled" : title,
+            description: newEventDescription,
+            time: "",
+            location: location,
+            latitude: newEventLatitude,
+            longitude: newEventLongitude,
+            icon: newEventIcon,
+            accent: newEventAccent,
+            photoData: photoData,
+            documents: newEventDocuments,
+            rating: 0,
+            cost: newEventCost,
+            costCurrencyCode: newEventCostCurrencyCode
+        )
+        
+        var noteParts: [String] = []
+        let description = newEventDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !description.isEmpty {
+            noteParts.append(description)
+        }
+        if newEventCost != nil {
+            noteParts.append(
+                "Cost: \(CurrencyFormatting.string(for: newEventCost, currencyCode: newEventCostCurrencyCode))"
+            )
+        }
+        
+        _ = placeStore.saveFromActivity(
+            name: inferredName,
+            location: location,
+            note: noteParts.joined(separator: "\n\n"),
+            photoData: PlaceImageResolver.imageData(from: draft),
+            latitude: newEventLatitude,
+            longitude: newEventLongitude,
+            tripID: trip.id,
+            tripName: trip.name,
+            eventID: linkedEventID,
+            placeType: PlaceType.inferred(fromActivityIcon: newEventIcon)
+        )
+        activityAlreadyInPlaces = true
     }
     
     func addReminder() {
@@ -1924,13 +2066,14 @@ private extension TripDetailView {
         newEventDocuments = event.documents
         newEventCost = event.cost
         newEventCostCurrencyCode = event.costCurrencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD")
-        newEventRating = event.rating
         
         if let photoData = event.photoData {
             newEventPhoto = UIImage(data: photoData)
         } else {
             newEventPhoto = nil
         }
+        
+        activityAlreadyInPlaces = placeStore.places.contains { $0.sourceEventID == event.id }
 
         let normalized = event.time.replacingOccurrences(of: "–", with: "-")
         let parts = normalized
@@ -1985,13 +2128,14 @@ private extension TripDetailView {
         newEventDocuments = event.documents
         newEventCost = event.cost
         newEventCostCurrencyCode = event.costCurrencyCode ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD")
-        newEventRating = event.rating
         
         if let photoData = event.photoData {
             newEventPhoto = UIImage(data: photoData)
         } else {
             newEventPhoto = nil
         }
+        
+        activityAlreadyInPlaces = placeStore.places.contains { $0.sourceEventID == event.id }
         
         let normalized = event.time.replacingOccurrences(of: "–", with: "-")
         let parts = normalized
@@ -3220,5 +3364,6 @@ private extension UTType {
     NavigationStack {
         TripDetailView(trip: .constant(Trip.sampleTrips[0]))
     }
+    .environment(PlaceStore())
 }
 

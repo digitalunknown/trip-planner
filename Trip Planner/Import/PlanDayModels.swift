@@ -113,13 +113,28 @@ struct PlanDayTripContext: Hashable, Codable {
     var endDate: Date
     var unscheduledDaysCount: Int
     var destination: String
+    var latitude: Double?
+    var longitude: Double?
+    var mapSpan: Double?
     
-    init(isDatesSet: Bool, startDate: Date, endDate: Date, unscheduledDaysCount: Int, destination: String) {
+    init(
+        isDatesSet: Bool,
+        startDate: Date,
+        endDate: Date,
+        unscheduledDaysCount: Int,
+        destination: String,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        mapSpan: Double? = nil
+    ) {
         self.isDatesSet = isDatesSet
         self.startDate = startDate
         self.endDate = endDate
         self.unscheduledDaysCount = unscheduledDaysCount
         self.destination = destination
+        self.latitude = latitude
+        self.longitude = longitude
+        self.mapSpan = mapSpan
     }
 }
 

@@ -8,6 +8,7 @@ struct TrackerDetailView: View {
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
+    private var unfilledBarColor: Color { colorScheme == .dark ? Color(hex: 0x2A2A2E) : Color(hex: 0xD4D4D8) }
     private var textSecondary: Color {
         let primary = colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717)
         return primary.opacity(colorScheme == .dark ? 0.72 : 0.62)
@@ -47,7 +48,7 @@ struct TrackerDetailView: View {
                     visitedCount: store.visitedCount(in: type),
                     totalCount: TrackerData.items(for: type).count,
                     barHeight: 40,
-                    unfilledColor: columnStroke,
+                    unfilledColor: unfilledBarColor,
                     useLargeTitle: true
                 )
                 .padding(.top, 6)

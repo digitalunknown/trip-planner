@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("prefFood") private var prefFood: String = ""
     @AppStorage("prefInterests") private var prefInterests: String = ""
     @AppStorage("currencyCode") private var currencyCode: String = "USD"
+    @State private var displayNameDraft: String = ""
     
     private struct CurrencyOption: Identifiable {
         let code: String
@@ -41,8 +42,9 @@ struct SettingsView: View {
                         HStack {
                             Text("Account")
                             Spacer()
-                            Text((auth.displayName ?? "Apple ID"))
-                                .foregroundStyle(.primary)
+                            Text(auth.displayName ?? "Apple ID")
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing)
                         }
                         
                         Button(role: .destructive) {
@@ -52,7 +54,7 @@ struct SettingsView: View {
                         }
                     } else {
                         SignInWithAppleButton(.signIn) { request in
-                            request.requestedScopes = [.fullName]
+                            request.requestedScopes = [.fullName, .email]
                         } onCompletion: { result in
                             auth.handleAuthorizationResult(result)
                             if auth.isSignedIn {
@@ -80,25 +82,16 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                 }
                 
-                Section {
-                    TextField("Favorite food, separated by commas", text: $prefFood, axis: .vertical)
-                        .lineLimit(1...3)
-                    
-                    TextField("Interests, separated by commas", text: $prefInterests, axis: .vertical)
-                        .lineLimit(1...3)
+                Section("Personal") {
+                    TextField("Display Name", text: $displayNameDraft)
+                        .textContentType(.name)
+                        .textInputAutocapitalization(.words)
                     
                     Picker("Home Currency", selection: $currencyCode) {
                         ForEach(popularCurrencies) { option in
                             Text(option.label).tag(option.code)
                         }
                     }
-                } header: {
-                    Text("Personal")
-                } footer: {
-                    Text("Your preferences will be considered for trip planning and recommendations")
-                        .font(.appFootnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 2)
                 }
                 
                 Section("App Settings") {
@@ -149,7 +142,17 @@ struct SettingsView: View {
         .onChange(of: prefFood) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: prefInterests) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: currencyCode) { _, _ in saveSettingsToICloudIfNeeded() }
+        .onChange(of: displayNameDraft) { _, newValue in
+            auth.updateDisplayName(newValue)
+        }
+        .onChange(of: auth.displayName) { _, newValue in
+            let incoming = newValue ?? ""
+            if displayNameDraft != incoming {
+                displayNameDraft = incoming
+            }
+        }
         .onAppear {
+            displayNameDraft = auth.displayName ?? ""
             SettingsCloudSync.shared.start { snapshot in
                 applySettingsSnapshot(snapshot)
             }

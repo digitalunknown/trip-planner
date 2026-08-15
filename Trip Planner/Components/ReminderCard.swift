@@ -4,9 +4,12 @@ struct ReminderCard: View {
     let text: String
     @Environment(\.colorScheme) private var colorScheme
     
-    private var cardBackground: Color { colorScheme == .dark ? Color(hex: 0x222222) : Color(hex: 0xFFFEF9) }
+    private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 14, style: .continuous) }
+    /// Match activity cards: translucent lift over the day column.
+    private var cardFill: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.white.opacity(0.78)
+    }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     
     var body: some View {
         HStack(spacing: 6) {
@@ -23,7 +26,11 @@ struct ReminderCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background {
+            cardShape
+                .fill(cardFill)
+        }
+        .clipShape(cardShape)
+        .contentShape(cardShape)
     }
 }
-

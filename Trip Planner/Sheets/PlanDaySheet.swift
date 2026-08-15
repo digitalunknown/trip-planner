@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 
 struct PlanDaySheet: View {
@@ -187,8 +188,13 @@ struct PlanDaySheet: View {
                 }
                 return
             }
+            let refined = await PlanDayLocationResolver.refineLocations(
+                in: sanitized,
+                destination: tripContext.destination,
+                biasRegion: searchBiasRegion()
+            )
             await MainActor.run {
-                draft = applyingDefaultDay(to: sanitized)
+                draft = applyingDefaultDay(to: refined)
                 showPreview = true
             }
         } catch {
@@ -245,7 +251,11 @@ User prompt:
 
 Constraints:
 - Generate: 6–10 activities, 1 checklist (5–12 items), and 0–3 reminders.
-- Activities should have concrete titles and helpful locations (neighborhoods, beaches, restaurants, etc.).
+- Activities should have concrete titles.
+- Location rules:
+  - If the activity is a specific establishment (restaurant, museum, cafe, shop, hotel, landmark building, etc.), set location to that place’s street address (include street number when known), not just the neighborhood/district/city.
+  - If the activity is intentionally a general area (neighborhood stroll, beach day, explore a district), a neighborhood/area name is fine.
+  - Prefer real places in the destination. Never invent a vague area when a venue has a known address.
 - Do not output an activity whose title is exactly the same as the user prompt.
 - Return STRICT JSON matching the schema. Provide ALL fields. If unknown, use empty string or null.
 - Set dayID to null or the selected day; the app will assign missing dayIDs to the selected day.
@@ -302,6 +312,15 @@ Return JSON only.
             }
 
         return updated
+    }
+    
+    private func searchBiasRegion() -> MKCoordinateRegion? {
+        guard let lat = tripContext.latitude, let lon = tripContext.longitude else { return nil }
+        let span = max(0.05, min(tripContext.mapSpan ?? 0.18, 0.6))
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+            span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
+        )
     }
     
     private func isoDate(_ date: Date) -> String {

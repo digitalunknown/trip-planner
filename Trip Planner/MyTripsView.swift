@@ -13,7 +13,6 @@ struct MyTripsView: View {
     @EnvironmentObject private var auth: AppleSignInManager
     @State private var isPresentingSignInGate: Bool = false
     @State private var showingNewTrip = false
-    @State private var showingSettings = false
     @State private var navigationPath = NavigationPath()
     @State private var pendingNewTripID: UUID?
     @State private var editingTrip: Trip?
@@ -56,6 +55,17 @@ struct MyTripsView: View {
         return segs
     }
     
+    /// Year label above trip cards — keep metrics identical across segments to avoid layout jump.
+    private func tripYearHeader(_ title: String, isFirst: Bool) -> some View {
+        HStack {
+            Text(title)
+                .font(.appCaption)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.top, isFirst ? 0 : 8)
+    }
+    
     var body: some View {
         NavigationStack(path: $navigationPath) {
             Group {
@@ -88,14 +98,7 @@ struct MyTripsView: View {
                 }
             }
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .fontWeight(.medium)
-                    }
-                    
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         requestCreateTrip()
                     } label: {
@@ -113,11 +116,6 @@ struct MyTripsView: View {
                     pendingNewTripID = newTripID
                 }
                 .tint(.primary)
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-                    .tint(.primary)
-                    .presentationDetents([.medium, .large])
             }
             .onReceive(NotificationCenter.default.publisher(for: .openNewTripSheet)) { _ in
                 openCreateTripSheetIfNeeded(force: true)
@@ -212,47 +210,35 @@ struct MyTripsView: View {
     }
     
     private var emptyStateView: some View {
-        let gradient = LinearGradient(
-            colors: [Color(hex: 0xFF8B00), Color(hex: 0xFF12EB)],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-        
-        return VStack(spacing: 25) {
+        VStack(spacing: 28) {
             Spacer()
             
-            ZStack {
-                Circle()
-                    .fill(gradient.opacity(0.25))
-                    .frame(width: 160, height: 160)
-                
-                Image(systemName: "airplane.departure")
-                    .font(.app(60, weight: .regular))
-                    .foregroundStyle(gradient)
-            }
+            SearchGlobeIllustration()
             
-            VStack(spacing: 25) {
-                Text("No Trips Yet")
-                    .font(.appTitle2)
-                    .fontWeight(.bold)
-            }
+            Text("You haven’t created any trips yet")
+                .font(.appTitle2)
+                .fontWeight(.bold)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
             
             Button {
                 requestCreateTrip()
             } label: {
-                Text("Create Trip")
+                Text("New Trip")
                     .font(.appSubheadline)
                     .fontWeight(.medium)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
+                    .background(Color(hex: 0x2C2C2E), in: Capsule(style: .continuous))
             }
+            .buttonStyle(.plain)
             
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black)
     }
     
     private var tripListView: some View {
@@ -301,7 +287,7 @@ struct MyTripsView: View {
         
         return ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 20, pinnedViews: []) {
+                VStack(spacing: 0) {
                     Color.clear
                         .frame(height: 1)
                         .id("top")
@@ -313,8 +299,7 @@ struct MyTripsView: View {
                             }
                         }
                         .pickerStyle(.segmented)
-                        .padding(.top, 4)
-                        .padding(.bottom, 6)
+                        .padding(.bottom, RootHomeMetrics.chromeToContent)
                         .zIndex(10)
                         .contentShape(Rectangle())
                         .highPriorityGesture(
@@ -326,7 +311,8 @@ struct MyTripsView: View {
                             }
                         )
                     }
-                
+                    
+                    LazyVStack(spacing: RootHomeMetrics.chromeToContent, pinnedViews: []) {
                     if filteredTrips.isEmpty {
                         ContentUnavailableView(
                             selectedSegment == .past ? "No Past Trips" : (selectedSegment == .unscheduled ? "No Unscheduled Trips" : "No Upcoming Trips"),
@@ -337,7 +323,8 @@ struct MyTripsView: View {
                         .padding(.top, 36)
                     } else {
                         if selectedSegment == .unscheduled {
-                            ForEach(filteredTrips) { trip in
+                            Section {
+                                ForEach(filteredTrips) { trip in
                                 Button {
                                     navigationPath.append(trip.id)
                                 } label: {
@@ -398,6 +385,12 @@ struct MyTripsView: View {
                                         .tint(.red)
                                     }
                                 }
+                                }
+                            } header: {
+                                // Match Upcoming/Past year-header height so the list doesn't jump.
+                                tripYearHeader("0000", isFirst: true)
+                                    .opacity(0)
+                                    .accessibilityHidden(true)
                             }
                         } else {
                             ForEach(sortedYears, id: \.self) { year in
@@ -476,22 +469,18 @@ struct MyTripsView: View {
                                     }
                                 }
                             } header: {
-                                HStack {
-                                    Text(String(year))
-                                        .font(.appCaption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                }
-                                .padding(.top, year == sortedYears.first ? 0 : 8)
+                                tripYearHeader(String(year), isFirst: year == sortedYears.first)
                             }
                         }
                         }
                     }
                     
                     Spacer(minLength: 12)
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                .padding(.horizontal, RootHomeMetrics.horizontalInset)
+                .padding(.top, RootHomeMetrics.topInset)
+                .padding(.bottom, RootHomeMetrics.bottomInset)
             }
             .onAppear {
                 if !segments.contains(selectedSegment), let first = segments.first {
@@ -804,7 +793,6 @@ struct EditTripView: View {
                             }
                         } label: {
                             HStack {
-                                Image(systemName: "photo.badge.plus")
                                 Text("Add Cover Photo")
                                 Spacer()
                                 Image(systemName: "chevron.up.chevron.down")
@@ -1007,5 +995,6 @@ struct EditTripView: View {
         MyTripsView()
     }
     .environment(TripStore())
+    .environment(PlaceStore())
 }
 

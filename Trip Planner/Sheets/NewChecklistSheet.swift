@@ -24,6 +24,7 @@ struct NewChecklistSheet: View {
     private var pillBackground: Color { colorScheme == .dark ? Color(hex: 0x2C2C2E) : Color(hex: 0xE5E5EA) }
     private var pillHighlight: Color { colorScheme == .dark ? Color(hex: 0x3A3A3C) : Color(hex: 0xD1D1D6) }
     
+    private let maxChecklistItemLength = 40
     private let addRowID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
     
     var body: some View {
@@ -101,7 +102,10 @@ struct NewChecklistSheet: View {
                                                     get: { items.first(where: { $0.id == itemID })?.text ?? "" },
                                                     set: { newValue in
                                                         guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
-                                                        items[idx].text = newValue
+                                                        items[idx].text = Self.clampedChecklistItemText(
+                                                            newValue,
+                                                            maxLength: maxChecklistItemLength
+                                                        )
                                                     }
                                                 ),
                                                 prompt: Text("Item").foregroundStyle(.secondary)
@@ -109,7 +113,7 @@ struct NewChecklistSheet: View {
                                             .foregroundStyle(textPrimary)
                                             .focused($focusedItemID, equals: itemID)
                                             .strikethrough(isDone, color: textPrimary.opacity(0.6))
-                                            .fixedSize(horizontal: true, vertical: false)
+                                            .lineLimit(1)
                                             .onTapGesture {
                                                 focusedItemID = itemID
                                             }
@@ -184,12 +188,12 @@ struct NewChecklistSheet: View {
                                             placeholder: "Add item",
                                             text: $newItemText,
                                             isFirstResponder: $isAddFieldFocused,
-                                            autocapitalization: .sentences
+                                            autocapitalization: .sentences,
+                                            maxLength: maxChecklistItemLength
                                         ) {
                                             addNewChecklistItem(proxy: proxy)
                                         }
                                         .foregroundStyle(textPrimary)
-                                        .fixedSize(horizontal: true, vertical: false)
                                         .onTapGesture {
                                             isAddFieldFocused = true
                                         }
@@ -285,7 +289,10 @@ struct NewChecklistSheet: View {
     }
     
     private func addNewChecklistItem(proxy: ScrollViewProxy) {
-        let t = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let t = Self.clampedChecklistItemText(
+            newItemText.trimmingCharacters(in: .whitespacesAndNewlines),
+            maxLength: maxChecklistItemLength
+        )
         guard !t.isEmpty else { return }
         items.append(ChecklistEntry(id: UUID(), text: t, isDone: false))
         newItemText = ""
@@ -296,6 +303,11 @@ struct NewChecklistSheet: View {
                 proxy.scrollTo(addRowID, anchor: .bottom)
             }
         }
+    }
+    
+    private static func clampedChecklistItemText(_ text: String, maxLength: Int) -> String {
+        guard text.count > maxLength else { return text }
+        return String(text.prefix(maxLength))
     }
 }
 

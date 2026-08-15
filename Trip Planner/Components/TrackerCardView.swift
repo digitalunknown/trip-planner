@@ -73,6 +73,7 @@ struct TrackerRowCard: View {
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
+    private var unfilledBarColor: Color { colorScheme == .dark ? Color(hex: 0x2A2A2E) : Color(hex: 0xD4D4D8) }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     
@@ -129,17 +130,37 @@ struct TrackerRowCard: View {
                 totalCount: totalCount,
                 totalBars: 16,
                 barHeight: 28,
-                unfilledColor: columnStroke
+                unfilledColor: unfilledBarColor
             )
         }
         .padding(15)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(dayBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(columnStroke)
+        .modifier(TrackerRowGlassBackground(fallback: dayBackground, stroke: columnStroke))
+    }
+}
+
+private struct TrackerRowGlassBackground: ViewModifier {
+    let fallback: Color
+    let stroke: Color
+    
+    private let cornerRadius: CGFloat = 20
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular,
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+        } else {
+            content
+                .background(fallback, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(stroke)
+                }
+                .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
         }
-        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
     }
 }
 

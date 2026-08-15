@@ -6,6 +6,7 @@ struct ReturnKeyTextField: UIViewRepresentable {
     @Binding var text: String
     @Binding var isFirstResponder: Bool
     var autocapitalization: UITextAutocapitalizationType = .sentences
+    var maxLength: Int? = nil
     var onReturn: () -> Void
     
     func makeUIView(context: Context) -> UITextField {
@@ -44,7 +45,14 @@ struct ReturnKeyTextField: UIViewRepresentable {
         }
         
         @objc func textChanged(_ textField: UITextField) {
-            parent.text = textField.text ?? ""
+            let value = textField.text ?? ""
+            if let maxLength = parent.maxLength, value.count > maxLength {
+                let clipped = String(value.prefix(maxLength))
+                textField.text = clipped
+                parent.text = clipped
+            } else {
+                parent.text = value
+            }
         }
         
         func textFieldDidBeginEditing(_ textField: UITextField) {
@@ -58,6 +66,18 @@ struct ReturnKeyTextField: UIViewRepresentable {
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             parent.onReturn()
             return false
+        }
+        
+        func textField(
+            _ textField: UITextField,
+            shouldChangeCharactersIn range: NSRange,
+            replacementString string: String
+        ) -> Bool {
+            guard let maxLength = parent.maxLength else { return true }
+            let current = textField.text ?? ""
+            guard let swiftRange = Range(range, in: current) else { return true }
+            let next = current.replacingCharacters(in: swiftRange, with: string)
+            return next.count <= maxLength
         }
     }
 }

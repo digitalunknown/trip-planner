@@ -18,7 +18,6 @@ struct NewActivitySheet: View {
     @Binding var startTime: Date
     @Binding var endTime: Date
     @Binding var documents: [EventDocument]
-    @Binding var rating: Int
     @Binding var cost: Double?
     @Binding var costCurrencyCode: String?
     @Binding var selectedDayID: UUID?
@@ -26,8 +25,54 @@ struct NewActivitySheet: View {
     let tripLocationRegion: MKCoordinateRegion?
     var onAdd: () -> Void
     var onDelete: (() -> Void)?
+    var onAddToPlaces: (() -> Void)?
     var isEditing: Bool = false
+    /// True when this activity is already linked in Places (sourceEventID).
+    var isAlreadyInPlaces: Bool = false
     
+    init(
+        title: Binding<String>,
+        location: Binding<String>,
+        latitude: Binding<Double?>,
+        longitude: Binding<Double?>,
+        description: Binding<String>,
+        icon: Binding<String>,
+        accent: Binding<EventAccent>,
+        startTime: Binding<Date>,
+        endTime: Binding<Date>,
+        documents: Binding<[EventDocument]>,
+        cost: Binding<Double?>,
+        costCurrencyCode: Binding<String?>,
+        selectedDayID: Binding<UUID?>,
+        dayOptions: [DayOption],
+        tripLocationRegion: MKCoordinateRegion?,
+        onAdd: @escaping () -> Void,
+        onDelete: (() -> Void)? = nil,
+        onAddToPlaces: (() -> Void)? = nil,
+        isEditing: Bool = false,
+        isAlreadyInPlaces: Bool = false
+    ) {
+        self._title = title
+        self._location = location
+        self._latitude = latitude
+        self._longitude = longitude
+        self._description = description
+        self._icon = icon
+        self._accent = accent
+        self._startTime = startTime
+        self._endTime = endTime
+        self._documents = documents
+        self._cost = cost
+        self._costCurrencyCode = costCurrencyCode
+        self._selectedDayID = selectedDayID
+        self.dayOptions = dayOptions
+        self.tripLocationRegion = tripLocationRegion
+        self.onAdd = onAdd
+        self.onDelete = onDelete
+        self.onAddToPlaces = onAddToPlaces
+        self.isEditing = isEditing
+        self.isAlreadyInPlaces = isAlreadyInPlaces
+    }
     @State private var showDocumentImagePicker = false
     @State private var showDocumentCameraPicker = false
     @State private var showDocumentFileImporter = false
@@ -44,6 +89,12 @@ struct NewActivitySheet: View {
     @State private var draftAccent: EventAccent = .purple
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
+    
+    private var canAddToPlaces: Bool {
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !name.isEmpty || !loc.isEmpty
+    }
     
     private var googleMapsURL: URL? {
         let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -131,21 +182,6 @@ struct NewActivitySheet: View {
         formatter.allowedUnits = interval >= 3600 ? [.hour, .minute] : [.minute]
         formatter.unitsStyle = .short
         return formatter.string(from: interval)
-    }
-    
-    private func clampRating(_ value: Int) -> Int {
-        min(max(value, 0), 5)
-    }
-    
-    private func starsText(_ value: Int) -> String {
-        let r = clampRating(value)
-        return String(repeating: "★", count: r) + String(repeating: "☆", count: 5 - r)
-    }
-    
-    private var ratingSummaryText: String {
-        let r = clampRating(rating)
-        if r == 0 { return "None" }
-        return "\(starsText(r)) \(r)"
     }
     
     private func isImageDocument(_ document: EventDocument) -> Bool {
@@ -403,8 +439,12 @@ struct NewActivitySheet: View {
         dismiss()
     }
     
+    private func addToPlaces() {
+        onAddToPlaces?()
+    }
+    
     private var documentsSection: some View {
-        Section("Documents") {
+        Section("Images & Documents") {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(documents) { document in
@@ -528,8 +568,9 @@ struct NewActivitySheet: View {
                 .foregroundStyle(.primary)
                 .tint(appAccentColor) // caret color
                 .focused($isTitleFocused)
+                .lineLimit(1...2)
                 .padding(.horizontal, 18)
-                .frame(minHeight: 72, maxHeight: 120)
+                .frame(minHeight: 72)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 6)
@@ -636,9 +677,17 @@ struct NewActivitySheet: View {
             }
             
             Section {
-                InteractiveRatingView(rating: $rating)
+                Button {
+                    addToPlaces()
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text(isAlreadyInPlaces ? "Update in Places" : "Add to Places")
+                        Spacer()
+                    }
+                }
+                .disabled(!canAddToPlaces || onAddToPlaces == nil)
             }
-            .listRowBackground(Color.clear)
             
             if isEditing {
                 Section {
@@ -652,6 +701,7 @@ struct NewActivitySheet: View {
                         }
                     }
                 }
+                .listSectionSpacing(12)
             }
         }
         .scrollContentBackground(.hidden)
@@ -690,9 +740,6 @@ struct NewActivitySheet: View {
     
     private var contentStack: some View {
         ZStack(alignment: .top) {
-            Color(.systemGroupedBackground)
-                .ignoresSafeArea()
-            
             LinearGradient(
                 colors: [
                     accent.color.opacity(0.18),

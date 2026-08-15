@@ -31,6 +31,18 @@ struct TripSettingsSheet: View {
     let itineraryText: String
     var onApply: () -> Void
     
+    /// Local drafts so typing doesn’t rewrite the live trip (and re-render trip detail) every keystroke.
+    @State private var draftName: String = ""
+    @State private var draftLocation: String = ""
+    @State private var draftLatitude: Double?
+    @State private var draftLongitude: Double?
+    @State private var draftMapSpan: Double?
+    @State private var draftStartDate: Date = Date()
+    @State private var draftEndDate: Date = Date()
+    @State private var draftIsDatesSet: Bool = true
+    @State private var draftUnscheduledDaysCount: Int = 1
+    @State private var draftShowParkedIdeas: Bool = true
+    
     @State private var coverImage: UIImage?
     @State private var pendingCoverImageData: Data?
     @State private var showImagePicker = false
@@ -82,10 +94,10 @@ struct TripSettingsSheet: View {
             Form {
                 Section {
                     HStack {
-                        TextField("Trip Name", text: $name)
-                        if !name.isEmpty {
+                        TextField("Trip Name", text: $draftName)
+                        if !draftName.isEmpty {
                             Button {
-                                name = ""
+                                draftName = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(.secondary)
@@ -94,38 +106,38 @@ struct TripSettingsSheet: View {
                         }
                     }
                     LocationSearchField(
-                        text: $location,
-                        latitude: $latitude,
-                        longitude: $longitude,
-                        mapSpan: $mapSpan,
+                        text: $draftLocation,
+                        latitude: $draftLatitude,
+                        longitude: $draftLongitude,
+                        mapSpan: $draftMapSpan,
                         resultTypes: .address
                     )
                 }
 
                 Section {
-                    Toggle("Set Dates", isOn: $isDatesSet)
+                    Toggle("Set Dates", isOn: $draftIsDatesSet)
                         .tint(appAccentColor)
                     
-                    if isDatesSet {
+                    if draftIsDatesSet {
                         DatePicker(
                             "Start date",
-                            selection: $startDate,
+                            selection: $draftStartDate,
                             in: Date.distantPast...Date.distantFuture,
                             displayedComponents: .date
                         )
                         
                         DatePicker(
                             "End date",
-                            selection: $endDate,
-                            in: startDate...Date.distantFuture,
+                            selection: $draftEndDate,
+                            in: draftStartDate...Date.distantFuture,
                             displayedComponents: .date
                         )
                     } else {
-                        Stepper(value: $unscheduledDaysCount, in: 1...30) {
+                        Stepper(value: $draftUnscheduledDaysCount, in: 1...30) {
                             HStack {
                                 Text("Number of Days")
                                 Spacer()
-                                Text("\(unscheduledDaysCount)")
+                                Text("\(draftUnscheduledDaysCount)")
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -188,18 +200,11 @@ struct TripSettingsSheet: View {
                                     .buttonStyle(.plain)
                                 }
                             
-                            Button {
+                            LiquidGlassIconButton(systemName: "xmark", showsGlassBackground: true) {
                                 coverImage = nil
                                 pendingCoverImageData = nil
                                 TripCoverAttribution.clear(for: tripID)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.appTitle)
-                                    .symbolRenderingMode(.palette)
-                                    .foregroundStyle(.white, .black.opacity(0.7))
-                                    .shadow(radius: 2)
                             }
-                            .buttonStyle(.plain)
                             .padding(12)
                         }
                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
@@ -218,7 +223,6 @@ struct TripSettingsSheet: View {
                             }
                         } label: {
                             HStack {
-                                Image(systemName: "photo.badge.plus")
                                 Text("Add Cover Photo")
                                 Spacer()
                                 Image(systemName: "chevron.up.chevron.down")
@@ -229,13 +233,13 @@ struct TripSettingsSheet: View {
                 }
                 
                 Section {
-                    Toggle("Show Ideas", isOn: $showParkedIdeas)
+                    Toggle("Show Ideas", isOn: $draftShowParkedIdeas)
                         .tint(appAccentColor)
                 } footer: {
                     Text("Include an extra column for ideation not tied to a day")
                 }
             }
-            .navigationTitle(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trip" : name)
+            .navigationTitle(draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trip" : draftName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -257,11 +261,9 @@ struct TripSettingsSheet: View {
                         
                         LiquidGlassIconButton(
                             systemName: "checkmark",
-                            isEnabled: !(name.isEmpty || location.isEmpty)
+                            isEnabled: !(draftName.isEmpty || draftLocation.isEmpty)
                         ) {
-                            coverImageData = pendingCoverImageData ?? coverImage?.jpegData(compressionQuality: 0.8)
-                            onApply()
-                            dismiss()
+                            commitDraftsAndApply()
                         }
                     }
                 }
@@ -278,7 +280,7 @@ struct TripSettingsSheet: View {
                     .tint(.primary)
             }
             .sheet(isPresented: $showUnsplashPicker) {
-                UnsplashCoverPickerSheet(initialQuery: location) { selection in
+                UnsplashCoverPickerSheet(initialQuery: draftLocation) { selection in
                     pendingCoverImageData = selection.imageData
                     coverImage = UIImage(data: selection.imageData)
                     TripCoverAttribution.setName(selection.photographerName, for: tripID)
@@ -296,19 +298,50 @@ struct TripSettingsSheet: View {
                     .tint(.primary)
             }
             .onAppear {
-                if let imageData = coverImageData {
-                    coverImage = UIImage(data: imageData)
-                    pendingCoverImageData = imageData
-                } else {
-                    pendingCoverImageData = nil
-                }
+                loadDraftsFromBindings()
             }
-            .onChange(of: startDate) { _, newValue in
-                if isDatesSet, endDate < newValue {
-                    endDate = newValue
+            .onChange(of: draftStartDate) { _, newValue in
+                if draftIsDatesSet, draftEndDate < newValue {
+                    draftEndDate = newValue
                 }
             }
         }
     }
+    
+    private func loadDraftsFromBindings() {
+        draftName = name
+        draftLocation = location
+        draftLatitude = latitude
+        draftLongitude = longitude
+        draftMapSpan = mapSpan
+        draftStartDate = startDate
+        draftEndDate = endDate
+        draftIsDatesSet = isDatesSet
+        draftUnscheduledDaysCount = unscheduledDaysCount
+        draftShowParkedIdeas = showParkedIdeas
+        
+        if let imageData = coverImageData {
+            coverImage = UIImage(data: imageData)
+            pendingCoverImageData = imageData
+        } else {
+            coverImage = nil
+            pendingCoverImageData = nil
+        }
+    }
+    
+    private func commitDraftsAndApply() {
+        name = draftName
+        location = draftLocation
+        latitude = draftLatitude
+        longitude = draftLongitude
+        mapSpan = draftMapSpan
+        startDate = draftStartDate
+        endDate = draftEndDate
+        isDatesSet = draftIsDatesSet
+        unscheduledDaysCount = draftUnscheduledDaysCount
+        showParkedIdeas = draftShowParkedIdeas
+        coverImageData = pendingCoverImageData ?? coverImage?.jpegData(compressionQuality: 0.8)
+        onApply()
+        dismiss()
+    }
 }
-
