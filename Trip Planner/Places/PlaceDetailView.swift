@@ -8,6 +8,7 @@ struct PlaceDetailView: View {
     
     @Environment(PlaceStore.self) private var placeStore
     @Environment(TripStore.self) private var tripStore
+    @Environment(RootTabChrome.self) private var tabChrome
     @Environment(\.dismiss) private var dismiss
     
     @State private var showEdit = false
@@ -15,6 +16,7 @@ struct PlaceDetailView: View {
     @State private var appleMapItem: MKMapItem?
     @State private var isLoadingApplePlace = false
     @State private var selectedAppleMapItem: MKMapItem?
+    @State private var isPreviewingAppleMaps = false
     @State private var draftNote: String = ""
     @State private var draftLocation: String = ""
     @State private var draftLatitude: Double?
@@ -109,15 +111,7 @@ struct PlaceDetailView: View {
                                 Label("Edit", systemImage: "pencil")
                             }
                             
-                            if place.hasAppleMapsMatch {
-                                Button {
-                                    placeStore.unlinkAppleMapsMatch(for: place.id)
-                                    appleMapItem = nil
-                                    selectedAppleMapItem = nil
-                                } label: {
-                                    Label("Unlink Apple Maps place", systemImage: "link.badge.minus")
-                                }
-                            } else if #available(iOS 18.0, *) {
+                            if !place.hasAppleMapsMatch, #available(iOS 18.0, *) {
                                 Button {
                                     placeStore.scheduleMapKitMatch(for: place.id, force: true)
                                 } label: {
@@ -187,8 +181,16 @@ struct PlaceDetailView: View {
                     await loadApplePlaceIfNeeded(for: place)
                 }
                 .onAppear {
+                    tabChrome.beginSuppressingAIAccessory()
                     syncDrafts(from: place)
-                    placeStore.scheduleMapKitMatch(for: place.id)
+                    // Retry unmatched places (common for AI imports without coordinates).
+                    placeStore.scheduleMapKitMatch(
+                        for: place.id,
+                        force: place.mapKitMatchStatus == .unmatched
+                    )
+                }
+                .onDisappear {
+                    tabChrome.endSuppressingAIAccessory()
                 }
                 .onChange(of: place.note) { _, newValue in
                     if !isNotesFocused {
@@ -279,23 +281,48 @@ struct PlaceDetailView: View {
                     Button {
                         selectedAppleMapItem = appleMapItem
                     } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(appleMapItem.name ?? placeTitle(for: place))
-                                    .foregroundStyle(.primary)
-                                Text("Photos, hours, ratings & more")
-                                    .font(.appCaption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.app(13, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                        }
+                        appleMapsRow(
+                            title: appleMapItem.name ?? placeTitle(for: place),
+                            subtitle: "Photos, hours, ratings & more"
+                        )
                     }
                     .buttonStyle(.plain)
                 }
+            } else {
+                Section("Apple Maps") {
+                    Button {
+                        Task { await previewInAppleMaps(for: place) }
+                    } label: {
+                        appleMapsRow(
+                            title: "Preview in Apple Maps",
+                            subtitle: "Photos, hours, ratings & more",
+                            showsProgress: isPreviewingAppleMaps
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isPreviewingAppleMaps)
+                }
             }
+        }
+    }
+    
+    private func appleMapsRow(title: String, subtitle: String, showsProgress: Bool = false) -> some View {
+        HStack {
+            if showsProgress {
+                ProgressView()
+                    .padding(.trailing, 4)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.appCaption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.app(13, weight: .semibold))
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -348,11 +375,13 @@ struct PlaceDetailView: View {
                 } label: {
                     HStack {
                         Text("Add Photo")
+                            .foregroundStyle(.primary)
                         Spacer()
                         Image(systemName: "chevron.up.chevron.down")
                             .foregroundStyle(.secondary)
                     }
                 }
+                .tint(.primary)
             }
         }
     }
@@ -445,6 +474,51 @@ struct PlaceDetailView: View {
         let item = await PlaceMapKitMatcher.loadMapItem(identifierRawValue: raw)
         appleMapItem = item
         isLoadingApplePlace = false
+    }
+    
+    @MainActor
+    private func previewInAppleMaps(for place: Place) async {
+        let query = [place.name, place.location]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        guard !query.isEmpty else { return }
+        
+        isPreviewingAppleMaps = true
+        defer { isPreviewingAppleMaps = false }
+        
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.resultTypes = [.pointOfInterest, .address]
+        if let lat = place.latitude, let lon = place.longitude {
+            request.region = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                latitudinalMeters: 4_000,
+                longitudinalMeters: 4_000
+            )
+        }
+        
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            guard let mapItem = response.mapItems.first else { return }
+            selectedAppleMapItem = mapItem
+            
+            // Persist a confident match when possible so the rich row appears next time.
+            if #available(iOS 18.0, *), let identifier = mapItem.identifier?.rawValue {
+                var updated = place
+                updated.mapKitIdentifier = identifier
+                updated.mapKitMatchStatus = .matched
+                if updated.latitude == nil || updated.longitude == nil {
+                    let coordinate = mapItemCoordinate(mapItem)
+                    updated.latitude = coordinate?.latitude
+                    updated.longitude = coordinate?.longitude
+                }
+                placeStore.update(updated, rematchMapKitIfNeeded: false)
+                appleMapItem = mapItem
+            }
+        } catch {
+            // Keep the preview row available for retry.
+        }
     }
 }
 

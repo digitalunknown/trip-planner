@@ -5,9 +5,6 @@ struct EventCard: View {
     let event: EventItem
     @Environment(\.colorScheme) private var colorScheme
     
-    /// Keeps activity photos from dominating the day column.
-    private let maxPhotoHeight: CGFloat = 128
-    
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
@@ -18,7 +15,7 @@ struct EventCard: View {
     }
     
     private var photoImage: UIImage? {
-        guard let data = event.photoData else { return nil }
+        guard let data = PlaceImageResolver.imageData(from: event) else { return nil }
         return UIImage(data: data)
     }
 
@@ -26,8 +23,11 @@ struct EventCard: View {
         VStack(alignment: .leading, spacing: 0) {
             if let photoImage {
                 photoHeader(photoImage)
+                
                 detailsBlock
-                    .padding(12)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 10)
+                    .padding(.bottom, 12)
             } else {
                 HStack(alignment: .center, spacing: 10) {
                     iconBadge
@@ -47,18 +47,9 @@ struct EventCard: View {
     }
     
     private func photoHeader(_ image: UIImage) -> some View {
-        let aspect = PlaceCardMetrics.clampedPhotoAspect(for: image)
-        return Color.clear
-            .aspectRatio(aspect, contentMode: .fit)
-            .frame(maxHeight: maxPhotoHeight)
-            .frame(maxWidth: .infinity)
-            .overlay {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            }
-            .clipped()
-            .contentShape(Rectangle())
+        FixedAspectCover {
+            FillCroppedImage(image: image)
+        }
     }
     
     private var iconBadge: some View {

@@ -245,38 +245,17 @@ private struct DestinationPinView: View {
     let count: Int
     var isSelected: Bool = false
     
-    @Environment(\.colorScheme) private var colorScheme
-    
     private let size: CGFloat = 36
-    private var ringColor: Color {
-        colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0)
-    }
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            ZStack {
-                if let coverImageData, let image = UIImage(data: coverImageData) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: size, height: size)
-                        .clipShape(Circle())
-                } else {
-                    // Map-safe fill (profile accent can be near-white and disappear on imagery).
-                    Circle()
-                        .fill(Color(hex: 0x4DA1F7))
-                        .frame(width: size, height: size)
-                    
-                    Image(systemName: "suitcase.fill")
-                        .font(.app(16, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                
-                Circle()
-                    .stroke(ringColor, lineWidth: isSelected ? 3.5 : 3)
-                    .frame(width: size, height: size)
-            }
-            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+            SquareMapPinView(
+                size: size,
+                image: coverImageData.flatMap(UIImage.init(data:)),
+                fallbackColor: Color(hex: 0x4DA1F7),
+                fallbackSystemImage: "suitcase.fill",
+                isSelected: isSelected
+            )
             
             if count > 1 {
                 Text("\(count)")
@@ -292,7 +271,5 @@ private struct DestinationPinView: View {
                     .offset(x: 6, y: -6)
             }
         }
-        .scaleEffect(isSelected ? 1.08 : 1)
-        .animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 }

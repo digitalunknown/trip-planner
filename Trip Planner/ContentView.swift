@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct ContentView: View {
-    private enum RootTab: Hashable {
+    fileprivate enum RootTab: Hashable {
         case myTrips
+        case explore
         case places
         case trackers
         case search
@@ -17,6 +18,7 @@ struct ContentView: View {
     @State private var isSearchPresented: Bool = false
     @State private var tripStore = TripStore()
     @State private var placeStore = PlaceStore()
+    @State private var tabChrome = RootTabChrome()
     @StateObject private var auth = AppleSignInManager()
     @State private var isPresentingSignInGate: Bool = false
     @State private var isFetchingSampleCover: Bool = false
@@ -33,6 +35,7 @@ struct ContentView: View {
         }
         .environment(tripStore)
         .environment(placeStore)
+        .environment(tabChrome)
         .environmentObject(auth)
         .tint(accentColor)
         .environment(\.appAccentColor, accentColor)
@@ -99,6 +102,7 @@ struct ContentView: View {
     /// iOS 18+ `Tab` API with `role: .search` — floating magnifying glass beside the tab bar.
     /// `.searchable` lives on the search tab only (not the TabView) so Trips/Places/Profile stay clear.
     /// On iOS 26, that yields the liquid-glass search field above the keyboard.
+    /// Trips / Places also show a liquid-glass AI accessory above the tab bar.
     @available(iOS 18.0, *)
     private var modernTabView: some View {
         TabView(selection: $selectedTab) {
@@ -110,6 +114,13 @@ struct ContentView: View {
             Tab("Places", systemImage: "mappin.and.ellipse", value: RootTab.places) {
                 NavigationStack {
                     PlacesHomeView()
+                        .tint(.primary)
+                }
+            }
+            
+            Tab("Explore", systemImage: "safari.fill", value: RootTab.explore) {
+                NavigationStack {
+                    ExploreHomeView()
                         .tint(.primary)
                 }
             }
@@ -134,6 +145,7 @@ struct ContentView: View {
             }
         }
         .modifier(SearchTabActivationModifier())
+        .modifier(AITabBarAccessoryModifier(selectedTab: selectedTab))
     }
     
     private var legacyTabView: some View {
@@ -153,6 +165,15 @@ struct ContentView: View {
                 Label("Places", systemImage: "mappin.and.ellipse")
             }
             .tag(RootTab.places)
+            
+            NavigationStack {
+                ExploreHomeView()
+                    .tint(.primary)
+            }
+            .tabItem {
+                Label("Explore", systemImage: "safari.fill")
+            }
+            .tag(RootTab.explore)
 
             NavigationStack {
                 TrackersHomeView()
@@ -744,6 +765,54 @@ private struct SearchTabActivationModifier: ViewModifier {
                 .tabViewSearchActivation(.searchTabSelection)
         } else {
             content
+        }
+    }
+}
+
+/// Liquid-glass AI accessory above the tab bar on Trips and Places (iOS 26+).
+private struct AITabBarAccessoryModifier: ViewModifier {
+    let selectedTab: ContentView.RootTab
+    @Environment(RootTabChrome.self) private var tabChrome
+    
+    private var showsAccessory: Bool {
+        (selectedTab == .myTrips || selectedTab == .places) && !tabChrome.suppressBottomAIAccessory
+    }
+    
+    private var accessoryTitle: String {
+        selectedTab == .places ? "Find Places" : "Create Trip"
+    }
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content
+                .tabBarMinimizeBehavior(.onScrollDown)
+                .tabViewBottomAccessory(isEnabled: showsAccessory) {
+                    accessoryButton
+                }
+        } else if #available(iOS 26.0, *) {
+            content
+                .tabBarMinimizeBehavior(.onScrollDown)
+                .tabViewBottomAccessory {
+                    if showsAccessory {
+                        accessoryButton
+                    }
+                }
+        } else {
+            content
+        }
+    }
+    
+    @available(iOS 26.0, *)
+    private var accessoryButton: some View {
+        AITabBarAccessory(title: accessoryTitle, chrome: .systemTabAccessory) {
+            switch selectedTab {
+            case .places:
+                NotificationCenter.default.post(name: .openAIFindPlaces, object: nil)
+            case .myTrips:
+                NotificationCenter.default.post(name: .openAICreateTrip, object: nil)
+            default:
+                break
+            }
         }
     }
 }

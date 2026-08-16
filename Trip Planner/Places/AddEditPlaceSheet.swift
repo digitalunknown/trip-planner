@@ -103,11 +103,13 @@ struct AddEditPlaceSheet: View {
                         } label: {
                             HStack {
                                 Text("Add Photo")
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.up.chevron.down")
                                     .foregroundStyle(.secondary)
                             }
                         }
+                        .tint(.primary)
                     }
                 }
                 

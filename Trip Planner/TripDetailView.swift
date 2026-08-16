@@ -46,6 +46,7 @@ struct TripDetailView: View {
     @Binding var trip: Trip
     @Environment(\.dismiss) private var dismiss
     @Environment(PlaceStore.self) private var placeStore
+    @Environment(RootTabChrome.self) private var tabChrome
     
     @State private var tripDays: [TripDay] = []
     @State private var isPresentingSettings: Bool = false
@@ -285,27 +286,11 @@ struct TripDetailView: View {
                     Button {
                         openEventFromMarker(annotation.event)
                     } label: {
-                        ZStack {
-                            if let photoData = annotation.event.photoData, let uiImage = UIImage(data: photoData) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 36, height: 36)
-                                    .clipShape(Circle())
-                            } else {
-                                Circle()
-                                    .fill(annotation.color)
-                                    .frame(width: 36, height: 36)
-                                
-                                Image(systemName: annotation.event.icon)
-                                    .font(.app(16, weight: .semibold))
-                                    .foregroundStyle(.white)
-                            }
-                            
-                            Circle()
-                                .stroke(dayBoardBackgroundColor, lineWidth: 3)
-                        }
-                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                        SquareMapPinView(
+                            image: PlaceImageResolver.imageData(from: annotation.event).flatMap(UIImage.init(data:)),
+                            fallbackColor: annotation.color,
+                            fallbackSystemImage: annotation.event.icon
+                        )
                     }
                     .opacity(markersOpacity)
                 }
@@ -426,110 +411,99 @@ struct TripDetailView: View {
     @ToolbarContentBuilder
     private var tripDetailToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Button {
+            LiquidGlassIconButton(systemName: "chevron.left", accessibilityLabelText: "Back") {
                 dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-                    .contentShape(Rectangle())
             }
-            .tint(.primary)
-            .buttonStyle(.plain)
         }
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            Button {
-                settingsSnapshotTrip = trip
-                settingsSnapshotTripDays = tripDays
-                isPresentingSettings = true
-            } label: {
-                Image(systemName: "gearshape")
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-                    .contentShape(Rectangle())
-            }
-            .tint(.primary)
-            .buttonStyle(.plain)
-            
-            Menu {
+        ToolbarItem(placement: .topBarTrailing) {
+            LiquidGlassToolbarIconPair {
                 Button {
-                    let focusedIsParked = trip.showParkedIdeas && focusedDayID == Self.parkedIdeasColumnID
-                    if focusedIsParked {
-                        selectedDayID = Self.parkedIdeasColumnID
-                    } else {
-                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    }
-                    prepareNewEventDefaults()
-                    activitySheetDetent = .large
-                    isPresentingNewActivity = true
+                    settingsSnapshotTrip = trip
+                    settingsSnapshotTripDays = tripDays
+                    isPresentingSettings = true
                 } label: {
-                    Label("Activity", systemImage: "calendar.badge.plus")
+                    LiquidGlassToolbarIconLabel(systemName: "gearshape")
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Trip settings")
                 
                 Menu {
-                    ForEach(TravelMode.allCases, id: \.self) { mode in
-                        Button {
+                    Button {
+                        let focusedIsParked = trip.showParkedIdeas && focusedDayID == Self.parkedIdeasColumnID
+                        if focusedIsParked {
+                            selectedDayID = Self.parkedIdeasColumnID
+                        } else {
                             let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
                             selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                            prepareNewFlightDefaults(mode: mode)
-                            isPresentingNewFlight = true
-                        } label: {
-                            Label(mode.title, systemImage: mode.systemImageName)
                         }
+                        prepareNewEventDefaults()
+                        activitySheetDetent = .large
+                        isPresentingNewActivity = true
+                    } label: {
+                        Label("Activity", systemImage: "calendar.badge.plus")
+                    }
+                    
+                    Menu {
+                        ForEach(TravelMode.allCases, id: \.self) { mode in
+                            Button {
+                                let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                                selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                                prepareNewFlightDefaults(mode: mode)
+                                isPresentingNewFlight = true
+                            } label: {
+                                Label(mode.title, systemImage: mode.systemImageName)
+                            }
+                        }
+                    } label: {
+                        Label("Travel", systemImage: "arrow.left.arrow.right")
+                    }
+                    
+                    Button {
+                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                        newReminderText = ""
+                        editingReminder = nil
+                        isPresentingNewReminder = true
+                    } label: {
+                        Label("Reminder", systemImage: "pin.fill")
+                    }
+                    
+                    Button {
+                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                        checklistTitle = ""
+                        checklistDraftItems = []
+                        editingChecklist = nil
+                        isPresentingNewChecklist = true
+                    } label: {
+                        Label("Checklist", systemImage: "checklist.checked")
+                    }
+                    
+                    Divider()
+                    
+                    Button {
+                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                        planDayDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                        isPresentingPlanDay = true
+                    } label: {
+                        Label("Plan Day", systemImage: "sparkles")
+                    }
+                    
+                    Button {
+                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                        addManyDraftText = ""
+                        addManyItems = []
+                        isPresentingAddMany = true
+                    } label: {
+                        Label("Add Many", systemImage: "text.badge.plus")
                     }
                 } label: {
-                    Label("Travel", systemImage: "arrow.left.arrow.right")
+                    LiquidGlassToolbarIconLabel(systemName: "plus")
                 }
-                
-                Button {
-                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    newReminderText = ""
-                    editingReminder = nil
-                    isPresentingNewReminder = true
-                } label: {
-                    Label("Reminder", systemImage: "pin.fill")
-                }
-                
-                Button {
-                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    checklistTitle = ""
-                    checklistDraftItems = []
-                    editingChecklist = nil
-                    isPresentingNewChecklist = true
-                } label: {
-                    Label("Checklist", systemImage: "checklist.checked")
-                }
-                
-                Divider()
-                
-                Button {
-                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                    planDayDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    isPresentingPlanDay = true
-                } label: {
-                    Label("Plan Day", systemImage: "sparkles")
-                }
-                
-                Button {
-                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                    addManyDraftText = ""
-                    addManyItems = []
-                    isPresentingAddMany = true
-                } label: {
-                    Label("Add Many", systemImage: "text.badge.plus")
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-                    .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add to trip")
             }
-            .tint(.primary)
-            .buttonStyle(.plain)
         }
         ToolbarItem(placement: .principal) {
             VStack(spacing: 2) {
@@ -542,7 +516,9 @@ struct TripDetailView: View {
                     .font(.appCaption)
                     .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity)
+            // Avoid expanding into leading/trailing bar button hit areas.
+            .frame(maxWidth: 220)
+            .allowsHitTesting(false)
         }
     }
 
@@ -902,7 +878,6 @@ struct TripDetailView: View {
                     onCommitPlanItems: applyPlanDayItems
                 )
                 .tint(.primary)
-                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
             }
             .sheet(isPresented: $isPresentingAddMany) {
                 NewManySheet(title: "Add Many") { titles in
@@ -1018,8 +993,8 @@ struct TripDetailView: View {
                     description: item.notes,
                     time: timeText(start: item.startTime, end: item.endTime),
                     location: item.location,
-                    latitude: nil,
-                    longitude: nil,
+                    latitude: item.latitude,
+                    longitude: item.longitude,
                     icon: "mappin.and.ellipse",
                     accent: .neutral,
                     photoData: nil
@@ -1027,7 +1002,7 @@ struct TripDetailView: View {
                 
                 if isIdeasTarget {
                     parkedIdeas.insert(event, at: 0)
-                    if !event.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if event.needsMapGeocode {
                         newlyAddedEventIDs.append(event.id)
                     }
                     continue
@@ -1039,7 +1014,7 @@ struct TripDetailView: View {
                     tripDays[first].events.append(event)
                 }
                 
-                if !event.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if event.needsMapGeocode {
                     newlyAddedEventIDs.append(event.id)
                 }
                 
@@ -1140,9 +1115,29 @@ struct TripDetailView: View {
             }
         }
     }
+    
+    private func geocodeMissingEventCoordinatesIfNeeded() {
+        var missingIDs: [UUID] = []
+        for day in tripDays {
+            for event in day.events where event.needsMapGeocode {
+                missingIDs.append(event.id)
+            }
+        }
+        if trip.showParkedIdeas {
+            for event in parkedIdeas where event.needsMapGeocode {
+                missingIDs.append(event.id)
+            }
+        }
+        guard !missingIDs.isEmpty else { return }
+        geocodeTask?.cancel()
+        geocodeTask = Task {
+            await geocodeEventsIfNeeded(eventIDs: missingIDs)
+        }
+    }
 
     private func geocodeEventsIfNeeded(eventIDs: [UUID]) async {
         let region: MKCoordinateRegion? = await MainActor.run { geocodeBiasRegion() }
+        var resolvedAny = false
         
         for id in eventIDs {
             if Task.isCancelled { return }
@@ -1157,9 +1152,16 @@ struct TripDetailView: View {
                 await MainActor.run {
                     applyResolvedPlace(resolved, toEventID: id, isIdeas: payload.isIdeas)
                 }
+                resolvedAny = true
             }
             
             try? await Task.sleep(nanoseconds: 220_000_000)
+        }
+        
+        if resolvedAny {
+            await MainActor.run {
+                setMapRegion(appropriateMapRegion, animated: true)
+            }
         }
     }
     
@@ -1358,6 +1360,7 @@ struct TripDetailView: View {
             }
         }
         .onAppear {
+            tabChrome.beginSuppressingAIAccessory()
             initializeTripDays()
             setMapRegion(appropriateMapRegion, animated: false)
             displayedDayIDForMarkers = nil
@@ -1371,6 +1374,10 @@ struct TripDetailView: View {
                     showMap = true
                 }
             }
+            geocodeMissingEventCoordinatesIfNeeded()
+        }
+        .onDisappear {
+            tabChrome.endSuppressingAIAccessory()
         }
         .onChange(of: trip.latitude) { _, _ in
             setMapRegion(appropriateMapRegion, animated: false)
@@ -3011,6 +3018,12 @@ struct EventItem: Identifiable, Hashable, Codable, Transferable {
         self.costCurrencyCode = costCurrencyCode
     }
     
+    /// Has a location string but no coordinates yet — needs MapKit geocode for map pins.
+    var needsMapGeocode: Bool {
+        !location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (latitude == nil || longitude == nil)
+    }
+    
     var startTimeMinutes: Int {
         let normalized = time.replacingOccurrences(of: "–", with: "-")
         let startText = normalized
@@ -3421,5 +3434,6 @@ private extension UTType {
         TripDetailView(trip: .constant(Trip.sampleTrips[0]))
     }
     .environment(PlaceStore())
+    .environment(RootTabChrome())
 }
 

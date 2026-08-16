@@ -3,7 +3,8 @@ import MapKit
 
 enum PlanDayLocationResolver {
     /// Resolve activity locations to street-level MapKit places when the item is a specific establishment.
-    /// General-area activities keep the AI location as-is.
+    /// Always stores coordinates when MapKit finds a match so trip map pins can plot.
+    /// General-area activities keep the AI location text as-is when no POI match is found.
     static func refineLocations(
         in draft: PlanDayDraft,
         destination: String,
@@ -14,15 +15,14 @@ enum PlanDayLocationResolver {
         
         for idx in updated.items.indices {
             if Task.isCancelled { break }
-            guard updated.items[idx].kind == .activity else { continue }
+            guard updated.items[idx].kind == .activity || updated.items[idx].kind == .place else { continue }
             
             let item = updated.items[idx]
             let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !title.isEmpty else { continue }
             
             let currentLocation = item.location.trimmingCharacters(in: .whitespacesAndNewlines)
-            if isAlreadyStreetLevel(currentLocation) { continue }
-            
+            let alreadyStreetLevel = isAlreadyStreetLevel(currentLocation)
             let queries = searchQueries(
                 title: title,
                 location: currentLocation,
@@ -32,12 +32,24 @@ enum PlanDayLocationResolver {
             for query in queries {
                 if Task.isCancelled { break }
                 guard let mapItem = await searchMapItem(query: query, region: biasRegion) else { continue }
-                guard isSpecificEstablishment(mapItem) else { continue }
-                // Only upgrade when MapKit found the named place — keeps general-area activities intact.
-                guard namesAlign(title: title, mapItem: mapItem) else { continue }
+                guard let coordinate = mapItemCoordinate(mapItem) else { continue }
                 
-                if let refined = refinedLocationString(for: mapItem, fallbackTitle: title) {
+                let isPOI = isSpecificEstablishment(mapItem)
+                let aligned = namesAlign(title: title, mapItem: mapItem)
+                
+                // Prefer upgrading location text for named establishments.
+                if isPOI, aligned, !alreadyStreetLevel,
+                   let refined = refinedLocationString(for: mapItem, fallbackTitle: title) {
                     updated.items[idx].location = refined
+                    updated.items[idx].latitude = coordinate.latitude
+                    updated.items[idx].longitude = coordinate.longitude
+                    break
+                }
+                
+                // Street-level (or loose) match: keep location text, still capture coordinates for the map.
+                if alreadyStreetLevel || (isPOI && aligned) {
+                    updated.items[idx].latitude = coordinate.latitude
+                    updated.items[idx].longitude = coordinate.longitude
                     break
                 }
             }
@@ -54,6 +66,12 @@ enum PlanDayLocationResolver {
         var queries: [String] = []
         let destSuffix = destination.isEmpty ? "" : ", \(destination)"
         
+        if !location.isEmpty {
+            queries.append(location)
+            if !location.localizedCaseInsensitiveContains(title), !title.isEmpty {
+                queries.append("\(title), \(location)")
+            }
+        }
         queries.append("\(title)\(destSuffix)")
         if !location.isEmpty, location.caseInsensitiveCompare(destination) != .orderedSame {
             queries.append("\(title), \(location)\(destSuffix)")

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlanDayPreviewView: View {
     @State private var draft: PlanDayDraft
+    @State private var addedIDs: Set<UUID> = []
     let dayOptions: [DayOption]
     var intent: String = ""
     let onCancel: () -> Void
@@ -23,11 +24,22 @@ struct PlanDayPreviewView: View {
                 }
             }
         }
+        for idx in d.items.indices {
+            d.items[idx].include = false
+        }
         self._draft = State(initialValue: d)
         self.dayOptions = dayOptions
         self.intent = intent
         self.onCancel = onCancel
         self.onConfirm = onConfirm
+    }
+    
+    private var sections: [(section: AIResultSection, items: [PlanDayItem])] {
+        AIResultSection.grouped(draft.items)
+    }
+    
+    private var canConfirm: Bool {
+        !draft.items.filter { addedIDs.contains($0.id) }.contains(where: { $0.dayID == nil })
     }
     
     var body: some View {
@@ -39,12 +51,16 @@ struct PlanDayPreviewView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            ForEach(draft.items) { item in
-                Section {
-                    PlanDayItemEditor(
-                        item: binding(for: item.id),
-                        dayOptions: dayOptions
-                    )
+            ForEach(sections, id: \.section.id) { group in
+                Section(group.section.title) {
+                    ForEach(group.items) { item in
+                        PlanDayItemEditor(
+                            item: binding(for: item.id),
+                            dayOptions: dayOptions,
+                            isAdded: addedIDs.contains(item.id),
+                            onAdd: { markAdded(item.id) }
+                        )
+                    }
                 }
             }
         }
@@ -52,8 +68,29 @@ struct PlanDayPreviewView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Add \(includedCount)") { onConfirm(draft.items.filter(\.include)) }
-                    .disabled(!canConfirm)
+                HStack(spacing: 12) {
+                    if !addedIDs.isEmpty && addedIDs.count < draft.items.count {
+                        Button("Done") {
+                            onConfirm(draft.items.filter { addedIDs.contains($0.id) }.map { item in
+                                var copy = item
+                                copy.include = true
+                                return copy
+                            })
+                        }
+                        .disabled(!canConfirm)
+                    }
+                    Button("Add All") {
+                        for item in draft.items {
+                            markAdded(item.id)
+                        }
+                        onConfirm(draft.items.map { item in
+                            var copy = item
+                            copy.include = true
+                            return copy
+                        })
+                    }
+                    .disabled(draft.items.isEmpty || !canConfirm)
+                }
             }
         }
     }
@@ -66,16 +103,17 @@ struct PlanDayPreviewView: View {
         case "checklist": return "Checklist"
         case "reminder": return "Reminders"
         case "flight": return "Travel"
+        case "full_itinerary": return "Full itinerary"
+        case "get_started": return "Starter ideas"
         default: return intent.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
     
-    private var canConfirm: Bool {
-        !draft.items.filter(\.include).contains(where: { $0.dayID == nil })
-    }
-    
-    private var includedCount: Int {
-        draft.items.filter(\.include).count
+    private func markAdded(_ id: UUID) {
+        addedIDs.insert(id)
+        if let idx = draft.items.firstIndex(where: { $0.id == id }) {
+            draft.items[idx].include = true
+        }
     }
     
     private func binding(for id: UUID) -> Binding<PlanDayItem> {
@@ -90,13 +128,13 @@ struct PlanDayPreviewView: View {
             }
         )
     }
-    
 }
 
 private struct PlanDayItemEditor: View {
-    @Environment(\.appAccentColor) private var appAccentColor
     @Binding var item: PlanDayItem
     let dayOptions: [DayOption]
+    let isAdded: Bool
+    let onAdd: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -109,10 +147,6 @@ private struct PlanDayItemEditor: View {
                 .foregroundStyle(.primary)
                 
                 Spacer(minLength: 0)
-                
-                Toggle("", isOn: $item.include)
-                    .labelsHidden()
-                    .tint(appAccentColor)
             }
             
             Text(item.title.isEmpty ? "Untitled" : item.title)
@@ -156,29 +190,14 @@ private struct PlanDayItemEditor: View {
                 flightSummaryRow
             }
             
-            if item.include {
-                if item.kind == .activity || item.kind == .place {
-                    let hasContext = !item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    let hasLocation = !item.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    if hasContext || hasLocation {
-                        Divider()
-                    }
-                } else if item.kind == .flight {
-                    Divider()
-                } else if item.kind == .checklist {
-                    if !item.checklistItemsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Divider()
-                    }
-                } else if item.kind == .reminder {
-                    if !item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Divider()
-                    }
-                }
-                
-                if item.kind != .place {
-                    dayPicker
-                }
-            }
+            dayPicker
+            
+            AIAddActionButton(
+                title: "Add to Trip",
+                addedTitle: "Added to Trip",
+                isAdded: isAdded,
+                action: onAdd
+            )
         }
         .padding(.vertical, 10)
     }
@@ -218,7 +237,7 @@ private struct PlanDayItemEditor: View {
     
     private func notesBox(_ text: String) -> some View {
         Text(text)
-                .font(.appCallout)
+            .font(.appCallout)
             .foregroundStyle(.primary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .multilineTextAlignment(.leading)
@@ -244,4 +263,3 @@ private struct PlanDayItemEditor: View {
         }
     }
 }
-

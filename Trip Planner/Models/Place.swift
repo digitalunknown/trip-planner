@@ -68,7 +68,7 @@ enum PlaceType: String, Codable, CaseIterable, Identifiable, Hashable {
             return .cafe
         case "wineglass.fill":
             return .bar
-        case "bed.double.fill", "house.fill", "building.2.fill":
+        case "bed.double.fill", "house.fill":
             return .hotel
         case "bag.fill", "cart.fill", "tag.fill", "gift.fill", "creditcard.fill", "duffle.bag.fill":
             return .shopping
@@ -78,7 +78,7 @@ enum PlaceType: String, Codable, CaseIterable, Identifiable, Hashable {
             return .beach
         case "figure.hiking", "figure.walk", "mountain.2.fill":
             return .hike
-        case "building.columns.fill":
+        case "building.columns.fill", "atom", "paintpalette.fill", "sparkles":
             return .museum
         case "binoculars.fill":
             return .viewpoint
@@ -86,7 +86,7 @@ enum PlaceType: String, Codable, CaseIterable, Identifiable, Hashable {
             return .nightlife
         case "figure.and.child.holdinghands":
             return .kids
-        case "star.fill", "ticket.fill", "camera.fill", "photo.fill", "theatermasks.fill":
+        case "star.fill", "ticket.fill", "camera.fill", "photo.fill", "theatermasks.fill", "building.2.fill":
             return .attraction
         default:
             return .unspecified

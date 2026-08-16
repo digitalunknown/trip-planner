@@ -121,19 +121,21 @@ struct PlacesHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 12) {
-                    Button {
-                        showAIFindPlaces = true
-                    } label: {
-                        Image(systemName: "sparkles")
-                            .fontWeight(.medium)
+                LiquidGlassToolbarIconPair {
+                    if #unavailable(iOS 26.0) {
+                        Button {
+                            showAIFindPlaces = true
+                        } label: {
+                            LiquidGlassToolbarIconLabel(systemName: "sparkles")
+                        }
+                        .buttonStyle(.plain)
                     }
                     Button {
                         showAddPlace = true
                     } label: {
-                        Image(systemName: "plus")
-                            .fontWeight(.medium)
+                        LiquidGlassToolbarIconLabel(systemName: "plus")
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -160,7 +162,9 @@ struct PlacesHomeView: View {
                 onCommitPlaces: commitAIPlaces
             )
             .tint(.primary)
-            .presentationDetents([.medium, .large])
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openAIFindPlaces)) { _ in
+            showAIFindPlaces = true
         }
         .sheet(item: $placeToEdit) { place in
             AddEditPlaceSheet(mode: .edit(place)) { updated in
@@ -364,6 +368,8 @@ struct PlacesHomeView: View {
                 name: name,
                 location: item.location,
                 note: item.notes,
+                latitude: item.latitude,
+                longitude: item.longitude,
                 placeType: PlaceType.fromAICategory(item.category)
             )
             placeStore.add(place)

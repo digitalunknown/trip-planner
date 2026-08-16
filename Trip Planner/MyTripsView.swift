@@ -10,6 +10,7 @@ struct MyTripsView: View {
     }
     
     @Environment(TripStore.self) private var tripStore
+    @Environment(PlaceStore.self) private var placeStore
     @EnvironmentObject private var auth: AppleSignInManager
     @State private var isPresentingSignInGate: Bool = false
     @State private var showingNewTrip = false
@@ -22,7 +23,6 @@ struct MyTripsView: View {
     @State private var selectedImage: UIImage?
     @State private var tripForUnsplashCoverPicker: Trip?
     @State private var selectedSegment: TripSegment = .upcoming
-    @State private var segmentSwitchInFlight: Bool = false
     @State private var tripPendingDelete: Trip?
     
     private let pendingCreateTripFlagKey = "pendingCreateTripFromQuickAction"
@@ -99,18 +99,22 @@ struct MyTripsView: View {
                 }
             }
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        showingAICreateTrip = true
-                    } label: {
-                        Image(systemName: "sparkles")
-                            .fontWeight(.medium)
-                    }
-                    Button {
-                        requestCreateTrip()
-                    } label: {
-                        Image(systemName: "plus")
-                            .fontWeight(.medium)
+                ToolbarItem(placement: .topBarTrailing) {
+                    LiquidGlassToolbarIconPair {
+                        if #unavailable(iOS 26.0) {
+                            Button {
+                                showingAICreateTrip = true
+                            } label: {
+                                LiquidGlassToolbarIconLabel(systemName: "sparkles")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Button {
+                            requestCreateTrip()
+                        } label: {
+                            LiquidGlassToolbarIconLabel(systemName: "plus")
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -138,10 +142,12 @@ struct MyTripsView: View {
                     onCommitTrip: commitAITrip
                 )
                 .tint(.primary)
-                .presentationDetents([.medium, .large])
             }
             .onReceive(NotificationCenter.default.publisher(for: .openNewTripSheet)) { _ in
                 openCreateTripSheetIfNeeded(force: true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openAICreateTrip)) { _ in
+                showingAICreateTrip = true
             }
             .onAppear {
                 openCreateTripSheetIfNeeded(force: false)
@@ -248,7 +254,7 @@ struct MyTripsView: View {
         return df.date(from: raw)
     }
     
-    private func commitAITrip(_ draft: AITripDraft, seedItems: [PlanDayItem]) {
+    private func commitAITrip(_ draft: AITripDraft, seedItems: [PlanDayItem], placeItems: [PlanDayItem]) {
         let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let destination = draft.destination.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = name.isEmpty ? (destination.isEmpty ? "New Trip" : destination) : name
@@ -323,8 +329,8 @@ struct MyTripsView: View {
                     description: item.notes,
                     time: "",
                     location: item.location,
-                    latitude: nil,
-                    longitude: nil,
+                    latitude: item.latitude,
+                    longitude: item.longitude,
                     icon: "mappin.and.ellipse",
                     accent: .neutral,
                     photoData: nil
@@ -334,6 +340,22 @@ struct MyTripsView: View {
         
         tripStore.addTrip(trip)
         pendingNewTripID = trip.id
+        
+        for item in placeItems where item.canSaveToPlaces {
+            let placeName = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !placeName.isEmpty else { continue }
+            let place = Place(
+                name: placeName,
+                location: item.location,
+                note: item.notes,
+                latitude: item.latitude,
+                longitude: item.longitude,
+                placeType: PlaceType.fromAICategory(item.category),
+                sourceTripID: trip.id,
+                sourceTripName: trip.name
+            )
+            placeStore.add(place)
+        }
     }
     
     private func applySeedItems(_ items: [PlanDayItem], to days: inout [TripDay]) {
@@ -354,8 +376,8 @@ struct MyTripsView: View {
                     description: item.notes,
                     time: "",
                     location: item.location,
-                    latitude: nil,
-                    longitude: nil,
+                    latitude: item.latitude,
+                    longitude: item.longitude,
                     icon: "mappin.and.ellipse",
                     accent: .neutral,
                     photoData: nil
@@ -500,16 +522,6 @@ struct MyTripsView: View {
                         }
                         .pickerStyle(.segmented)
                         .padding(.bottom, RootHomeMetrics.chromeToContent)
-                        .zIndex(10)
-                        .contentShape(Rectangle())
-                        .highPriorityGesture(
-                            TapGesture().onEnded {
-                                segmentSwitchInFlight = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                    segmentSwitchInFlight = false
-                                }
-                            }
-                        )
                     }
                     
                     LazyVStack(spacing: RootHomeMetrics.chromeToContent, pinnedViews: []) {
@@ -525,66 +537,7 @@ struct MyTripsView: View {
                         if selectedSegment == .unscheduled {
                             Section {
                                 ForEach(filteredTrips) { trip in
-                                Button {
-                                    navigationPath.append(trip.id)
-                                } label: {
-                                    TripCardView(trip: trip)
-                                }
-                                .buttonStyle(.plain)
-                                .allowsHitTesting(!segmentSwitchInFlight)
-                                .contextMenu {
-                                    Button {
-                                        navigationPath.append(trip.id)
-                                    } label: {
-                                        Label("View Trip", systemImage: "arrow.right.circle")
-                                    }
-                                    
-                                    Divider()
-                                    
-                                    Menu {
-                                        Button {
-                                            tripForUnsplashCoverPicker = trip
-                                        } label: {
-                                            Label("Choose from Unsplash", systemImage: "sparkles")
-                                        }
-                                        
-                                        Button {
-                                            tripForImagePicker = trip
-                                            showImagePicker = true
-                                        } label: {
-                                            Label("Upload from Photos", systemImage: "photo.on.rectangle")
-                                        }
-                                    } label: {
-                                        let hasCover = trip.coverImageData != nil
-                                        Label(hasCover ? "Update Cover Image" : "Add Cover Image",
-                                              systemImage: hasCover ? "photo" : "photo.badge.plus")
-                                    }
-                                    
-                                    Button {
-                                        editingTrip = trip
-                                    } label: {
-                                        Label("Edit Trip", systemImage: "pencil")
-                                    }
-                                    
-                                    if auth.isSignedIn {
-                                        Button {
-                                            withAnimation {
-                                                tripStore.addTrip(trip.duplicatedTrip())
-                                            }
-                                        } label: {
-                                            Label("Duplicate Trip", systemImage: "doc.on.doc")
-                                        }
-                                        
-                                        Divider()
-                                        
-                                        Button(role: .destructive) {
-                                            tripPendingDelete = trip
-                                        } label: {
-                                            Label("Delete Trip", systemImage: "trash")
-                                        }
-                                        .tint(.red)
-                                    }
-                                }
+                                    tripCardRow(trip)
                                 }
                             } header: {
                                 // Match Upcoming/Past year-header height so the list doesn't jump.
@@ -607,71 +560,12 @@ struct MyTripsView: View {
                                     }
                                     
                                     ForEach(tripsForYear) { trip in
-                                    Button {
-                                        navigationPath.append(trip.id)
-                                    } label: {
-                                        TripCardView(trip: trip)
+                                        tripCardRow(trip)
                                     }
-                                    .buttonStyle(.plain)
-                                    .allowsHitTesting(!segmentSwitchInFlight)
-                                    .contextMenu {
-                                        Button {
-                                            navigationPath.append(trip.id)
-                                        } label: {
-                                            Label("View Trip", systemImage: "arrow.right.circle")
-                                        }
-                                        
-                                        Divider()
-                                        
-                                        Menu {
-                                            Button {
-                                                tripForUnsplashCoverPicker = trip
-                                            } label: {
-                                                Label("Choose from Unsplash", systemImage: "sparkles")
-                                            }
-                                            
-                                            Button {
-                                                tripForImagePicker = trip
-                                                showImagePicker = true
-                                            } label: {
-                                                Label("Upload from Photos", systemImage: "photo.on.rectangle")
-                                            }
-                                        } label: {
-                                            let hasCover = trip.coverImageData != nil
-                                            Label(hasCover ? "Update Cover Image" : "Add Cover Image",
-                                                  systemImage: hasCover ? "photo" : "photo.badge.plus")
-                                        }
-                                        
-                                        Button {
-                                            editingTrip = trip
-                                        } label: {
-                                            Label("Edit Trip", systemImage: "pencil")
-                                        }
-                                        
-                                        if auth.isSignedIn {
-                                            Button {
-                                                withAnimation {
-                                                    tripStore.addTrip(trip.duplicatedTrip())
-                                                }
-                                            } label: {
-                                                Label("Duplicate Trip", systemImage: "doc.on.doc")
-                                            }
-                                            
-                                            Divider()
-                                            
-                                            Button(role: .destructive) {
-                                                tripPendingDelete = trip
-                                            } label: {
-                                                Label("Delete Trip", systemImage: "trash")
-                                            }
-                                            .tint(.red)
-                                        }
-                                    }
+                                } header: {
+                                    tripYearHeader(String(year), isFirst: year == sortedYears.first)
                                 }
-                            } header: {
-                                tripYearHeader(String(year), isFirst: year == sortedYears.first)
                             }
-                        }
                         }
                     }
                     
@@ -695,16 +589,89 @@ struct MyTripsView: View {
             }
             .onChange(of: selectedSegment) { _, _ in
                 Haptics.bump()
-                segmentSwitchInFlight = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     withTransaction(Transaction(animation: nil)) {
                         proxy.scrollTo("top", anchor: .top)
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
-                        segmentSwitchInFlight = false
-                    }
                 }
             }
+        }
+    }
+    
+    @ViewBuilder
+    private func tripCardRow(_ trip: Trip) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        Button {
+            navigationPath.append(trip.id)
+        } label: {
+            TripCardView(trip: trip)
+                .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .contentShape(shape)
+        .contextMenu {
+            tripCardContextMenu(trip)
+        } preview: {
+            TripCardView(trip: trip)
+                .frame(width: 280)
+                .clipShape(shape)
+        }
+    }
+    
+    @ViewBuilder
+    private func tripCardContextMenu(_ trip: Trip) -> some View {
+        Button {
+            navigationPath.append(trip.id)
+        } label: {
+            Label("View Trip", systemImage: "arrow.right.circle")
+        }
+        
+        Divider()
+        
+        Menu {
+            Button {
+                tripForUnsplashCoverPicker = trip
+            } label: {
+                Label("Choose from Unsplash", systemImage: "sparkles")
+            }
+            
+            Button {
+                tripForImagePicker = trip
+                showImagePicker = true
+            } label: {
+                Label("Upload from Photos", systemImage: "photo.on.rectangle")
+            }
+        } label: {
+            let hasCover = trip.coverImageData != nil
+            Label(
+                hasCover ? "Update Cover Image" : "Add Cover Image",
+                systemImage: hasCover ? "photo" : "photo.badge.plus"
+            )
+        }
+        
+        Button {
+            editingTrip = trip
+        } label: {
+            Label("Edit Trip", systemImage: "pencil")
+        }
+        
+        if auth.isSignedIn {
+            Button {
+                withAnimation {
+                    tripStore.addTrip(trip.duplicatedTrip())
+                }
+            } label: {
+                Label("Duplicate Trip", systemImage: "doc.on.doc")
+            }
+            
+            Divider()
+            
+            Button(role: .destructive) {
+                tripPendingDelete = trip
+            } label: {
+                Label("Delete Trip", systemImage: "trash")
+            }
+            .tint(.red)
         }
     }
 }
@@ -1196,5 +1163,6 @@ struct EditTripView: View {
     }
     .environment(TripStore())
     .environment(PlaceStore())
+    .environment(RootTabChrome())
 }
 

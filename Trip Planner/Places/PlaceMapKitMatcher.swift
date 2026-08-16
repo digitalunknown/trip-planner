@@ -39,6 +39,7 @@ enum PlaceMapKitMatcher {
         
         guard let best = response.mapItems.first(where: { isConfidentMatch(place: place, title: title, item: $0) })
                 ?? response.mapItems.first(where: { isConfidentMatch(place: place, title: title, item: $0, allowLooseDistance: true) })
+                ?? response.mapItems.first(where: { $0.identifier != nil && namesAlign(title: title, mapItem: $0) })
         else {
             return nil
         }
@@ -59,8 +60,13 @@ enum PlaceMapKitMatcher {
     
     private static func bestQuery(for place: Place, title: String) -> String {
         let location = place.location.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = place.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !location.isEmpty, !name.isEmpty {
+            if location.localizedCaseInsensitiveContains(name) { return location }
+            return "\(name), \(location)"
+        }
         if !location.isEmpty { return location }
-        return title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name
     }
     
     @available(iOS 18.0, *)
@@ -76,12 +82,15 @@ enum PlaceMapKitMatcher {
         // Prefer real establishments / street-level results over vague localities.
         let isPOI = item.pointOfInterestCategory != nil
         let hasStreet = hasStreetAddress(item)
-        guard isPOI || hasStreet else { return false }
         
         guard let placeLat = place.latitude, let placeLon = place.longitude else {
-            // Without coordinates, require a strong name containment match + POI.
-            return isPOI && strongNameContainment(title: title, mapItem: item)
+            // AI-saved places often lack coordinates. Accept strong name matches and
+            // named outdoor features (hikes/parks) that may not be street-addressed POIs.
+            if strongNameContainment(title: title, mapItem: item) { return true }
+            return isPOI || hasStreet
         }
+        
+        guard isPOI || hasStreet || strongNameContainment(title: title, mapItem: item) else { return false }
         
         let itemCoord = coordinate(of: item)
         let placeLoc = CLLocation(latitude: placeLat, longitude: placeLon)

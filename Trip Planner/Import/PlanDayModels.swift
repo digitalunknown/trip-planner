@@ -23,6 +23,9 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
     var subtitle: String
     
     var location: String
+    /// MapKit-resolved coordinates when available (map pins need these, not just location text).
+    var latitude: Double?
+    var longitude: Double?
     var notes: String
     
     var startTime: Date?
@@ -50,6 +53,8 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
         title: String,
         subtitle: String = "",
         location: String = "",
+        latitude: Double? = nil,
+        longitude: Double? = nil,
         notes: String = "",
         startTime: Date? = nil,
         endTime: Date? = nil,
@@ -70,6 +75,8 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
         self.title = title
         self.subtitle = subtitle
         self.location = location
+        self.latitude = latitude
+        self.longitude = longitude
         self.notes = notes
         self.startTime = startTime
         self.endTime = endTime

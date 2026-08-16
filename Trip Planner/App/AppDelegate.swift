@@ -3,6 +3,8 @@ import UIKit
 extension Notification.Name {
     static let quickActionCreateNewTrip = Notification.Name("quickActionCreateNewTrip")
     static let openNewTripSheet = Notification.Name("openNewTripSheet")
+    static let openAICreateTrip = Notification.Name("openAICreateTrip")
+    static let openAIFindPlaces = Notification.Name("openAIFindPlaces")
 }
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
