@@ -4,12 +4,13 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>TripStacks uses the camera so you can capture documents and photos for activities.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TripStacks uses your location to suggest trips and places near you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>TripStacks uses your photo library so you can attach images to trips and activities.</string>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Inter-Italic-VariableFont_opsz,wght.ttf</string>
-		<string>Inter-VariableFont_opsz,wght.ttf</string>
+		<string>Manrope-VariableFont_wght.ttf</string>
 	</array>
 </dict>
 </plist>

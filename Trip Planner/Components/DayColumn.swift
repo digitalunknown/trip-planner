@@ -29,19 +29,18 @@ struct DayColumn: View {
     let onMoveFlightLeft: (FlightItem) -> Void
     let onMoveFlightRight: (FlightItem) -> Void
     let onMoveFlightToParked: ((FlightItem) -> Void)?
-    let onAddEvent: () -> Void
     var onPlanDay: (() -> Void)? = nil
     let showEmptyPlaceholder: Bool
+    /// When true, empty-state CTA is fully visible; otherwise it animates completely out.
+    var isEmptyStateFocused: Bool = true
     
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.appAccentColor) private var appAccentColor
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
-    private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
+    private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xD0D0D6) }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
-    private var emptyActionFill: Color { colorScheme == .dark ? Color(hex: 0x2C2C2E) : Color(hex: 0xE8E8EA) }
-    private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xB5B5B5) }
+    private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xA8A8B0) }
     private var highlightFillColor: Color { colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04) }
     
     private struct TimedRow: Identifiable {
@@ -87,6 +86,10 @@ struct DayColumn: View {
             }
     }
 
+    private var isDayEmpty: Bool {
+        day.events.isEmpty && day.reminders.isEmpty && day.checklists.isEmpty && day.flights.isEmpty
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
@@ -100,202 +103,18 @@ struct DayColumn: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 10) {
-                    if day.events.isEmpty && day.reminders.isEmpty && day.checklists.isEmpty && day.flights.isEmpty && showEmptyPlaceholder {
-                        dayEmptyState
-                    }
-                    
-                    // Reminders always show at the top and have no time.
-                    if !day.reminders.isEmpty {
-                        VStack(spacing: 8) {
-                            ForEach(day.reminders) { reminder in
-                                ReminderCard(text: reminder.text)
-                                    .onTapGesture { onTapReminder(reminder) }
-                                    .contextMenu {
-                                        if day.order > 1 {
-                                            Button {
-                                                onMoveReminderLeft(reminder)
-                                            } label: {
-                                                Label("Move Left", systemImage: "arrow.left")
-                                            }
-                                        }
-                                        if day.order < totalDays {
-                                            Button {
-                                                onMoveReminderRight(reminder)
-                                            } label: {
-                                                Label("Move Right", systemImage: "arrow.right")
-                                            }
-                                        }
-                                        if let moveToParked = onMoveReminderToParked {
-                                            Button {
-                                                moveToParked(reminder)
-                                            } label: {
-                                                Label("Move to Ideas", systemImage: "arrow.right")
-                                            }
-                                        }
-                                        Divider()
-                                        
-                                        Button {
-                                            onTapReminder(reminder)
-                                        } label: {
-                                            Label("Edit Reminder", systemImage: "pencil")
-                                        }
-                                        
-                                        Button(role: .destructive) {
-                                            onDeleteReminder(reminder)
-                                        } label: {
-                                            Label("Delete Reminder", systemImage: "trash")
-                                        }
-                                        .tint(.red)
-                                    }
-                            }
-                        }
-                    }
-                    
-                    if !day.checklists.isEmpty {
-                        VStack(spacing: 10) {
-                            ForEach(day.checklists) { checklist in
-                                ChecklistCard(checklist: checklist)
-                                    .onTapGesture { onTapChecklist(checklist) }
-                                    .contextMenu {
-                                        if day.order > 1 {
-                                            Button {
-                                                onMoveChecklistLeft(checklist)
-                                            } label: {
-                                                Label("Move Left", systemImage: "arrow.left")
-                                            }
-                                        }
-                                        if day.order < totalDays {
-                                            Button {
-                                                onMoveChecklistRight(checklist)
-                                            } label: {
-                                                Label("Move Right", systemImage: "arrow.right")
-                                            }
-                                        }
-                                        if let moveToParked = onMoveChecklistToParked {
-                                            Button {
-                                                moveToParked(checklist)
-                                            } label: {
-                                                Label("Move to Ideas", systemImage: "arrow.right")
-                                            }
-                                        }
-                                        Divider()
-                                        
-                                        Button {
-                                            onTapChecklist(checklist)
-                                        } label: {
-                                            Label("Edit Checklist", systemImage: "pencil")
-                                        }
-                                        
-                                        Button(role: .destructive) {
-                                            onDeleteChecklist(checklist)
-                                        } label: {
-                                            Label("Delete Checklist", systemImage: "trash")
-                                        }
-                                        .tint(.red)
-                                    }
-                            }
-                        }
-                    }
-                    
-                    ForEach(timelineRows) { row in
-                        switch row.kind {
-                        case .flight(let flight):
-                            FlightCard(flight: flight)
-                                .onTapGesture { onTapFlight(flight) }
-                                .contextMenu {
-                                    if day.order > 1 {
-                                        Button {
-                                            onMoveFlightLeft(flight)
-                                        } label: {
-                                            Label("Move Left", systemImage: "arrow.left")
-                                        }
-                                    }
-                                    if day.order < totalDays {
-                                        Button {
-                                            onMoveFlightRight(flight)
-                                        } label: {
-                                            Label("Move Right", systemImage: "arrow.right")
-                                        }
-                                    }
-                                    if let moveToParked = onMoveFlightToParked {
-                                        Button {
-                                            moveToParked(flight)
-                                        } label: {
-                                            Label("Move to Ideas", systemImage: "arrow.right")
-                                        }
-                                    }
-                                    Divider()
-                                    
-                                    Button {
-                                        onTapFlight(flight)
-                                    } label: {
-                                        Label("Edit Travel", systemImage: "pencil")
-                                    }
-                                    
-                                    Button(role: .destructive) {
-                                        onDeleteFlight(flight)
-                                    } label: {
-                                        Label("Delete Travel", systemImage: "trash")
-                                    }
-                                    .tint(.red)
-                                }
-                        case .activity(let event):
-                            EventCard(event: event)
-                                .onTapGesture { onTap(event) }
-                                .contextMenu {
-                                    if day.order > 1 {
-                                        Button {
-                                            onMoveEventLeft(event)
-                                        } label: {
-                                            Label("Move Left", systemImage: "arrow.left")
-                                        }
-                                    }
-                                    if day.order < totalDays {
-                                        Button {
-                                            onMoveEventRight(event)
-                                        } label: {
-                                            Label("Move Right", systemImage: "arrow.right")
-                                        }
-                                    }
-                                    if let moveToParked = onMoveEventToParked {
-                                        Button {
-                                            moveToParked(event)
-                                        } label: {
-                                            Label("Move to Ideas", systemImage: "arrow.right")
-                                        }
-                                    }
-                                    Divider()
-                                    
-                                    Button {
-                                        onEdit(event)
-                                    } label: {
-                                        Label("Edit Activity", systemImage: "pencil")
-                                    }
-                                        
-                                        Button {
-                                            onDuplicate(event)
-                                        } label: {
-                                            Label("Duplicate Activity", systemImage: "doc.on.doc")
-                                    }
-                                    
-                                    Button(role: .destructive) {
-                                        onDelete(event)
-                                    } label: {
-                                        Label("Delete Activity", systemImage: "trash")
-                                    }
-                                    .tint(.red)
-                                }
-                        }
-                    }
-                    
-                    Spacer(minLength: 20)
-                }
-                .padding(14)
+            if isDayEmpty && showEmptyPlaceholder {
+                dayEmptyState
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(isEmptyStateFocused ? 1 : 0)
+                    .scaleEffect(isEmptyStateFocused ? 1 : 0.92, anchor: .center)
+                    .allowsHitTesting(isEmptyStateFocused)
+                    .animation(.easeInOut(duration: 0.32), value: isEmptyStateFocused)
+            } else {
+                dayContentScroll
             }
         }
-        .frame(width: columnWidth, height: columnHeight)
+        .frame(width: columnWidth, height: columnHeight, alignment: .top)
         .modifier(DayColumnGlassChrome(
             isCurrentDay: isCurrentDay,
             dayBackground: dayBackground,
@@ -305,53 +124,233 @@ struct DayColumn: View {
         ))
     }
     
-    private var dayEmptyState: some View {
-        VStack(spacing: 18) {
-            Text("You haven’t added anything to this day yet")
-                .font(.app(15, weight: .semibold))
-                .foregroundStyle(textPrimary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 4)
-            
-            HStack(spacing: 10) {
-                Button {
-                    onPlanDay?()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Plan Day")
-                            .font(.app(14, weight: .semibold))
+    private var dayContentScroll: some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Reminders always show at the top and have no time.
+                if !day.reminders.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(day.reminders) { reminder in
+                            ReminderCard(text: reminder.text)
+                                .onTapGesture { onTapReminder(reminder) }
+                                .contextMenu {
+                                    if day.order > 1 {
+                                        Button {
+                                            onMoveReminderLeft(reminder)
+                                        } label: {
+                                            Label("Move Left", systemImage: "arrow.left")
+                                        }
+                                    }
+                                    if day.order < totalDays {
+                                        Button {
+                                            onMoveReminderRight(reminder)
+                                        } label: {
+                                            Label("Move Right", systemImage: "arrow.right")
+                                        }
+                                    }
+                                    if let moveToParked = onMoveReminderToParked {
+                                        Button {
+                                            moveToParked(reminder)
+                                        } label: {
+                                            Label("Move to Ideas", systemImage: "arrow.right")
+                                        }
+                                    }
+                                    Divider()
+                                    
+                                    Button {
+                                        onTapReminder(reminder)
+                                    } label: {
+                                        Label("Edit Reminder", systemImage: "pencil")
+                                    }
+                                    
+                                    Button(role: .destructive) {
+                                        onDeleteReminder(reminder)
+                                    } label: {
+                                        Label("Delete Reminder", systemImage: "trash")
+                                    }
+                                    .tint(.red)
+                                }
+                        }
                     }
-                    .foregroundStyle(textPrimary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(emptyActionFill, in: Capsule(style: .continuous))
                 }
-                .buttonStyle(.plain)
                 
-                Button {
-                    onAddEvent()
-                } label: {
-                    Text("Add")
-                        .font(.app(14, weight: .semibold))
-                        .foregroundStyle(textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(emptyActionFill, in: Capsule(style: .continuous))
+                if !day.checklists.isEmpty {
+                    VStack(spacing: 10) {
+                        ForEach(day.checklists) { checklist in
+                            ChecklistCard(checklist: checklist)
+                                .onTapGesture { onTapChecklist(checklist) }
+                                .contextMenu {
+                                    if day.order > 1 {
+                                        Button {
+                                            onMoveChecklistLeft(checklist)
+                                        } label: {
+                                            Label("Move Left", systemImage: "arrow.left")
+                                        }
+                                    }
+                                    if day.order < totalDays {
+                                        Button {
+                                            onMoveChecklistRight(checklist)
+                                        } label: {
+                                            Label("Move Right", systemImage: "arrow.right")
+                                        }
+                                    }
+                                    if let moveToParked = onMoveChecklistToParked {
+                                        Button {
+                                            moveToParked(checklist)
+                                        } label: {
+                                            Label("Move to Ideas", systemImage: "arrow.right")
+                                        }
+                                    }
+                                    Divider()
+                                    
+                                    Button {
+                                        onTapChecklist(checklist)
+                                    } label: {
+                                        Label("Edit Checklist", systemImage: "pencil")
+                                    }
+                                    
+                                    Button(role: .destructive) {
+                                        onDeleteChecklist(checklist)
+                                    } label: {
+                                        Label("Delete Checklist", systemImage: "trash")
+                                    }
+                                    .tint(.red)
+                                }
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
+                
+                ForEach(timelineRows) { row in
+                    switch row.kind {
+                    case .flight(let flight):
+                        FlightCard(flight: flight)
+                            .onTapGesture { onTapFlight(flight) }
+                            .contextMenu {
+                                if day.order > 1 {
+                                    Button {
+                                        onMoveFlightLeft(flight)
+                                    } label: {
+                                        Label("Move Left", systemImage: "arrow.left")
+                                    }
+                                }
+                                if day.order < totalDays {
+                                    Button {
+                                        onMoveFlightRight(flight)
+                                    } label: {
+                                        Label("Move Right", systemImage: "arrow.right")
+                                    }
+                                }
+                                if let moveToParked = onMoveFlightToParked {
+                                    Button {
+                                        moveToParked(flight)
+                                    } label: {
+                                        Label("Move to Ideas", systemImage: "arrow.right")
+                                    }
+                                }
+                                Divider()
+                                
+                                Button {
+                                    onTapFlight(flight)
+                                } label: {
+                                    Label("Edit Travel", systemImage: "pencil")
+                                }
+                                
+                                Button(role: .destructive) {
+                                    onDeleteFlight(flight)
+                                } label: {
+                                    Label("Delete Travel", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+                    case .activity(let event):
+                        EventCard(event: event)
+                            .onTapGesture { onTap(event) }
+                            .contextMenu {
+                                if day.order > 1 {
+                                    Button {
+                                        onMoveEventLeft(event)
+                                    } label: {
+                                        Label("Move Left", systemImage: "arrow.left")
+                                    }
+                                }
+                                if day.order < totalDays {
+                                    Button {
+                                        onMoveEventRight(event)
+                                    } label: {
+                                        Label("Move Right", systemImage: "arrow.right")
+                                    }
+                                }
+                                if let moveToParked = onMoveEventToParked {
+                                    Button {
+                                        moveToParked(event)
+                                    } label: {
+                                        Label("Move to Ideas", systemImage: "arrow.right")
+                                    }
+                                }
+                                Divider()
+                                
+                                Button {
+                                    onEdit(event)
+                                } label: {
+                                    Label("Edit Activity", systemImage: "pencil")
+                                }
+                                
+                                Button {
+                                    onDuplicate(event)
+                                } label: {
+                                    Label("Duplicate Activity", systemImage: "doc.on.doc")
+                                }
+                                
+                                Button(role: .destructive) {
+                                    onDelete(event)
+                                } label: {
+                                    Label("Delete Activity", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+                    }
+                }
+                
+                Spacer(minLength: 20)
             }
+            .padding(14)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 28)
-        .padding(.bottom, 12)
+    }
+    
+    private var dayEmptyState: some View {
+        ViewThatFits(in: .vertical) {
+            emptyStateStack(spacing: 18, showsMessage: true)
+            emptyStateStack(spacing: 10, showsMessage: true)
+            emptyStateStack(spacing: 0, showsMessage: false)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private func emptyStateStack(spacing: CGFloat, showsMessage: Bool) -> some View {
+        VStack(spacing: spacing) {
+            if showsMessage {
+                Text("You haven’t added anything to this day yet")
+                    .font(.app(15, weight: .semibold))
+                    .foregroundStyle(textPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 28)
+            }
+            
+            Button {
+                onPlanDay?()
+            } label: {
+                Label("Plan Day", systemImage: "sparkles")
+            }
+            .buttonStyle(.primaryCapsule)
+            .padding(.horizontal, 28)
+        }
         .frame(maxWidth: .infinity)
     }
 }
 
-/// Liquid glass day-column chrome on iOS 26+; solid fill fallback on earlier OS versions.
+/// Liquid glass day-column chrome in dark mode on iOS 26+; solid fill + stroke in light
+/// mode (and on earlier OS) so columns stay visible against the sheet.
 private struct DayColumnGlassChrome: ViewModifier {
     let isCurrentDay: Bool
     let dayBackground: Color
@@ -359,17 +358,24 @@ private struct DayColumnGlassChrome: ViewModifier {
     let highlightStrokeColor: Color
     let highlightFillColor: Color
     
+    @Environment(\.colorScheme) private var colorScheme
+    
     private let cornerRadius: CGFloat = 20
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+    }
+    
+    private var borderColor: Color {
+        isCurrentDay ? highlightStrokeColor : columnStroke
+    }
     
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, *), colorScheme == .dark {
             content
-                .glassEffect(
-                    .regular,
-                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                )
+                .glassEffect(.regular, in: shape)
+                .clipShape(shape)
                 .overlay {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    shape
                         .strokeBorder(
                             isCurrentDay ? highlightStrokeColor : Color.clear,
                             lineWidth: isCurrentDay ? 1 : 0
@@ -384,16 +390,17 @@ private struct DayColumnGlassChrome: ViewModifier {
         } else {
             content
                 .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    shape
                         .fill(dayBackground)
                         .overlay(
-                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            shape
                                 .fill(isCurrentDay ? highlightFillColor : .clear)
                         )
                 )
+                .clipShape(shape)
                 .overlay {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(isCurrentDay ? highlightStrokeColor : columnStroke, lineWidth: 1)
+                    shape
+                        .strokeBorder(borderColor, lineWidth: 1)
                         .shadow(
                             color: isCurrentDay ? highlightStrokeColor.opacity(0.35) : .clear,
                             radius: 2,
@@ -401,7 +408,12 @@ private struct DayColumnGlassChrome: ViewModifier {
                             y: 0
                         )
                 }
-                .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
+                .shadow(
+                    color: Color.black.opacity(colorScheme == .dark ? 0.08 : 0.06),
+                    radius: colorScheme == .dark ? 18 : 10,
+                    x: 0,
+                    y: colorScheme == .dark ? 14 : 4
+                )
         }
     }
 }

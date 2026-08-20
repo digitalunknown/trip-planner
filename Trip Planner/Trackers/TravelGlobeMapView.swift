@@ -19,7 +19,7 @@ struct TravelGlobeMapView: View {
             .ignoresSafeArea()
             
             HStack(spacing: 12) {
-                LiquidGlassIconButton(systemName: "xmark") { dismiss() }
+                LiquidGlassIconButton(systemName: "xmark", showsGlassBackground: true) { dismiss() }
                 
                 Spacer(minLength: 0)
                 

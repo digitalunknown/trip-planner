@@ -19,7 +19,9 @@ struct TrackersHomeView: View {
     @EnvironmentObject private var auth: AppleSignInManager
     @Environment(\.colorScheme) private var colorScheme
     @Environment(TripStore.self) private var tripStore
+    @Environment(PlaceStore.self) private var placeStore
     @AppStorage("hiddenStats") private var hiddenStatsRaw: String = ""
+    @AppStorage(AchievementCounters.aiDaysPlannedKey) private var aiDaysPlannedCount: Int = 0
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
@@ -358,87 +360,92 @@ struct TrackersHomeView: View {
         }
     }
     
-    // MARK: - Achievements (level progress)
+    // MARK: - Badges
     
     private var tripsLoggedCount: Int { completedTrips.count }
     
     private var tripLevel: Int { TripLevelProgress.level(forTripCount: tripsLoggedCount) }
     
-    private var tripLevelProgress: Double { TripLevelProgress.progress(forTripCount: tripsLoggedCount) }
+    private var achievementProgress: AchievementProgress {
+        let travelItems = allTravelItems
+        return AchievementProgress(
+            tripsLogged: tripsLoggedCount,
+            countries: store.visitedCount(in: .countries),
+            continents: store.visitedCount(in: .continents),
+            daysTraveled: AchievementProgress.totalTravelDays(trips: tripStore.trips),
+            flights: travelItems.filter { $0.travelMode == .flight }.count,
+            drives: travelItems.filter { $0.travelMode == .drive }.count,
+            placesSaved: placeStore.places.count,
+            restaurantsTried: placeStore.places.filter { $0.placeType == .restaurant }.count,
+            aiDaysPlanned: aiDaysPlannedCount,
+            checklistsCompleted: AchievementProgress.completedChecklists(in: tripStore.trips)
+        )
+    }
+    
+    private var visitedNationalParkIDs: Set<String> {
+        store.visitedIDs(in: .nationalParks)
+    }
+    
+    private var visibleAchievements: [AchievementDefinition] {
+        AchievementsCatalog.visibleAchievements(
+            progress: achievementProgress,
+            visitedParkIDs: visitedNationalParkIDs
+        )
+    }
+    
+    private var previewAchievements: [AchievementDefinition] {
+        Array(visibleAchievements.prefix(4))
+    }
+    
+    private var unlockedAchievementsCount: Int {
+        AchievementsCatalog.unlockedCount(
+            progress: achievementProgress,
+            visitedParkIDs: visitedNationalParkIDs
+        )
+    }
+    
+    private var achievementsUnlockedLabel: String {
+        unlockedAchievementsCount == 1
+            ? "1 unlocked"
+            : "\(unlockedAchievementsCount) unlocked"
+    }
     
     private var achievementsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            sectionHeader("Achievements")
+            sectionHeader("Badges")
             
             Button {
                 showAchievementsSheet = true
             } label: {
-                HStack(alignment: .center, spacing: 16) {
-                    levelBadge
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 8) {
+                        ForEach(previewAchievements) { definition in
+                            AchievementBadgeCell(
+                                definition: definition,
+                                unlocked: achievementProgress.isUnlocked(definition),
+                                showsDescription: true,
+                                badgeSize: 64
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(TripLevelProgress.title(forLevel: tripLevel) ?? "Getting started")
-                            .font(.app(18, weight: .semibold))
-                            .foregroundStyle(textPrimary)
-                        
-                        Text(levelSubtitle)
+                    HStack {
+                        Spacer(minLength: 0)
+                        Text(achievementsUnlockedLabel)
                             .font(.appCaption)
                             .foregroundStyle(textSecondary)
-                        
-                        Capsule(style: .continuous)
-                            .fill(textPrimary.opacity(colorScheme == .dark ? 0.22 : 0.14))
-                            .frame(height: 8)
-                            .overlay(alignment: .leading) {
-                                Capsule(style: .continuous)
-                                    .fill(textPrimary)
-                                    .frame(maxWidth: .infinity)
-                                    .scaleEffect(x: tripLevelProgress, y: 1, anchor: .leading)
-                            }
-                            .clipShape(Capsule(style: .continuous))
-                            .accessibilityValue("\(Int((tripLevelProgress * 100).rounded())) percent")
+                            .multilineTextAlignment(.trailing)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.app(13, weight: .semibold))
-                        .foregroundStyle(textSecondary.opacity(0.7))
                 }
-                .padding(16)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 14)
                 .modifier(ProfileGlassBackground(cornerRadius: 20, fallback: dayBackground))
                 .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
             .buttonStyle(.plain)
-        }
-    }
-    
-    private var levelSubtitle: String {
-        if let remaining = TripLevelProgress.tripsRemaining(forTripCount: tripsLoggedCount),
-           let nextTitle = TripLevelProgress.title(forLevel: tripLevel + 1) {
-            let tripWord = remaining == 1 ? "trip" : "trips"
-            return "\(tripsLoggedCount) logged · \(remaining) \(tripWord) to \(nextTitle)"
-        }
-        return "\(tripsLoggedCount) trips logged · Max rank"
-    }
-    
-    @ViewBuilder
-    private var levelBadge: some View {
-        let size: CGFloat = 72
-        if let name = TripLevelProgress.illustrationName(forLevel: tripLevel) {
-            Image(name)
-                .resizable()
-                .interpolation(.high)
-                .scaledToFit()
-                .frame(width: size, height: size)
-        } else {
-            // Level 0 — empty slot toward first badge
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(textSecondary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                    .frame(width: size, height: size)
-                Image(systemName: "sparkles")
-                    .font(.app(22, weight: .semibold))
-                    .foregroundStyle(textSecondary.opacity(0.55))
-            }
+            .accessibilityHint("Shows all badges")
+            .accessibilityValue(achievementsUnlockedLabel)
         }
     }
     
@@ -447,7 +454,7 @@ struct TrackersHomeView: View {
     private var legacyAchievementsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                sectionHeader("Achievements")
+                sectionHeader("Badges")
                 Spacer(minLength: 0)
                 if !completedTrips.isEmpty {
                     Button {
@@ -644,17 +651,33 @@ struct TrackersHomeView: View {
     }
     
     private var achievementsSheet: some View {
-        NavigationStack {
-            List {
-                ForEach(1...3, id: \.self) { level in
-                    achievementRow(level: level)
-                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
+        let progress = achievementProgress
+        let items = visibleAchievements
+        return NavigationStack {
+            ScrollView {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ],
+                    spacing: 18
+                ) {
+                    ForEach(items) { definition in
+                        AchievementBadgeCell(
+                            definition: definition,
+                            unlocked: progress.isUnlocked(definition),
+                            showsDescription: true,
+                            badgeSize: 96
+                        )
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Achievements")
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Badges")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -664,51 +687,6 @@ struct TrackersHomeView: View {
         }
         .tint(.primary)
         .presentationDetents([.medium, .large])
-    }
-    
-    private func achievementRow(level: Int) -> some View {
-        let unlocked = tripLevel >= level
-        let threshold = TripLevelProgress.startThreshold(forLevel: level)
-        let imageName = TripLevelProgress.illustrationName(forLevel: level)
-        
-        return HStack(spacing: 16) {
-            Group {
-                if let imageName {
-                    Image(imageName)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFit()
-                } else {
-                    Color.clear
-                }
-            }
-            .frame(width: 64, height: 64)
-            .opacity(unlocked ? 1 : 0.28)
-            .saturation(unlocked ? 1 : 0)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(TripLevelProgress.title(forLevel: level) ?? "Level \(level)")
-                    .font(.app(17, weight: .semibold))
-                    .foregroundStyle(.primary)
-                
-                Text(unlocked ? "Unlocked" : "Log \(threshold) trips to unlock")
-                    .font(.appCaption)
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer(minLength: 0)
-            
-            if unlocked {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.app(20, weight: .semibold))
-                    .foregroundStyle(.primary)
-            } else {
-                Image(systemName: "lock.fill")
-                    .font(.app(16, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 6)
     }
     
     private var completedTripsSheet: some View {
@@ -730,6 +708,63 @@ struct TrackersHomeView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+private struct AchievementBadgeCell: View {
+    let definition: AchievementDefinition
+    let unlocked: Bool
+    var showsDescription: Bool = true
+    var badgeSize: CGFloat = 64
+    
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
+    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    
+    var body: some View {
+        VStack(spacing: showsDescription ? 8 : 0) {
+            badgeArtwork
+                .frame(width: badgeSize, height: badgeSize)
+                .accessibilityLabel(unlocked ? definition.title : "\(definition.title), locked")
+            
+            if showsDescription {
+                Text(definition.description)
+                    .font(.app(11, weight: .regular))
+                    .foregroundStyle(textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity, minHeight: 28, alignment: .top)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var badgeArtwork: some View {
+        if unlocked {
+            if let name = definition.illustrationName {
+                Image(name)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+            } else {
+                ZStack {
+                    Circle()
+                        .fill(textPrimary.opacity(colorScheme == .dark ? 0.18 : 0.10))
+                    Circle()
+                        .strokeBorder(textPrimary.opacity(0.18), lineWidth: 1)
+                    Image(systemName: definition.systemImage)
+                        .font(.system(size: badgeSize * 0.36, weight: .semibold))
+                        .foregroundStyle(textPrimary.opacity(0.92))
+                }
+            }
+        } else {
+            Image(AchievementsCatalog.lockedBadgeAsset)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+        }
     }
 }
 

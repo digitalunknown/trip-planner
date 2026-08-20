@@ -76,19 +76,27 @@ struct NewActivitySheet: View {
     @State private var showDocumentImagePicker = false
     @State private var showDocumentCameraPicker = false
     @State private var showDocumentFileImporter = false
-    @State private var isExtractingDocumentText = false
     @State private var hasEndTime = false
     @State private var showCostSheet = false
     @State private var showIconPickerSheet = false
     @State private var pendingDocumentImage: UIImage?
     @State private var pendingDocumentCameraImage: UIImage?
-    @State private var extractionReviewResult: DocumentTextExtractor.ExtractionResult?
     @State private var selectedPreviewDocumentID: UUID?
     @State private var selectedQuickLookDocument: EventDocument?
     @State private var draftIcon: String = ""
     @State private var draftAccent: EventAccent = .purple
+    @State private var appleMapItem: MKMapItem?
+    @State private var selectedAppleMapItem: MKMapItem?
+    @State private var isLoadingApplePlace = false
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
+    
+    private var placeLookupKey: String {
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lat = latitude.map { String($0) } ?? ""
+        let lon = longitude.map { String($0) } ?? ""
+        return "\(loc)|\(lat)|\(lon)"
+    }
     
     private var canAddToPlaces: Bool {
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -228,85 +236,7 @@ struct NewActivitySheet: View {
         ActivityDocumentStore.delete(document: document)
         if isEditing { onAdd() }
     }
-
-    private func applying(
-        _ components: DateComponents,
-        to baseDate: Date
-    ) -> Date? {
-        guard let hour = components.hour, let minute = components.minute else { return nil }
-        return Calendar.current.date(
-            bySettingHour: hour,
-            minute: minute,
-            second: 0,
-            of: baseDate
-        )
-    }
-
-    private func appendToNotes(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        let existing = description.trimmingCharacters(in: .whitespacesAndNewlines)
-        description = existing.isEmpty ? trimmed : "\(description)\n\n\(trimmed)"
-    }
-
-    private func applyExtractionSelections(
-        _ selections: [DocumentTextExtractor.SuggestedField],
-        from result: DocumentTextExtractor.ExtractionResult
-    ) {
-        var appliedValues: [String] = []
-
-        for suggestion in selections {
-            switch suggestion.type {
-            case .startTime:
-                if let components = suggestion.timeComponents,
-                   let detectedStart = applying(components, to: startTime) {
-                    startTime = detectedStart
-                    appliedValues.append(suggestion.value)
-                }
-            case .endTime:
-                if let components = suggestion.timeComponents,
-                   let detectedEnd = applying(components, to: startTime) {
-                    hasEndTime = true
-                    endTime = max(detectedEnd, startTime)
-                    appliedValues.append(suggestion.value)
-                }
-            case .cost:
-                if let amount = suggestion.numericAmount {
-                    cost = amount
-                    appliedValues.append(suggestion.value)
-                }
-            case .currencyCode:
-                costCurrencyCode = suggestion.value.uppercased()
-                appliedValues.append(suggestion.value)
-            case .referenceCode:
-                appendToNotes("Reference: \(suggestion.value)")
-                appliedValues.append(suggestion.value)
-            }
-        }
-
-        let notesBlock = result.notesBlock(excluding: appliedValues)
-        appendToNotes(notesBlock)
-
-        if isEditing { onAdd() }
-        extractionReviewResult = nil
-    }
     
-    private func extractInfoFromDocuments() {
-        guard !documents.isEmpty, !isExtractingDocumentText else { return }
-        
-        isExtractingDocumentText = true
-        Task {
-            let extraction = await DocumentTextExtractor.extractInfo(from: documents)
-            
-            await MainActor.run {
-                if extraction.hasContent {
-                    extractionReviewResult = extraction
-                }
-                isExtractingDocumentText = false
-            }
-        }
-    }
-
     private func removeCurrentlyPreviewedDocument() {
         guard let selectedPreviewDocumentID else { return }
         guard let currentIndex = documents.firstIndex(where: { $0.id == selectedPreviewDocumentID }) else {
@@ -443,6 +373,19 @@ struct NewActivitySheet: View {
         onAddToPlaces?()
     }
     
+    @ViewBuilder
+    private func openInButton(title: String, systemImage: String, url: URL?) -> some View {
+        Button {
+            if let url {
+                openURL(url)
+            }
+        } label: {
+            Label(title, systemImage: systemImage)
+        }
+        .buttonStyle(.secondaryCapsule)
+        .disabled(url == nil)
+    }
+    
     private var documentsSection: some View {
         Section("Images & Documents") {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -478,23 +421,6 @@ struct NewActivitySheet: View {
                     .buttonStyle(.plain)
                 }
                 .padding(.vertical, 2)
-            }
-            
-            if !documents.isEmpty {
-                Button {
-                    extractInfoFromDocuments()
-                } label: {
-                    HStack {
-                        if isExtractingDocumentText {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Extracting…")
-                        } else {
-                            Text("Extract information from documents")
-                        }
-                    }
-                }
-                .disabled(isExtractingDocumentText)
             }
         }
     }
@@ -611,6 +537,50 @@ struct NewActivitySheet: View {
         }
     }
     
+    @ViewBuilder
+    private var applePlaceInfoSection: some View {
+        if location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            EmptyView()
+        } else if isLoadingApplePlace, appleMapItem == nil {
+            Section {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Looking up place info…")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } else if let appleMapItem {
+            ApplePlaceContactSection(
+                mapItem: appleMapItem,
+                fallbackTitle: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? location
+                    : title,
+                selectedMapItem: $selectedAppleMapItem
+            )
+        }
+    }
+    
+    @MainActor
+    private func loadApplePlaceInfo() async {
+        let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !loc.isEmpty else {
+            appleMapItem = nil
+            isLoadingApplePlace = false
+            return
+        }
+        
+        isLoadingApplePlace = true
+        let item = await ApplePlaceLookup.mapItem(
+            name: title,
+            location: location,
+            latitude: latitude,
+            longitude: longitude,
+            regionHint: tripLocationRegion
+        )
+        appleMapItem = item
+        isLoadingApplePlace = false
+    }
+    
     private var activityForm: some View {
         Form {
             titleHeaderSection
@@ -622,34 +592,34 @@ struct NewActivitySheet: View {
                     longitude: $longitude,
                     searchRegion: tripLocationRegion
                 )
-                
+            } footer: {
                 if isEditing, !location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Menu {
-                        if let url = googleMapsURL {
-                            Button("Google Maps") { openURL(url) }
+                    // Footer sits outside the inset-grouped card (avoids clip). Pull leading
+                    // flush with the location card — Form footers are indented by default.
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                Color.clear
+                                    .frame(width: 0, height: 1)
+                                    .id("openInLeading")
+                                openInButton(title: "Google Maps", systemImage: "globe", url: googleMapsURL)
+                                openInButton(title: "Apple Maps", systemImage: "map.fill", url: appleMapsURL)
+                                openInButton(title: "Lyft", systemImage: "car.fill", url: lyftURL)
+                                openInButton(title: "Uber", systemImage: "car.fill", url: uberURL)
+                            }
+                            .padding(.trailing, 20)
                         }
-                        if let url = appleMapsURL {
-                            Button("Apple Maps") { openURL(url) }
-                        }
-                        if let url = lyftURL {
-                            Button("Lyft") { openURL(url) }
-                        }
-                        if let url = uberURL {
-                            Button("Uber") { openURL(url) }
-                        }
-                    } label: {
-                        HStack {
-                            Text("Open In")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.app(11, weight: .semibold))
-                                .foregroundStyle(.secondary)
+                        .scrollClipDisabled()
+                        .padding(.top, 6)
+                        .padding(.leading, -16)
+                        .onAppear {
+                            proxy.scrollTo("openInLeading", anchor: .leading)
                         }
                     }
-                    .buttonStyle(.plain)
                 }
             }
+            
+            applePlaceInfoSection
             
             timingSection
             
@@ -676,32 +646,28 @@ struct NewActivitySheet: View {
                     .focused($isNotesFocused)
             }
             
-            Section {
+            DetailActionButtonStack {
                 Button {
                     addToPlaces()
                 } label: {
-                    HStack {
-                        Spacer()
-                        Text(isAlreadyInPlaces ? "Update in Places" : "Add to Places")
-                        Spacer()
-                    }
+                    Label(
+                        isAlreadyInPlaces ? "Added to Places" : "Add to Places",
+                        systemImage: "mappin.and.ellipse"
+                    )
                 }
-                .disabled(!canAddToPlaces || onAddToPlaces == nil)
-            }
-            
-            if isEditing {
-                Section {
-                    Button(role: .destructive) {
+                .buttonStyle(.secondaryCapsuleBlock)
+                .disabled(isAlreadyInPlaces || !canAddToPlaces || onAddToPlaces == nil)
+                .detailActionRow()
+                
+                if isEditing {
+                    Button {
                         deleteEvent()
                     } label: {
-                        HStack {
-                            Spacer()
-                            Text("Delete Activity")
-                            Spacer()
-                        }
+                        Label("Delete Activity", systemImage: "trash")
                     }
+                    .buttonStyle(.destructiveCapsuleBlock)
+                    .detailActionRow()
                 }
-                .listSectionSpacing(12)
             }
         }
         .scrollContentBackground(.hidden)
@@ -740,6 +706,11 @@ struct NewActivitySheet: View {
     
     private var contentStack: some View {
         ZStack(alignment: .top) {
+            // Keep a true grouped page behind inset sections so white cards
+            // stay visible in light mode (scroll background is hidden for the accent wash).
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
+            
             LinearGradient(
                 colors: [
                     accent.color.opacity(0.18),
@@ -784,23 +755,6 @@ struct NewActivitySheet: View {
             }
             .sheet(item: $selectedQuickLookDocument) { document in
                 QuickLookPreview(url: ActivityDocumentStore.fileURL(for: document.localRelativePath))
-            }
-            .sheet(item: $extractionReviewResult) { result in
-                ExtractionReviewSheet(
-                    suggestions: result.suggestions,
-                    allowedFieldTypes: [.startTime, .endTime, .cost, .currencyCode],
-                    onApplySelected: { selections in
-                        applyExtractionSelections(selections, from: result)
-                    },
-                    onSkip: {
-                        let notesBlock = result.notesBlock(excluding: [])
-                        appendToNotes(notesBlock)
-                        if isEditing { onAdd() }
-                        extractionReviewResult = nil
-                    }
-                )
-                .presentationDetents([.medium, .large])
-                .tint(.primary)
             }
             .sheet(isPresented: $showCostSheet) {
                 CostEntrySheet(
@@ -868,6 +822,10 @@ struct NewActivitySheet: View {
                     endTime = startTime
                 }
             }
+            .task(id: placeLookupKey) {
+                await loadApplePlaceInfo()
+            }
+            .applePlaceCardSheet(item: $selectedAppleMapItem)
             .onChange(of: hasEndTime) { _, newValue in
                 if !newValue {
                     endTime = startTime

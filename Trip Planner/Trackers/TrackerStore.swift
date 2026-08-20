@@ -54,9 +54,12 @@ final class TrackerStore: ObservableObject {
     }
 
     func visitedCount(in tracker: TrackerType) -> Int {
+        visitedIDs(in: tracker).count
+    }
+    
+    func visitedIDs(in tracker: TrackerType) -> Set<String> {
         state.visitedIDsByTracker[tracker, default: []]
             .intersection(validIDs(in: tracker))
-            .count
     }
 
     func save() {

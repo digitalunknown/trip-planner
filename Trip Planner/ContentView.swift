@@ -37,7 +37,8 @@ struct ContentView: View {
         .environment(placeStore)
         .environment(tabChrome)
         .environmentObject(auth)
-        .tint(accentColor)
+        // Tab bar stays monochrome; orange is only for in-app accents via environment.
+        .tint(.primary)
         .environment(\.appAccentColor, accentColor)
         .preferredColorScheme(appearanceMode.preferredColorScheme)
         .onAppear {
@@ -106,36 +107,32 @@ struct ContentView: View {
     @available(iOS 18.0, *)
     private var modernTabView: some View {
         TabView(selection: $selectedTab) {
-            Tab("Trips", systemImage: "suitcase.fill", value: RootTab.myTrips) {
+            // Pass outline names only — the tab bar applies `.fill` to the selected item.
+            Tab("Trips", systemImage: "briefcase", value: RootTab.myTrips) {
                 MyTripsView()
-                    .tint(.primary)
             }
             
-            Tab("Places", systemImage: "mappin.and.ellipse", value: RootTab.places) {
+            Tab("Places", systemImage: "mappin", value: RootTab.places) {
                 NavigationStack {
                     PlacesHomeView()
-                        .tint(.primary)
                 }
             }
             
-            Tab("Explore", systemImage: "safari.fill", value: RootTab.explore) {
+            Tab("Explore", systemImage: "safari", value: RootTab.explore) {
                 NavigationStack {
                     ExploreHomeView()
-                        .tint(.primary)
                 }
             }
             
-            Tab("Profile", systemImage: "person.fill", value: RootTab.trackers) {
+            Tab("Profile", systemImage: "person", value: RootTab.trackers) {
                 NavigationStack {
                     TrackersHomeView()
-                        .tint(.primary)
                 }
             }
             
             Tab("Search", systemImage: "magnifyingglass", value: RootTab.search, role: .search) {
                 NavigationStack {
                     GlobalSearchView(searchText: $searchText)
-                        .tint(.primary)
                 }
                 .searchable(
                     text: $searchText,
@@ -151,42 +148,37 @@ struct ContentView: View {
     private var legacyTabView: some View {
         TabView(selection: $selectedTab) {
             MyTripsView()
-                .tint(.primary)
                 .tabItem {
-                    Label("Trips", systemImage: "suitcase.fill")
+                    Label("Trips", systemImage: "briefcase")
                 }
                 .tag(RootTab.myTrips)
             
             NavigationStack {
                 PlacesHomeView()
-                    .tint(.primary)
             }
             .tabItem {
-                Label("Places", systemImage: "mappin.and.ellipse")
+                Label("Places", systemImage: "mappin")
             }
             .tag(RootTab.places)
             
             NavigationStack {
                 ExploreHomeView()
-                    .tint(.primary)
             }
             .tabItem {
-                Label("Explore", systemImage: "safari.fill")
+                Label("Explore", systemImage: "safari")
             }
             .tag(RootTab.explore)
 
             NavigationStack {
                 TrackersHomeView()
-                    .tint(.primary)
             }
             .tabItem {
-                Label("Profile", systemImage: "person.fill")
+                Label("Profile", systemImage: "person")
             }
             .tag(RootTab.trackers)
             
             NavigationStack {
                 GlobalSearchView(searchText: $searchText)
-                    .tint(.primary)
             }
             .searchable(
                 text: $searchText,
@@ -779,7 +771,7 @@ private struct AITabBarAccessoryModifier: ViewModifier {
     }
     
     private var accessoryTitle: String {
-        selectedTab == .places ? "Find Places" : "Create Trip"
+        selectedTab == .places ? "Find Places" : "Plan Trip"
     }
     
     func body(content: Content) -> some View {

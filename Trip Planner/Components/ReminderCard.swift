@@ -5,9 +5,12 @@ struct ReminderCard: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 14, style: .continuous) }
-    /// Match activity cards: translucent lift over the day column.
+    /// Match activity cards: translucent in dark; solid white + stroke in light.
     private var cardFill: Color {
-        colorScheme == .dark ? Color.white.opacity(0.10) : Color.white.opacity(0.78)
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.white
+    }
+    private var cardStroke: Color {
+        colorScheme == .dark ? Color.clear : Color.black.opacity(0.08)
     }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     
@@ -29,6 +32,9 @@ struct ReminderCard: View {
         .background {
             cardShape
                 .fill(cardFill)
+        }
+        .overlay {
+            cardShape.strokeBorder(cardStroke, lineWidth: 1)
         }
         .clipShape(cardShape)
         .contentShape(cardShape)

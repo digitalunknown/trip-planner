@@ -159,6 +159,15 @@ struct PlacesHomeView: View {
                         note: $0.note
                     )
                 },
+                existingTrips: tripStore.trips.map { trip in
+                    AITripSummary(
+                        name: trip.name,
+                        destination: trip.destination,
+                        startDate: trip.isDatesSet ? isoDateString(trip.startDate) : nil,
+                        endDate: trip.isDatesSet ? isoDateString(trip.endDate) : nil,
+                        isDatesSet: trip.isDatesSet
+                    )
+                },
                 onCommitPlaces: commitAIPlaces
             )
             .tint(.primary)
@@ -196,16 +205,15 @@ struct PlacesHomeView: View {
                 }
             }
         }
-        .confirmationDialog(
-            "Delete this place?",
+        .alert(
+            "Delete Place",
             isPresented: Binding(
                 get: { placePendingDelete != nil },
                 set: { if !$0 { placePendingDelete = nil } }
             ),
-            titleVisibility: .visible,
             presenting: placePendingDelete
         ) { place in
-            Button("Delete", role: .destructive) {
+            Button("Delete Place", role: .destructive) {
                 placeStore.delete(place)
                 placePendingDelete = nil
             }
@@ -213,7 +221,7 @@ struct PlacesHomeView: View {
                 placePendingDelete = nil
             }
         } message: { _ in
-            Text("This can’t be undone.")
+            Text("Are you sure you want to delete this place? This action cannot be undone.")
         }
         .onChange(of: activePlaceTypes) { _, types in
             if let selectedPlaceType, !types.contains(selectedPlaceType) {
@@ -361,19 +369,26 @@ struct PlacesHomeView: View {
     }
     
     private func commitAIPlaces(_ items: [PlanDayItem]) {
-        for item in items where item.include {
+        for item in items {
             let name = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !name.isEmpty else { continue }
             let place = Place(
                 name: name,
                 location: item.location,
                 note: item.notes,
+                photoData: item.photoData,
                 latitude: item.latitude,
                 longitude: item.longitude,
                 placeType: PlaceType.fromAICategory(item.category)
             )
             placeStore.add(place)
         }
+    }
+    
+    private func isoDateString(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        return formatter.string(from: date)
     }
     
     private func setPlaceImage(_ data: Data, on place: Place) {

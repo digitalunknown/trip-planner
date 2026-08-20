@@ -1,5 +1,6 @@
 import Foundation
 import MapKit
+import CoreLocation
 
 enum PlanDayLocationResolver {
     /// Resolve activity locations to street-level MapKit places when the item is a specific establishment.
@@ -31,7 +32,12 @@ enum PlanDayLocationResolver {
             
             for query in queries {
                 if Task.isCancelled { break }
-                guard let mapItem = await searchMapItem(query: query, region: biasRegion) else { continue }
+                guard let mapItem = await searchMapItem(
+                    query: query,
+                    expectedTitle: title,
+                    region: biasRegion,
+                    destination: destination
+                ) else { continue }
                 guard let coordinate = mapItemCoordinate(mapItem) else { continue }
                 
                 let isPOI = isSpecificEstablishment(mapItem)
@@ -50,11 +56,16 @@ enum PlanDayLocationResolver {
                 if alreadyStreetLevel || (isPOI && aligned) {
                     updated.items[idx].latitude = coordinate.latitude
                     updated.items[idx].longitude = coordinate.longitude
+                    if !destination.isEmpty,
+                       !currentLocation.localizedCaseInsensitiveContains(destination.split(separator: ",").first.map(String.init) ?? destination),
+                       let refined = refinedLocationString(for: mapItem, fallbackTitle: title) {
+                        updated.items[idx].location = refined
+                    }
                     break
                 }
             }
             
-            try? await Task.sleep(nanoseconds: 160_000_000)
+            try? await Task.sleep(nanoseconds: 120_000_000)
         }
         
         return updated
@@ -65,11 +76,21 @@ enum PlanDayLocationResolver {
     private static func searchQueries(title: String, location: String, destination: String) -> [String] {
         var queries: [String] = []
         let destSuffix = destination.isEmpty ? "" : ", \(destination)"
+        let destCity = destination.split(separator: ",").first.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        } ?? destination
         
         if !location.isEmpty {
-            queries.append(location)
+            // Prefer title + location when location lacks the venue name.
             if !location.localizedCaseInsensitiveContains(title), !title.isEmpty {
                 queries.append("\(title), \(location)")
+            }
+            queries.append(location)
+            if !destCity.isEmpty, !location.localizedCaseInsensitiveContains(destCity) {
+                queries.append("\(location), \(destCity)")
+                if !title.isEmpty {
+                    queries.append("\(title), \(location), \(destCity)")
+                }
             }
         }
         queries.append("\(title)\(destSuffix)")
@@ -81,7 +102,12 @@ enum PlanDayLocationResolver {
         return queries.filter { seen.insert($0.lowercased()).inserted }
     }
     
-    private static func searchMapItem(query: String, region: MKCoordinateRegion?) async -> MKMapItem? {
+    private static func searchMapItem(
+        query: String,
+        expectedTitle: String,
+        region: MKCoordinateRegion?,
+        destination: String
+    ) async -> MKMapItem? {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
         request.resultTypes = [.pointOfInterest, .address]
@@ -91,10 +117,97 @@ enum PlanDayLocationResolver {
         
         do {
             let response = try await MKLocalSearch(request: request).start()
-            return response.mapItems.first
+            return pickBestMapItem(
+                from: response.mapItems,
+                expectedTitle: expectedTitle,
+                region: region,
+                destination: destination
+            )
         } catch {
             return nil
         }
+    }
+    
+    /// Prefer name-aligned POIs inside the destination region; never accept a random first hit.
+    private static func pickBestMapItem(
+        from items: [MKMapItem],
+        expectedTitle: String,
+        region: MKCoordinateRegion?,
+        destination: String
+    ) -> MKMapItem? {
+        guard !items.isEmpty else { return nil }
+        
+        let inRegion = items.filter { isWithinBiasRegion($0, region: region) }
+        let pool = inRegion.isEmpty && region == nil ? items : (inRegion.isEmpty ? [] : inRegion)
+        guard !pool.isEmpty else { return nil }
+        
+        let alignedPOI = pool.first {
+            namesAlign(title: expectedTitle, mapItem: $0)
+                && isSpecificEstablishment($0)
+                && localityMatches($0, destination: destination)
+        }
+        if let alignedPOI { return alignedPOI }
+        
+        let alignedInDest = pool.first {
+            namesAlign(title: expectedTitle, mapItem: $0)
+                && localityMatches($0, destination: destination)
+        }
+        if let alignedInDest { return alignedInDest }
+        
+        let alignedPOIAnywhere = pool.first {
+            namesAlign(title: expectedTitle, mapItem: $0) && isSpecificEstablishment($0)
+        }
+        if let alignedPOIAnywhere { return alignedPOIAnywhere }
+        
+        // Last resort: name-aligned only (still reject totally unrelated first hits).
+        return pool.first { namesAlign(title: expectedTitle, mapItem: $0) }
+    }
+    
+    private static func isWithinBiasRegion(_ item: MKMapItem, region: MKCoordinateRegion?) -> Bool {
+        guard let region, let coordinate = mapItemCoordinate(item) else { return true }
+        let center = CLLocation(latitude: region.center.latitude, longitude: region.center.longitude)
+        let point = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let latMeters = region.span.latitudeDelta * 111_000 / 2
+        let cosLat = cos(region.center.latitude * .pi / 180)
+        let lonMeters = region.span.longitudeDelta * 111_000 * max(cosLat, 0.2) / 2
+        let maxDistance = max(max(latMeters, lonMeters), 45_000) * 1.6
+        return point.distance(from: center) <= maxDistance
+    }
+    
+    private static func localityMatches(_ item: MKMapItem, destination: String) -> Bool {
+        let destination = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !destination.isEmpty else { return true }
+        
+        let destCore = destination
+            .split(separator: ",")
+            .first
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            ?? destination
+        let destNorm = normalize(destCore)
+        guard !destNorm.isEmpty else { return true }
+        
+        let haystack = [
+            mapItemCity(item),
+            mapItemAddressString(item),
+            item.placemark.locality,
+            item.placemark.subLocality,
+            item.placemark.administrativeArea,
+            item.placemark.country,
+        ]
+        .compactMap { $0 }
+        .joined(separator: " ")
+        
+        let hayNorm = normalize(haystack)
+        if hayNorm.contains(destNorm) { return true }
+        
+        // Destination "Toronto" should accept "North York, ON" when region filter already passed.
+        // Only fail hard when a clearly different major city appears without the destination.
+        let foreignCities = ["chicago", "new york", "los angeles", "miami", "paris", "london", "tokyo", "rome"]
+        let destHit = foreignCities.contains(where: { destNorm.contains($0) })
+        if destHit { return hayNorm.contains(destNorm) }
+        
+        let conflicting = foreignCities.filter { hayNorm.contains($0) && !destNorm.contains($0) }
+        return conflicting.isEmpty
     }
     
     // MARK: - Specificity
@@ -147,7 +260,7 @@ enum PlanDayLocationResolver {
     
     private static func namesAlign(title: String, mapItem: MKMapItem) -> Bool {
         let mapName = (itemName(mapItem) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !mapName.isEmpty else { return true }
+        guard !mapName.isEmpty else { return false }
         
         let a = normalize(title)
         let b = normalize(mapName)
@@ -198,11 +311,11 @@ enum PlanDayLocationResolver {
 }
 
 private extension String {
-    func ranges(of pattern: String, options: String.CompareOptions = []) -> [Range<String.Index>] {
+    func ranges(of pattern: String, options: NSString.CompareOptions) -> [Range<String.Index>] {
         var result: [Range<String.Index>] = []
         var searchStart = startIndex
         while searchStart < endIndex,
-              let range = range(of: pattern, options: options.union(.regularExpression), range: searchStart..<endIndex) {
+              let range = range(of: pattern, options: options, range: searchStart..<endIndex) {
             result.append(range)
             searchStart = range.upperBound
         }

@@ -101,26 +101,14 @@ struct TrackerRowCard: View {
             
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accentColor.opacity(0.22), accentColor.opacity(0.10)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(accentColor.opacity(0.18))
                     
                     Image(systemName: type.iconSystemName)
-                        .font(.app(20, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [accentColor, accentColor.opacity(0.75)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .font(.app(20, weight: .regular))
+                        .foregroundStyle(accentColor)
                 }
-                .frame(width: 58, height: 58)
+                .frame(width: 52, height: 52)
                 Spacer(minLength: 0)
             }
             
@@ -174,25 +162,13 @@ struct TrackerCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [accentColor.opacity(0.22), accentColor.opacity(0.10)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 56, height: 56)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(accentColor.opacity(0.18))
+                    .frame(width: 52, height: 52)
 
                 Image(systemName: type.iconSystemName)
-                    .font(.app(24, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [accentColor, accentColor.opacity(0.75)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .font(.app(20, weight: .regular))
+                    .foregroundStyle(accentColor)
             }
 
             Text(type.title)

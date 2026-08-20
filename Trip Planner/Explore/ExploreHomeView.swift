@@ -61,62 +61,62 @@ struct ExploreStaffPick: Identifiable, Hashable {
             longitude: 2.3376,
             mapSpan: 0.08,
             paragraphs: [
-                "Paris is packed with world-class museums, but not every gallery is built for short attention spans. This staff pick focuses on collections where kids can move, touch ideas, and leave with a story — without turning the day into a marathon of quiet rooms.",
-                "Use these five stops as a flexible shortlist. Mix one big-name museum with something smaller and more playful, leave room for a park break, and treat lines and ticket timing as part of the plan rather than a surprise.",
+                "Parisian art museums are very welcoming to kids — but what does one actually think of these world-class cultural institutions when you’re touring with a little one in tow?",
+                "This shortlist mixes headline collections with spaces that invite sketching, wandering, and hands-on moments. Use it as a flexible route: pair Orsay with Rodin on a dual ticket, leave room for a garden break, and treat fog sculptures and medieval moats as the real souvenirs.",
             ],
             activities: [
                 EventItem(
-                    title: "Cité des Sciences et de l'Industrie",
-                    description: "Hands-on science exhibits that reward curiosity.",
+                    title: "Bourse de Commerce",
+                    description: "A former government building turned private art collection — ornate interiors colliding with contemporary work. Don’t miss Fujiko Nakaya’s Fog Sculpture when it’s on view.",
                     time: "10:00 AM",
-                    location: "Parc de la Villette, Paris",
-                    latitude: 48.8956,
-                    longitude: 2.3882,
-                    icon: "atom",
+                    location: "2 Rue de Viarmes, Paris",
+                    latitude: 48.8628,
+                    longitude: 2.3426,
+                    icon: "building.columns.fill",
                     accent: .blue,
                     photoData: nil
                 ),
                 EventItem(
-                    title: "Musée en Herbe",
-                    description: "Kid-first temporary shows with workshops.",
+                    title: "Musée d'Orsay",
+                    description: "A former train station turned Impressionist temple, crowned by the famous gold clock. Book a dual Orsay + Rodin ticket to skip lines and keep the day flexible.",
                     time: "11:30 AM",
-                    location: "23 Rue de l'Arbre Sec, Paris",
-                    latitude: 48.8608,
-                    longitude: 2.3416,
-                    icon: "paintpalette.fill",
-                    accent: .mint,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Muséum national d'Histoire naturelle",
-                    description: "Dinosaurs, evolution halls, and wide-eyed wow moments.",
-                    time: "1:30 PM",
-                    location: "Jardin des Plantes, Paris",
-                    latitude: 48.8422,
-                    longitude: 2.3561,
-                    icon: "leaf.fill",
+                    location: "1 Rue de la Légion d'Honneur, Paris",
+                    latitude: 48.8600,
+                    longitude: 2.3266,
+                    icon: "clock.fill",
                     accent: .orange,
                     photoData: nil
                 ),
                 EventItem(
-                    title: "Centre Pompidou — Galerie des enfants",
-                    description: "Contemporary art scaled for younger visitors.",
+                    title: "Musée Rodin",
+                    description: "Hit The Atelier first — interactive, air-conditioned, and packed with activities — then wander the sculpture garden before and after.",
+                    time: "1:30 PM",
+                    location: "77 Rue de Varenne, Paris",
+                    latitude: 48.8553,
+                    longitude: 2.3158,
+                    icon: "leaf.fill",
+                    accent: .mint,
+                    photoData: nil
+                ),
+                EventItem(
+                    title: "Grand Palais — Matisse",
+                    description: "A Matisse exhibit where the artist’s sketchbook can spark kids to open their own. Worth the stop if the current show is running.",
                     time: "3:30 PM",
-                    location: "Place Georges-Pompidou, Paris",
-                    latitude: 48.8606,
-                    longitude: 2.3522,
-                    icon: "building.2.fill",
+                    location: "3 Avenue du Général Eisenhower, Paris",
+                    latitude: 48.8660,
+                    longitude: 2.3126,
+                    icon: "paintpalette.fill",
                     accent: .purple,
                     photoData: nil
                 ),
                 EventItem(
-                    title: "Musée de la Magie",
-                    description: "Illusions, automata, and a little theatrical sparkle.",
+                    title: "Musée du Louvre",
+                    description: "Start at Le Studio for model sand, sketching, and books, then walk the Medieval Louvre — the empty former moat of the fortress, surprisingly peaceful with kids.",
                     time: "5:00 PM",
-                    location: "11 Rue Saint-Paul, Paris",
-                    latitude: 48.8530,
-                    longitude: 2.3614,
-                    icon: "sparkles",
+                    location: "Rue de Rivoli, Paris",
+                    latitude: 48.8606,
+                    longitude: 2.3376,
+                    icon: "building.2.fill",
                     accent: .yellow,
                     photoData: nil
                 ),
@@ -378,32 +378,17 @@ struct ExploreDetailView: View {
     
     @Environment(TripStore.self) private var tripStore
     @Environment(PlaceStore.self) private var placeStore
+    @Environment(\.colorScheme) private var colorScheme
     
     @State private var openedTripID: UUID?
     @State private var showCreateTripReview = false
     @State private var savedPlaceKeys: Set<String> = []
+    @State private var coverByActivityID: [UUID: Data] = [:]
+    @State private var loadingMapsID: UUID?
+    @State private var selectedAppleMapItem: MKMapItem?
     
-    /// Upcoming / unscheduled trips whose destination matches this staff pick.
-    private var matchingTrips: [Trip] {
-        let tokens = destinationTokens(pick.destination)
-        guard !tokens.isEmpty else { return [] }
-        let today = Calendar.current.startOfDay(for: Date())
-        
-        return tripStore.trips
-            .filter { trip in
-                guard tripMatchesDestination(trip, tokens: tokens) else { return false }
-                if trip.isDatesSet {
-                    return Calendar.current.startOfDay(for: trip.endDate) >= today
-                }
-                return true
-            }
-            .sorted {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
-    }
-    
-    private var primaryMatchingTrip: Trip? {
-        matchingTrips.first
+    private var placeCardFill: Color {
+        colorScheme == .dark ? Color(hex: 0x323234) : Color(hex: 0xE8E8ED)
     }
     
     private var createTripDraft: AITripDraft {
@@ -453,6 +438,13 @@ struct ExploreDetailView: View {
                     )
                 }
                 
+                Button {
+                    showCreateTripReview = true
+                } label: {
+                    Label("Create Trip", systemImage: "suitcase.fill")
+                }
+                .buttonStyle(.primaryCapsule)
+                
                 VStack(alignment: .leading, spacing: 14) {
                     ForEach(Array(pick.paragraphs.enumerated()), id: \.offset) { _, paragraph in
                         Text(paragraph)
@@ -463,46 +455,26 @@ struct ExploreDetailView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Activities")
-                        .font(.appHeadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
-                    
                     ForEach(pick.activities) { activity in
                         activityRow(activity)
                     }
-                    
-                    Button {
-                        showCreateTripReview = true
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Create Trip")
-                            Spacer()
-                        }
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color(.secondarySystemGroupedBackground))
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 4)
                 }
             }
             .padding(.horizontal, RootHomeMetrics.horizontalInset)
             .padding(.top, RootHomeMetrics.topInset)
-            .padding(.bottom, 32)
+            .padding(.bottom, 100)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color(.systemGroupedBackground))
+        .tint(.primary)
         .navigationBarTitleDisplayMode(.inline)
+        .applePlaceCardSheet(item: $selectedAppleMapItem)
         .sheet(isPresented: $showCreateTripReview) {
             NavigationStack {
                 AICreateTripReviewView(
                     trip: createTripDraft,
-                    seedItems: createTripSeedItems
+                    seedItems: createTripSeedItems,
+                    replyText: AIReplyCopy.createTrip(trip: createTripDraft, itemCount: createTripSeedItems.count)
                 ) { draft, tripItems, placeItems in
                     commitExploreTrip(draft, seedItems: tripItems, placeItems: placeItems)
                     showCreateTripReview = false
@@ -531,103 +503,109 @@ struct ExploreDetailView: View {
     
     private func activityRow(_ activity: EventItem) -> some View {
         let placeKey = placeIdentityKey(for: activity)
-        let alreadySaved = savedPlaceKeys.contains(placeKey) || placeAlreadySaved(activity)
+        let coverData = coverByActivityID[activity.id] ?? activity.photoData
+        let subtitle: String = {
+            let notes = activity.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !notes.isEmpty { return notes }
+            return activity.location.trimmingCharacters(in: .whitespacesAndNewlines)
+        }()
         
-        return HStack(alignment: .center, spacing: 10) {
-            EventCard(event: activity)
-                .allowsHitTesting(false)
-            
-            if let matching = primaryMatchingTrip {
-                Menu {
-                    Button {
-                        addActivity(activity, to: matching)
-                    } label: {
-                        Label("Add to \(matching.name)", systemImage: "suitcase")
-                    }
-                    
-                    if matchingTrips.count > 1 {
-                        Menu("Add to Trip") {
-                            ForEach(matchingTrips) { trip in
-                                Button(trip.name) {
-                                    addActivity(activity, to: trip)
-                                }
-                            }
-                        }
-                    }
-                    
-                    Button {
+        return AIResultItemCard(
+            title: activity.title,
+            subtitle: subtitle,
+            photoData: coverData,
+            primaryAction: .savePlace(isOn: Binding(
+                get: {
+                    savedPlaceKeys.contains(placeKey) || placeAlreadySaved(activity)
+                },
+                set: { newValue in
+                    if newValue {
                         addActivityToPlaces(activity)
-                    } label: {
-                        Label(
-                            alreadySaved ? "Saved to Places" : "Add to Places",
-                            systemImage: alreadySaved ? "checkmark" : "mappin.and.ellipse"
-                        )
                     }
-                    .disabled(alreadySaved)
-                } label: {
-                    plusLabel(systemName: alreadySaved ? "checkmark.circle.fill" : "plus.circle.fill")
                 }
-                .accessibilityLabel("Add options")
-            } else {
-                Button {
-                    addActivityToPlaces(activity)
-                } label: {
-                    plusLabel(systemName: alreadySaved ? "checkmark.circle.fill" : "plus.circle.fill")
-                }
-                .disabled(alreadySaved)
-                .accessibilityLabel(alreadySaved ? "Saved to Places" : "Add to Places")
+            )),
+            showsMapButton: true,
+            isMapLoading: loadingMapsID == activity.id,
+            showsPhotoPlaceholder: coverData == nil,
+            onMapTap: {
+                Task { await openAppleMapsListing(for: activity) }
             }
+        )
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(placeCardFill)
+        )
+        .task(id: activity.id) {
+            await loadAppleMapsCoverIfNeeded(for: activity)
         }
     }
     
-    private func plusLabel(systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 28))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(.primary)
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
+    @MainActor
+    private func loadAppleMapsCoverIfNeeded(for activity: EventItem) async {
+        if coverByActivityID[activity.id] != nil { return }
+        if let existing = activity.photoData, !existing.isEmpty {
+            coverByActivityID[activity.id] = existing
+            return
+        }
+        
+        let data = await PlaceAppleImagery.coverJPEG(
+            name: activity.title,
+            location: activity.location,
+            latitude: activity.latitude,
+            longitude: activity.longitude
+        )
+        guard let data, coverByActivityID[activity.id] == nil else { return }
+        coverByActivityID[activity.id] = data
     }
     
-    private func addActivity(_ activity: EventItem, to trip: Trip) {
-        guard let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) else { return }
-        
-        let event = EventItem(
+    @MainActor
+    private func openAppleMapsListing(for activity: EventItem) async {
+        loadingMapsID = activity.id
+        defer { loadingMapsID = nil }
+        await AIResultMaps.openListing(
             title: activity.title,
-            description: activity.description,
-            time: activity.time,
             location: activity.location,
             latitude: activity.latitude,
             longitude: activity.longitude,
-            icon: activity.icon,
-            accent: activity.accent,
-            photoData: activity.photoData
+            selectedMapItem: $selectedAppleMapItem
         )
-        
-        var updated = tripStore.trips[index]
-        updated.showParkedIdeas = true
-        updated.parkedIdeas.insert(event, at: 0)
-        tripStore.trips[index] = updated
-        tripStore.save()
-        Haptics.bump()
     }
     
     private func addActivityToPlaces(_ activity: EventItem) {
         let key = placeIdentityKey(for: activity)
         guard !savedPlaceKeys.contains(key), !placeAlreadySaved(activity) else { return }
+        savedPlaceKeys.insert(key)
         
         let placeType = PlaceType.inferred(fromActivityIcon: activity.icon)
-        let place = Place(
+        Task {
+            let photoData = await resolvedCover(for: activity)
+            await MainActor.run {
+                let place = Place(
+                    name: activity.title,
+                    location: activity.location,
+                    note: activity.description,
+                    photoData: photoData,
+                    latitude: activity.latitude,
+                    longitude: activity.longitude,
+                    placeType: placeType == .unspecified ? .attraction : placeType
+                )
+                placeStore.add(place)
+                Haptics.bump()
+            }
+        }
+    }
+    
+    private func resolvedCover(for activity: EventItem) async -> Data? {
+        if let cached = coverByActivityID[activity.id], !cached.isEmpty { return cached }
+        if let existing = activity.photoData, !existing.isEmpty { return existing }
+        return await PlaceAppleImagery.coverJPEG(
             name: activity.title,
             location: activity.location,
-            note: activity.description,
             latitude: activity.latitude,
-            longitude: activity.longitude,
-            placeType: placeType == .unspecified ? .attraction : placeType
+            longitude: activity.longitude
         )
-        placeStore.add(place)
-        savedPlaceKeys.insert(key)
-        Haptics.bump()
     }
     
     private func placeAlreadySaved(_ activity: EventItem) -> Bool {
@@ -642,18 +620,6 @@ struct ExploreDetailView: View {
     private func placeIdentityKey(for activity: EventItem) -> String {
         let title = activity.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return "\(title)|\(PlaceNaming.normalizedLocationKey(activity.location))"
-    }
-    
-    private func destinationTokens(_ destination: String) -> [String] {
-        destination
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-            .filter { $0.count >= 3 }
-    }
-    
-    private func tripMatchesDestination(_ trip: Trip, tokens: [String]) -> Bool {
-        let haystack = "\(trip.destination) \(trip.name)".lowercased()
-        return tokens.contains { haystack.contains($0) }
     }
     
     private func parseClockTime(_ raw: String) -> Date? {
@@ -724,7 +690,7 @@ struct ExploreDetailView: View {
                 longitude: item.longitude,
                 icon: placeType == .unspecified ? "mappin.and.ellipse" : placeType.iconSystemName,
                 accent: .neutral,
-                photoData: nil
+                photoData: item.photoData
             ))
         }
         
@@ -756,6 +722,8 @@ struct ExploreDetailView: View {
         
         tripStore.addTrip(trip)
         
+        AchievementCounters.recordAIDaysPlanned(dayCount)
+        
         for item in placeItems where item.canSaveToPlaces {
             let placeName = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !placeName.isEmpty else { continue }
@@ -763,6 +731,7 @@ struct ExploreDetailView: View {
                 name: placeName,
                 location: item.location,
                 note: item.notes,
+                photoData: item.photoData,
                 latitude: item.latitude,
                 longitude: item.longitude,
                 placeType: PlaceType.fromAICategory(item.category),
@@ -799,7 +768,7 @@ private struct ExploreMetadataLine: View {
                 Text("  ·  ")
             }
             if !publisher.isEmpty {
-                Text(publisher)
+                Text("by \(publisher)")
             }
             if !destination.isEmpty || !publisher.isEmpty {
                 Text("  ·  ")
@@ -814,15 +783,16 @@ private struct ExploreMetadataLine: View {
 
 private struct ExploreBadgeGlassBackground: ViewModifier {
     func body(content: Content) -> some View {
-        content
-            .background {
-                Capsule(style: .continuous)
-                    .fill(Color.black.opacity(0.55))
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
-            }
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: Capsule(style: .continuous))
+        } else {
+            content
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
+        }
     }
 }
 

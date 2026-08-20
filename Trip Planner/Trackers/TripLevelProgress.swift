@@ -1,6 +1,6 @@
 import Foundation
 
-/// Trip-count leveling for Profile achievements.
+/// Trip-count leveling for Profile badges.
 enum TripLevelProgress {
     /// Completed / logged trip count thresholds:
     /// Level 0: under 5 · Level 1: 5–9 · Level 2: 10–19 · Level 3: 20+

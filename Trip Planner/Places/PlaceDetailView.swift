@@ -11,7 +11,6 @@ struct PlaceDetailView: View {
     @Environment(RootTabChrome.self) private var tabChrome
     @Environment(\.dismiss) private var dismiss
     
-    @State private var showEdit = false
     @State private var showDeleteConfirm = false
     @State private var appleMapItem: MKMapItem?
     @State private var isLoadingApplePlace = false
@@ -34,6 +33,12 @@ struct PlaceDetailView: View {
     private var relatedTrips: [Trip] {
         guard let place else { return [] }
         return PlaceTripMembership.trips(for: place, in: tripStore.trips)
+    }
+    
+    private var tripsForAddMenu: [Trip] {
+        tripStore.trips.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
     }
     
     private func placeTitle(for place: Place) -> String {
@@ -70,6 +75,31 @@ struct PlaceDetailView: View {
                         placeTypeMenu(for: place)
                     }
                     
+                    Section {
+                        HStack {
+                            Spacer(minLength: 0)
+                            Menu {
+                                if tripsForAddMenu.isEmpty {
+                                    Text("No trips yet")
+                                } else {
+                                    ForEach(tripsForAddMenu) { trip in
+                                        Button {
+                                            addPlace(place, to: trip)
+                                        } label: {
+                                            Text(trip.name)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                PrimaryCapsuleLabel(title: "Add to Trip", systemImage: "suitcase.fill")
+                            }
+                            .buttonStyle(.plain)
+                            Spacer(minLength: 0)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    }
+                    
                     appleMapsFormSection(for: place)
                     
                     tripsSection
@@ -88,6 +118,16 @@ struct PlaceDetailView: View {
                                 placeStore.update(updated, rematchMapKitIfNeeded: false)
                             }
                     }
+                    
+                    DetailActionButtonStack {
+                        Button {
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Delete Place", systemImage: "trash")
+                        }
+                        .buttonStyle(.destructiveCapsuleBlock)
+                        .detailActionRow()
+                    }
                 }
                 .scrollContentBackground(.hidden)
                 .scrollDismissesKeyboard(.interactively)
@@ -100,52 +140,6 @@ struct PlaceDetailView: View {
                 .safeAreaInset(edge: .bottom) {
                     if isNotesFocused {
                         Color.clear.frame(height: 36)
-                    }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            Button {
-                                showEdit = true
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            
-                            if !place.hasAppleMapsMatch, #available(iOS 18.0, *) {
-                                Button {
-                                    placeStore.scheduleMapKitMatch(for: place.id, force: true)
-                                } label: {
-                                    Label("Find on Apple Maps", systemImage: "map")
-                                }
-                            }
-                            
-                            if place.photoData != nil {
-                                Button(role: .destructive) {
-                                    clearPlaceImage(on: place)
-                                } label: {
-                                    Label("Remove image", systemImage: "photo.badge.minus")
-                                }
-                            }
-                            
-                            Button(role: .destructive) {
-                                showDeleteConfirm = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-                                .contentShape(Rectangle())
-                        }
-                        .tint(.primary)
-                        .buttonStyle(.plain)
-                    }
-                }
-                .sheet(isPresented: $showEdit) {
-                    AddEditPlaceSheet(mode: .edit(place)) { updated in
-                        placeStore.update(updated)
-                        syncDrafts(from: updated)
                     }
                 }
                 .sheet(isPresented: $showUnsplashPicker) {
@@ -169,14 +163,16 @@ struct PlaceDetailView: View {
                         }
                     }
                 }
-                .confirmationDialog("Delete this place?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-                    Button("Delete", role: .destructive) {
+                .alert("Delete Place", isPresented: $showDeleteConfirm) {
+                    Button("Delete Place", role: .destructive) {
                         placeStore.delete(place)
                         dismiss()
                     }
                     Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Are you sure you want to delete this place? This action cannot be undone.")
                 }
-                .modifier(ApplePlaceCardSheetModifier(item: $selectedAppleMapItem))
+                .applePlaceCardSheet(item: $selectedAppleMapItem)
                 .task(id: place.mapKitIdentifier) {
                     await loadApplePlaceIfNeeded(for: place)
                 }
@@ -272,30 +268,24 @@ struct PlaceDetailView: View {
                 Section {
                     HStack(spacing: 10) {
                         ProgressView()
-                        Text("Looking up Apple Maps…")
+                        Text("Looking up place info…")
                             .foregroundStyle(.secondary)
                     }
                 }
             } else if let appleMapItem {
-                Section("Apple Maps") {
-                    Button {
-                        selectedAppleMapItem = appleMapItem
-                    } label: {
-                        appleMapsRow(
-                            title: appleMapItem.name ?? placeTitle(for: place),
-                            subtitle: "Photos, hours, ratings & more"
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
+                ApplePlaceContactSection(
+                    mapItem: appleMapItem,
+                    fallbackTitle: placeTitle(for: place),
+                    selectedMapItem: $selectedAppleMapItem
+                )
             } else {
-                Section("Apple Maps") {
+                Section {
                     Button {
                         Task { await previewInAppleMaps(for: place) }
                     } label: {
                         appleMapsRow(
-                            title: "Preview in Apple Maps",
-                            subtitle: "Photos, hours, ratings & more",
+                            title: "Look Up Place Info",
+                            subtitle: "Address, phone, website & more",
                             showsProgress: isPreviewingAppleMaps
                         )
                     }
@@ -445,6 +435,36 @@ struct PlaceDetailView: View {
         placeStore.update(updated, rematchMapKitIfNeeded: false)
     }
     
+    private func addPlace(_ place: Place, to trip: Trip) {
+        guard let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) else { return }
+        
+        let title = PlaceNaming.title(location: place.location, fallback: place.name)
+        let event = EventItem(
+            title: title,
+            description: place.note,
+            time: "",
+            location: place.location.isEmpty ? title : place.location,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            icon: place.placeType == .unspecified ? "mappin.and.ellipse" : place.placeType.iconSystemName,
+            accent: .neutral,
+            photoData: place.photoData
+        )
+        
+        var updatedTrip = tripStore.trips[index]
+        updatedTrip.showParkedIdeas = true
+        updatedTrip.parkedIdeas.insert(event, at: 0)
+        tripStore.trips[index] = updatedTrip
+        tripStore.save()
+        
+        var updatedPlace = place
+        updatedPlace.sourceTripID = trip.id
+        updatedPlace.sourceTripName = trip.name
+        updatedPlace.sourceEventID = event.id
+        placeStore.update(updatedPlace, rematchMapKitIfNeeded: false)
+        Haptics.bump()
+    }
+    
     private func setPlaceImage(_ data: Data, on place: Place) {
         var updated = place
         updated.photoData = data
@@ -518,18 +538,6 @@ struct PlaceDetailView: View {
             }
         } catch {
             // Keep the preview row available for retry.
-        }
-    }
-}
-
-private struct ApplePlaceCardSheetModifier: ViewModifier {
-    @Binding var item: MKMapItem?
-    
-    func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
-            content.mapItemDetailSheet(item: $item, displaysMap: true)
-        } else {
-            content
         }
     }
 }

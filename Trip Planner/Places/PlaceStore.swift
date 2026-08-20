@@ -1,4 +1,5 @@
 import Foundation
+import MapKit
 import SwiftUI
 
 @Observable
@@ -239,29 +240,86 @@ class PlaceStore {
     func resolveMapKitMatchIfNeeded(placeID: UUID, force: Bool = false) async {
         guard #available(iOS 18.0, *) else { return }
         guard CloudSyncPaths.isSignedInToApple() else { return }
-        guard var place = place(id: placeID) else { return }
+        guard var existing = place(id: placeID) else { return }
         
         if !force {
-            if place.hasAppleMapsMatch { return }
-            if place.mapKitMatchStatus == .unmatched { return }
+            if existing.hasAppleMapsMatch {
+                await enrichCoverImageIfNeeded(for: placeID)
+                return
+            }
+            if existing.mapKitMatchStatus == .unmatched { return }
         }
         
-        let identifier = await PlaceMapKitMatcher.resolveIdentifier(for: place)
+        let identifier = await PlaceMapKitMatcher.resolveIdentifier(for: existing)
         guard placeStoreStillContains(placeID) else { return }
         guard CloudSyncPaths.isSignedInToApple() else { return }
+        guard var latest = place(id: placeID) else { return }
         
         if let identifier {
-            place.mapKitIdentifier = identifier
-            place.mapKitMatchStatus = .matched
+            latest.mapKitIdentifier = identifier
+            latest.mapKitMatchStatus = .matched
+            await applyMapKitEnrichment(to: &latest, identifier: identifier)
         } else {
-            place.mapKitIdentifier = nil
-            place.mapKitMatchStatus = .unmatched
+            latest.mapKitIdentifier = nil
+            latest.mapKitMatchStatus = .unmatched
         }
         
+        guard placeStoreStillContains(placeID) else { return }
         if let index = places.firstIndex(where: { $0.id == placeID }) {
-            places[index] = place
+            places[index] = latest
             save()
         }
+    }
+    
+    /// Fills missing coordinates / cover from Apple Maps without overwriting user photos.
+    @MainActor
+    @available(iOS 18.0, *)
+    private func applyMapKitEnrichment(to place: inout Place, identifier: String) async {
+        guard let mapItem = await PlaceMapKitMatcher.loadMapItem(identifierRawValue: identifier) else {
+            await assignCoverIfNeeded(to: &place)
+            return
+        }
+        
+        if let coordinate = mapItemCoordinate(mapItem) {
+            if place.latitude == nil { place.latitude = coordinate.latitude }
+            if place.longitude == nil { place.longitude = coordinate.longitude }
+        }
+        
+        await assignCoverIfNeeded(to: &place)
+    }
+    
+    @MainActor
+    @available(iOS 18.0, *)
+    private func enrichCoverImageIfNeeded(for placeID: UUID) async {
+        guard var existing = place(id: placeID) else { return }
+        guard existing.photoData == nil else { return }
+        guard existing.hasAppleMapsMatch, let identifier = existing.mapKitIdentifier else { return }
+        
+        await applyMapKitEnrichment(to: &existing, identifier: identifier)
+        guard existing.photoData != nil else { return }
+        guard placeStoreStillContains(placeID) else { return }
+        if let index = places.firstIndex(where: { $0.id == placeID }) {
+            places[index] = existing
+            save()
+        }
+    }
+    
+    @MainActor
+    private func assignCoverIfNeeded(to place: inout Place) async {
+        guard place.photoData == nil else { return }
+        guard let lat = place.latitude, let lon = place.longitude else { return }
+        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        guard CLLocationCoordinate2DIsValid(coordinate) else { return }
+        
+        let placeID = place.id
+        let jpeg = await PlaceAppleImagery.coverJPEG(at: coordinate)
+        guard placeStoreStillContains(placeID) else { return }
+        // Re-read in case the user set a photo while we were fetching.
+        if let current = self.place(id: placeID), current.photoData != nil {
+            place.photoData = current.photoData
+            return
+        }
+        place.photoData = jpeg
     }
     
     private func placeStoreStillContains(_ placeID: UUID) -> Bool {
@@ -286,8 +344,12 @@ class PlaceStore {
         
         let locationKey = PlaceNaming.normalizedLocationKey(location)
         
-        if let index = places.firstIndex(where: { eventID != nil && $0.sourceEventID == eventID })
-            ?? places.firstIndex(where: {
+        // Already linked to this activity — never overwrite on repeat taps.
+        if let eventID, let existing = places.first(where: { $0.sourceEventID == eventID }) {
+            return existing
+        }
+        
+        if let index = places.firstIndex(where: {
                 !locationKey.isEmpty
                     && PlaceNaming.normalizedLocationKey($0.location) == locationKey
             }) {

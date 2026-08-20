@@ -60,21 +60,19 @@ struct TripCardView: View {
     private let mapInsetSize: CGFloat = 88
     
     private var hasCoverImage: Bool {
-        trip.coverImageData.flatMap(UIImage.init(data:)) != nil
+        TripMapSupport.hasCoverImage(trip)
     }
     
     private var mapRegion: MKCoordinateRegion {
-        if let lat = trip.latitude, let lon = trip.longitude {
-            let span = trip.mapSpan ?? 0.1
-            return MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
+        TripMapSupport.mapRegion(for: trip)
+            ?? MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 20, longitude: 0),
+                span: MKCoordinateSpan(latitudeDelta: 80, longitudeDelta: 80)
             )
-        }
-        return MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-            span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 360)
-        )
+    }
+    
+    private var showsMapInset: Bool {
+        hasCoverImage && TripMapSupport.mapRegion(for: trip) != nil
     }
     
     private var tripStatus: TripStatus {
@@ -160,7 +158,7 @@ struct TripCardView: View {
                     .allowsHitTesting(false)
                 }
                 
-                if hasCoverImage, trip.latitude != nil, trip.longitude != nil {
+                if showsMapInset {
                     VStack {
                         Spacer()
                         HStack {
@@ -192,24 +190,28 @@ struct TripCardView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(2)
             
-            metadataLine
+            destinationMetadataLine
+            
+            Text(trip.isDatesSet ? trip.formattedDateRangeWithoutYear : "Unscheduled")
+                .font(.appCaption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .allowsHitTesting(false)
     }
     
-    private var metadataLine: some View {
+    private var destinationMetadataLine: some View {
         let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
-        let dateText = trip.isDatesSet ? trip.formattedDateRange : "Unscheduled"
         
         return HStack(spacing: 0) {
             if !destination.isEmpty {
                 Text(destination)
+            }
+            if !destination.isEmpty, coverAttributionName != nil {
                 Text("  ·  ")
             }
-            Text(dateText)
             if let coverAttributionName {
-                Text("  ·  ")
                 Image(systemName: "camera.fill")
                 Text(" \(coverAttributionName)")
             }
@@ -243,15 +245,19 @@ private struct TripCountdownGlassBackground: ViewModifier {
     let accentColor: Color
     
     func body(content: Content) -> some View {
-        content
-            .background {
-                Capsule(style: .continuous)
-                    .fill(isUrgent ? accentColor.opacity(0.92) : Color.black.opacity(0.55))
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
-            }
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    isUrgent ? .regular.tint(accentColor) : .regular,
+                    in: Capsule(style: .continuous)
+                )
+        } else {
+            content
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(.ultraThinMaterial))
+                }
+        }
     }
 }
 
@@ -259,7 +265,13 @@ struct MapSnapshotView: View {
     let region: MKCoordinateRegion
     var snapshotSize: CGSize = CGSize(width: 400, height: 300)
     
+    @AppStorage(AppMapStylePreference.storageKey) private var mapStylePreferenceRaw: String = AppMapStylePreference.standard.rawValue
     @State private var snapshot: UIImage?
+    @State private var inFlightSnapshotter: MKMapSnapshotter?
+    
+    private var preferredStyle: AppMapStylePreference {
+        AppMapStylePreference.resolved(fromRaw: mapStylePreferenceRaw)
+    }
     
     var body: some View {
         GeometryReader { geo in
@@ -282,18 +294,33 @@ struct MapSnapshotView: View {
         .onAppear {
             generateSnapshot()
         }
+        .onChange(of: mapStylePreferenceRaw) { _, _ in
+            snapshot = nil
+            generateSnapshot()
+        }
+        .onDisappear {
+            inFlightSnapshotter?.cancel()
+            inFlightSnapshotter = nil
+        }
     }
     
     private func generateSnapshot() {
+        inFlightSnapshotter?.cancel()
+        
         let options = MKMapSnapshotter.Options()
         options.region = region
         options.size = snapshotSize
-        options.mapType = .standard
+        options.preferredConfiguration = preferredStyle.snapshotConfiguration
         
         let snapshotter = MKMapSnapshotter(options: options)
-        snapshotter.start { snapshot, error in
-            if let snapshot = snapshot {
-                self.snapshot = snapshot.image
+        inFlightSnapshotter = snapshotter
+        snapshotter.start { snapshot, _ in
+            Task { @MainActor in
+                guard snapshotter === self.inFlightSnapshotter else { return }
+                self.inFlightSnapshotter = nil
+                if let snapshot {
+                    self.snapshot = snapshot.image
+                }
             }
         }
     }

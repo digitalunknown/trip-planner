@@ -30,13 +30,16 @@ struct TripStacksAIClient {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         
-        if let decoded = try? decoder.decode(AIResponse.self, from: data) {
-            return decoded.normalized()
+        // Prefer loose item decoding — model times are often "HH:mm", not ISO-8601.
+        if let loose = try? decoder.decode(AIResponseLoose.self, from: data) {
+            let strict = loose.toStrict().normalized()
+            if !strict.items.isEmpty || strict.clarificationNeeded || strict.trip != nil {
+                return strict
+            }
         }
         
-        // Loose fallback for partially messy model payloads.
-        if let loose = try? decoder.decode(AIResponseLoose.self, from: data) {
-            return loose.toStrict().normalized()
+        if let decoded = try? decoder.decode(AIResponse.self, from: data) {
+            return decoded.normalized()
         }
         
         throw TripStacksAIError.invalidResponse

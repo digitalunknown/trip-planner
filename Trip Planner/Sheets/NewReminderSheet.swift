@@ -7,6 +7,7 @@ struct NewReminderSheet: View {
     let dayOptions: [DayOption]
     var isEditing: Bool = false
     var onAdd: () -> Void
+    var onDelete: (() -> Void)? = nil
     
     var body: some View {
         NavigationStack {
@@ -20,35 +21,31 @@ struct NewReminderSheet: View {
                     }
                 }
                 
-                if isEditing {
-                    Section {
-                        HStack {
-                            TextField("Add a reminder", text: $reminderText)
-                            if !reminderText.isEmpty {
-                                Button {
-                                    reminderText = ""
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
+                Section {
+                    HStack {
+                        TextField("Add a reminder", text: $reminderText)
+                        if !reminderText.isEmpty {
+                            Button {
+                                reminderText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
-                } else {
-                    Section {
-                        HStack {
-                            TextField("Add a reminder", text: $reminderText)
-                            if !reminderText.isEmpty {
-                                Button {
-                                    reminderText = ""
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
+                }
+                
+                if isEditing {
+                    DetailActionButtonStack {
+                        Button {
+                            onDelete?()
+                            dismiss()
+                        } label: {
+                            Label("Delete Reminder", systemImage: "trash")
                         }
+                        .buttonStyle(.destructiveCapsuleBlock)
+                        .detailActionRow()
                     }
                 }
             }

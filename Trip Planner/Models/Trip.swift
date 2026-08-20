@@ -106,6 +106,13 @@ struct Trip: Identifiable, Hashable, Codable {
         return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
     }
     
+    /// Card-friendly range without year (e.g. "Mar 12 - Mar 18").
+    var formattedDateRangeWithoutYear: String {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("MMMd")
+        return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
+    }
+    
     var daysUntilTrip: Int {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())

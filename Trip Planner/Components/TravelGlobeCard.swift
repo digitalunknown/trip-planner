@@ -27,6 +27,11 @@ struct TravelGlobeCard: View {
         TravelDestinationPin.make(from: trips)
     }
     
+    /// Profile globe is always satellite, independent of Map Style settings.
+    private var globeMapStyle: MapStyle {
+        AppMapStylePreference.satellite.mapStyle
+    }
+    
     private var mapInteractionModes: MapInteractionModes {
         allowsFullInteraction ? [.pan, .zoom, .rotate, .pitch] : [.zoom, .rotate]
     }
@@ -69,6 +74,7 @@ struct TravelGlobeCard: View {
                                     }
                                 } label: {
                                     DestinationPinView(
+                                        pinID: pin.id,
                                         coverImageData: pin.coverImageData,
                                         count: pin.count,
                                         isSelected: selectedPinID == pin.id
@@ -78,7 +84,7 @@ struct TravelGlobeCard: View {
                             }
                         }
                     }
-                    .mapStyle(.imagery(elevation: .realistic))
+                    .mapStyle(globeMapStyle)
                     .onMapCameraChange(frequency: .continuous) { _ in
                         guard !isProgrammaticCameraUpdate else { return }
                         pauseAutoRotateTemporarily()
@@ -126,7 +132,7 @@ struct TravelGlobeCard: View {
     private var emptyState: some View {
         ZStack {
             Map(initialPosition: Self.makeCamera(heading: -35, fullGlobe: showsFullGlobe), interactionModes: [])
-                .mapStyle(.imagery(elevation: .realistic))
+                .mapStyle(globeMapStyle)
                 .allowsHitTesting(false)
                 .saturation(0.9)
             
@@ -241,6 +247,7 @@ struct TravelDestinationPin: Identifiable, Hashable {
 // MARK: - Pin view
 
 private struct DestinationPinView: View {
+    let pinID: UUID
     let coverImageData: Data?
     let count: Int
     var isSelected: Bool = false
@@ -251,7 +258,7 @@ private struct DestinationPinView: View {
         ZStack(alignment: .topTrailing) {
             SquareMapPinView(
                 size: size,
-                image: coverImageData.flatMap(UIImage.init(data:)),
+                image: MapPinImageCache.image(data: coverImageData, id: pinID.uuidString, pointSize: size),
                 fallbackColor: Color(hex: 0x4DA1F7),
                 fallbackSystemImage: "suitcase.fill",
                 isSelected: isSelected

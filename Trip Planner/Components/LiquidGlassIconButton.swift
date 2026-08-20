@@ -25,6 +25,7 @@ struct LiquidGlassIconButton: View {
                 .modifier(LiquidGlassCircleBackground(enabled: showsGlassBackground))
         }
         .buttonStyle(.plain)
+        .tint(.primary)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.45)
         .accessibilityLabel(accessibilityLabelText ?? systemName)
@@ -38,7 +39,9 @@ struct LiquidGlassToolbarIconLabel: View {
     var body: some View {
         Image(systemName: systemName)
             .font(.app(14, weight: .semibold))
+            .symbolRenderingMode(.monochrome)
             .foregroundStyle(.primary)
+            .tint(.primary)
             .frame(width: LiquidGlassToolbarMetrics.iconSide, height: LiquidGlassToolbarMetrics.iconSide)
             .contentShape(Rectangle())
     }

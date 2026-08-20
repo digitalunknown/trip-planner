@@ -56,6 +56,11 @@ struct TripDetailView: View {
     @State private var planDayDefaultDayID: UUID?
     @State private var geocodeTask: Task<Void, Never>?
     @State private var splitRatio: CGFloat = 0.45 // Map takes 45% by default
+    @AppStorage(AppMapStylePreference.storageKey) private var mapStylePreferenceRaw: String = AppMapStylePreference.standard.rawValue
+    
+    private var resolvedMapStyle: MapStyle {
+        AppMapStylePreference.resolved(fromRaw: mapStylePreferenceRaw).mapStyle
+    }
     @State private var newEventTitle: String = ""
     @State private var newEventLocation: String = ""
     @State private var newEventLatitude: Double?
@@ -77,6 +82,8 @@ struct TripDetailView: View {
     @State private var activitySheetDetent: PresentationDetent = .medium
     @State private var mapPosition: MapCameraPosition
     @State private var showMap = false
+    /// Cached MapKit road routes for drive/walk travel items (keyed by flight id).
+    @State private var resolvedTravelRoadRoutes: [UUID: [CLLocationCoordinate2D]] = [:]
     
     @State private var isPresentingNewReminder = false
     @State private var newReminderText: String = ""
@@ -112,7 +119,6 @@ struct TripDetailView: View {
     @State private var flightNumber: String = ""
     @State private var flightNotes: String = ""
     @State private var flightDocuments: [EventDocument] = []
-    @State private var flightAccent: EventAccent = .purple
     @State private var flightStartTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     @State private var flightEndTime: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(9 * 3600)
     @State private var flightCost: Double?
@@ -203,27 +209,41 @@ struct TripDetailView: View {
         return dayAnnotations + parkedAnnotations
     }
     
+    private var allTravelOverlays: [TravelMapOverlay] {
+        TravelMapRouting.overlays(days: tripDays, resolvedRoadRoutes: resolvedTravelRoadRoutes)
+    }
+    
+    private func travelOverlays(for dayID: UUID) -> [TravelMapOverlay] {
+        allTravelOverlays.filter { $0.dayID == dayID }
+    }
+    
+    private var visibleTravelOverlays: [TravelMapOverlay] {
+        if hasUserScrolledDays, let dayID = displayedDayIDForMarkers {
+            let dayOverlays = travelOverlays(for: dayID)
+            return dayOverlays.isEmpty ? allTravelOverlays : dayOverlays
+        }
+        return allTravelOverlays
+    }
+    
+    private var travelRouteRefreshKey: String {
+        tripDays
+            .flatMap(\.flights)
+            .map { flight in
+                let from = "\(flight.fromLatitude ?? 0),\(flight.fromLongitude ?? 0)"
+                let to = "\(flight.toLatitude ?? 0),\(flight.toLongitude ?? 0)"
+                return "\(flight.id.uuidString):\(flight.travelMode.rawValue):\(from):\(to)"
+            }
+            .sorted()
+            .joined(separator: "|")
+    }
+    
+    private var mapContentCoordinates: [CLLocationCoordinate2D] {
+        eventAnnotations.map(\.coordinate) + TravelMapRouting.coordinates(in: allTravelOverlays)
+    }
+    
     var appropriateMapRegion: MKCoordinateRegion {
-        if !eventAnnotations.isEmpty {
-            let coordinates = eventAnnotations.map { $0.coordinate }
-            let minLat = coordinates.map { $0.latitude }.min() ?? 0
-            let maxLat = coordinates.map { $0.latitude }.max() ?? 0
-            let minLon = coordinates.map { $0.longitude }.min() ?? 0
-            let maxLon = coordinates.map { $0.longitude }.max() ?? 0
-            
-            let center = CLLocationCoordinate2D(
-                latitude: (minLat + maxLat) / 2,
-                longitude: (minLon + maxLon) / 2
-            )
-            
-            let latSpread = maxLat - minLat
-            let lonSpread = maxLon - minLon
-            let padding: Double = 1.55
-            let span = MKCoordinateSpan(
-                latitudeDelta: max(latSpread * padding, 0.012),
-                longitudeDelta: max(lonSpread * padding, 0.012)
-            )
-            return MKCoordinateRegion(center: center, span: span)
+        if let region = regionFitting(coordinates: mapContentCoordinates) {
+            return region
         } else if let lat = trip.latitude, let lon = trip.longitude {
             let span = trip.mapSpan ?? 0.1
             return MKCoordinateRegion(
@@ -242,13 +262,21 @@ struct TripDetailView: View {
         eventAnnotations.filter { $0.dayID == dayID }
     }
     
-    private func regionFitting(_ annotations: [EventAnnotation]) -> MKCoordinateRegion? {
-        guard !annotations.isEmpty else { return nil }
-        let coordinates = annotations.map { $0.coordinate }
-        let minLat = coordinates.map { $0.latitude }.min() ?? 0
-        let maxLat = coordinates.map { $0.latitude }.max() ?? 0
-        let minLon = coordinates.map { $0.longitude }.min() ?? 0
-        let maxLon = coordinates.map { $0.longitude }.max() ?? 0
+    private func dayHasMapContent(_ dayID: UUID) -> Bool {
+        !annotations(for: dayID).isEmpty || !travelOverlays(for: dayID).isEmpty
+    }
+    
+    private func coordinates(forDay dayID: UUID) -> [CLLocationCoordinate2D] {
+        annotations(for: dayID).map(\.coordinate)
+            + TravelMapRouting.coordinates(in: travelOverlays(for: dayID))
+    }
+    
+    private func regionFitting(coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion? {
+        guard !coordinates.isEmpty else { return nil }
+        let minLat = coordinates.map(\.latitude).min() ?? 0
+        let maxLat = coordinates.map(\.latitude).max() ?? 0
+        let minLon = coordinates.map(\.longitude).min() ?? 0
+        let maxLon = coordinates.map(\.longitude).max() ?? 0
         
         let center = CLLocationCoordinate2D(
             latitude: (minLat + maxLat) / 2,
@@ -263,6 +291,10 @@ struct TripDetailView: View {
             longitudeDelta: max(lonSpread * padding, 0.012)
         )
         return MKCoordinateRegion(center: center, span: span)
+    }
+    
+    private func regionFitting(_ annotations: [EventAnnotation]) -> MKCoordinateRegion? {
+        regionFitting(coordinates: annotations.map(\.coordinate))
     }
     
     private var mapModes: MapInteractionModes {
@@ -281,13 +313,46 @@ struct TripDetailView: View {
     
     private var mapLayer: some View {
         Map(position: $mapPosition, interactionModes: mapModes) {
+            ForEach(visibleTravelOverlays) { overlay in
+                let dashed = overlay.usesDashedStroke
+                // Black outline first, white fill on top — same for dashed and solid.
+                MapPolyline(coordinates: overlay.routeCoordinates)
+                    .stroke(TravelMapStrokeStyle.outlineColor, style: TravelMapStrokeStyle.outline(dashed: dashed))
+                MapPolyline(coordinates: overlay.routeCoordinates)
+                    .stroke(TravelMapStrokeStyle.fillColor, style: TravelMapStrokeStyle.fill(dashed: dashed))
+                
+                Annotation("", coordinate: overlay.fromCoordinate, anchor: .center) {
+                    Button {
+                        openFlightFromMarker(overlay.flightID)
+                    } label: {
+                        SquareMapPinView(
+                            fallbackColor: Color(hex: 0x171717),
+                            fallbackSystemImage: overlay.travelMode.mapEndpointSystemImage(isOrigin: true)
+                        )
+                    }
+                    .opacity(markersOpacity)
+                }
+                
+                Annotation("", coordinate: overlay.toCoordinate, anchor: .center) {
+                    Button {
+                        openFlightFromMarker(overlay.flightID)
+                    } label: {
+                        SquareMapPinView(
+                            fallbackColor: Color(hex: 0x171717),
+                            fallbackSystemImage: overlay.travelMode.mapEndpointSystemImage(isOrigin: false)
+                        )
+                    }
+                    .opacity(markersOpacity)
+                }
+            }
+            
             ForEach(visibleAnnotations) { annotation in
                 Annotation("", coordinate: annotation.coordinate, anchor: .center) {
                     Button {
                         openEventFromMarker(annotation.event)
                     } label: {
                         SquareMapPinView(
-                            image: PlaceImageResolver.imageData(from: annotation.event).flatMap(UIImage.init(data:)),
+                            image: MapPinImageCache.image(for: annotation.event),
                             fallbackColor: annotation.color,
                             fallbackSystemImage: annotation.event.icon
                         )
@@ -296,6 +361,8 @@ struct TripDetailView: View {
                 }
             }
         }
+        .mapStyle(resolvedMapStyle)
+        .id(mapStylePreferenceRaw)
         .opacity(showMap ? 1 : 0)
         .allowsHitTesting(!isEdgeSwipingBack)
     }
@@ -346,7 +413,8 @@ struct TripDetailView: View {
     }
     
     private func resizeBaseRegion() -> MKCoordinateRegion {
-        if hasUserScrolledDays, let dayID = displayedDayIDForMarkers, let r = regionFitting(annotations(for: dayID)) {
+        if hasUserScrolledDays, let dayID = displayedDayIDForMarkers,
+           let r = regionFitting(coordinates: coordinates(forDay: dayID)) {
             return r
         }
         return appropriateMapRegion
@@ -425,6 +493,7 @@ struct TripDetailView: View {
                     LiquidGlassToolbarIconLabel(systemName: "gearshape")
                 }
                 .buttonStyle(.plain)
+                .tint(.primary)
                 .accessibilityLabel("Trip settings")
                 
                 Menu {
@@ -502,6 +571,7 @@ struct TripDetailView: View {
                     LiquidGlassToolbarIconLabel(systemName: "plus")
                 }
                 .buttonStyle(.plain)
+                .tint(.primary)
                 .accessibilityLabel("Add to trip")
             }
         }
@@ -798,25 +868,39 @@ struct TripDetailView: View {
                     selection: $activitySheetDetent
                 )
             }
-            .sheet(isPresented: $isPresentingNewReminder) {
+            .sheet(isPresented: $isPresentingNewReminder, onDismiss: {
+                editingReminder = nil
+            }) {
                 NewReminderSheet(
                     reminderText: $newReminderText,
                     selectedDayID: $selectedDayID,
                     dayOptions: dayOptions,
                     isEditing: editingReminder != nil,
-                    onAdd: addReminder
+                    onAdd: addReminder,
+                    onDelete: {
+                        if let editingReminder {
+                            deleteReminder(editingReminder)
+                        }
+                    }
                 )
                 .tint(.primary)
                 .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium])
             }
-            .sheet(isPresented: $isPresentingNewChecklist) {
+            .sheet(isPresented: $isPresentingNewChecklist, onDismiss: {
+                editingChecklist = nil
+            }) {
                 NewChecklistSheet(
                     title: $checklistTitle,
                     items: $checklistDraftItems,
                     selectedDayID: $selectedDayID,
                     dayOptions: dayOptions,
                     isEditing: editingChecklist != nil,
-                    onSave: saveChecklist
+                    onSave: saveChecklist,
+                    onDelete: {
+                        if let editingChecklist {
+                            deleteChecklist(editingChecklist)
+                        }
+                    }
                 )
                 .tint(.primary)
                 .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
@@ -844,13 +928,13 @@ struct TripDetailView: View {
                     flightNumber: $flightNumber,
                     notes: $flightNotes,
                     documents: $flightDocuments,
-                    accent: $flightAccent,
                     startTime: $flightStartTime,
                     endTime: $flightEndTime,
                     cost: $flightCost,
                     costCurrencyCode: $flightCostCurrencyCode,
                     selectedDayID: $selectedDayID,
                     dayOptions: dayOptions,
+                    tripLocationRegion: eventSheetTripRegion,
                     isEditing: editingFlight != nil,
                     onSave: saveFlight,
                     onDelete: deleteHandler
@@ -1108,6 +1192,15 @@ struct TripDetailView: View {
             focusedDayID = nil
         }
         
+        let plannedDayIDs = Set(
+            items
+                .filter { $0.include && $0.kind != .place }
+                .compactMap { item -> UUID? in
+                    item.dayID ?? defaultDayID
+                }
+        )
+        AchievementCounters.recordAIDaysPlanned(plannedDayIDs.count)
+        
         if !newlyAddedEventIDs.isEmpty {
             geocodeTask?.cancel()
             geocodeTask = Task {
@@ -1132,6 +1225,53 @@ struct TripDetailView: View {
         geocodeTask?.cancel()
         geocodeTask = Task {
             await geocodeEventsIfNeeded(eventIDs: missingIDs)
+        }
+    }
+    
+    private func geocodeMissingTravelCoordinatesIfNeeded() {
+        let needsWork = tripDays.contains { day in
+            day.flights.contains { flight in
+                travelEndpointNeedsGeocode(flight, isFrom: true)
+                    || travelEndpointNeedsGeocode(flight, isFrom: false)
+            }
+        }
+        guard needsWork else { return }
+        Task {
+            await geocodeTravelEndpointsIfNeeded()
+        }
+    }
+    
+    private func travelEndpointNeedsGeocode(_ flight: FlightItem, isFrom: Bool) -> Bool {
+        let lat = isFrom ? flight.fromLatitude : flight.toLatitude
+        let lon = isFrom ? flight.fromLongitude : flight.toLongitude
+        guard lat == nil || lon == nil else { return false }
+        return travelEndpointQuery(flight, isFrom: isFrom) != nil
+    }
+    
+    private func travelEndpointQuery(_ flight: FlightItem, isFrom: Bool) -> String? {
+        let name = (isFrom ? flight.fromName : flight.toName)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let code = (isFrom ? flight.fromCode : flight.toCode)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let city = (isFrom ? flight.fromCity : flight.toCity)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        switch flight.travelMode {
+        case .flight:
+            if !code.isEmpty { return "\(code) airport" }
+            if !name.isEmpty { return "\(name) airport" }
+            if !city.isEmpty { return "\(city) airport" }
+            return nil
+        case .train:
+            if !name.isEmpty { return "\(name) train station" }
+            if !code.isEmpty { return "\(code) station" }
+            return nil
+        case .drive, .walk:
+            let parts = [name, city, trip.destination]
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            guard !parts.isEmpty else { return nil }
+            return parts.joined(separator: " ")
         }
     }
 
@@ -1162,6 +1302,69 @@ struct TripDetailView: View {
             await MainActor.run {
                 setMapRegion(appropriateMapRegion, animated: true)
             }
+        }
+    }
+    
+    private func geocodeTravelEndpointsIfNeeded() async {
+        let region: MKCoordinateRegion? = await MainActor.run { geocodeBiasRegion() }
+        var resolvedAny = false
+        
+        let jobs: [(flightID: UUID, isFrom: Bool, query: String)] = await MainActor.run {
+            var result: [(UUID, Bool, String)] = []
+            for day in tripDays {
+                for flight in day.flights {
+                    if travelEndpointNeedsGeocode(flight, isFrom: true),
+                       let query = travelEndpointQuery(flight, isFrom: true) {
+                        result.append((flight.id, true, query))
+                    }
+                    if travelEndpointNeedsGeocode(flight, isFrom: false),
+                       let query = travelEndpointQuery(flight, isFrom: false) {
+                        result.append((flight.id, false, query))
+                    }
+                }
+            }
+            return result
+        }
+        
+        for job in jobs {
+            if Task.isCancelled { return }
+            if let resolved = await searchPlace(for: job.query, region: region) {
+                await MainActor.run {
+                    applyResolvedTravelEndpoint(
+                        coordinate: resolved.coordinate,
+                        toFlightID: job.flightID,
+                        isFrom: job.isFrom
+                    )
+                }
+                resolvedAny = true
+            }
+            try? await Task.sleep(nanoseconds: 220_000_000)
+        }
+        
+        if resolvedAny {
+            await MainActor.run {
+                setMapRegion(appropriateMapRegion, animated: true)
+            }
+            await refreshTravelRoadRoutes()
+        }
+    }
+    
+    @MainActor
+    private func applyResolvedTravelEndpoint(
+        coordinate: CLLocationCoordinate2D,
+        toFlightID id: UUID,
+        isFrom: Bool
+    ) {
+        for dayIdx in tripDays.indices {
+            guard let flightIdx = tripDays[dayIdx].flights.firstIndex(where: { $0.id == id }) else { continue }
+            if isFrom {
+                tripDays[dayIdx].flights[flightIdx].fromLatitude = coordinate.latitude
+                tripDays[dayIdx].flights[flightIdx].fromLongitude = coordinate.longitude
+            } else {
+                tripDays[dayIdx].flights[flightIdx].toLatitude = coordinate.latitude
+                tripDays[dayIdx].flights[flightIdx].toLongitude = coordinate.longitude
+            }
+            return
         }
     }
     
@@ -1344,6 +1547,7 @@ struct TripDetailView: View {
             .enableSwipeBack()
             .toolbar(.hidden, for: .tabBar)
             .tint(.primary)
+            .toolbarBackground(.automatic, for: .navigationBar)
             .simultaneousGesture(edgeSwipeGesture)
             .toolbar { tripDetailToolbar }
         .onChange(of: isPresentingNewReminder) { _, isPresented in
@@ -1375,6 +1579,10 @@ struct TripDetailView: View {
                 }
             }
             geocodeMissingEventCoordinatesIfNeeded()
+            geocodeMissingTravelCoordinatesIfNeeded()
+        }
+        .task(id: travelRouteRefreshKey) {
+            await refreshTravelRoadRoutes()
         }
         .onDisappear {
             tabChrome.endSuppressingAIAccessory()
@@ -1401,7 +1609,7 @@ struct TripDetailView: View {
             
             let targetDayID: UUID? = {
                 guard let dayID = newValue else { return nil }
-                return annotations(for: dayID).isEmpty ? nil : dayID
+                return dayHasMapContent(dayID) ? dayID : nil
             }()
             
             pendingMarkerTransition?.cancel()
@@ -1411,7 +1619,7 @@ struct TripDetailView: View {
             }
             
             let targetRegion: MKCoordinateRegion = {
-                if let dayID = targetDayID, let region = regionFitting(annotations(for: dayID)) {
+                if let dayID = targetDayID, let region = regionFitting(coordinates: coordinates(forDay: dayID)) {
                     return region
                 }
                 return appropriateMapRegion
@@ -1468,11 +1676,12 @@ private extension TripDetailView {
             }()
             let tripHasNoItems = tripDays.allSatisfy { $0.events.isEmpty && $0.reminders.isEmpty && $0.checklists.isEmpty && $0.flights.isEmpty }
             let viewport = CGRect(x: 0, y: 0, width: geo.size.width, height: geo.size.height)
+            let emptyStateFocusedDayID = focusedDayID ?? tripDays.first?.id
             
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 16) {
-                        ForEach(Array(tripDays.enumerated()), id: \.element.id) { index, day in
+                        ForEach(Array(tripDays.enumerated()), id: \.element.id) { _, day in
                             let isToday = trip.isDatesSet && Calendar.current.isDate(day.date, inSameDayAs: Date())
                             DayColumn(
                                 day: day,
@@ -1503,17 +1712,12 @@ private extension TripDetailView {
                                 onMoveFlightLeft: { flight in moveFlight(flight, from: day, direction: -1) },
                                 onMoveFlightRight: { flight in moveFlight(flight, from: day, direction: 1) },
                                 onMoveFlightToParked: trip.showParkedIdeas ? { flight in moveFlightToParked(flight, from: day) } : nil,
-                                onAddEvent: {
-                                    selectedDayID = day.id
-                                    prepareNewEventDefaults()
-                                    activitySheetDetent = .large
-                                    isPresentingNewActivity = true
-                                },
                                 onPlanDay: {
                                     planDayDefaultDayID = day.id
                                     isPresentingPlanDay = true
                                 },
-                                showEmptyPlaceholder: index == 0 && tripHasNoItems
+                                showEmptyPlaceholder: tripHasNoItems,
+                                isEmptyStateFocused: emptyStateFocusedDayID == day.id
                             )
                             .id(day.id)
                             .background(
@@ -1567,7 +1771,9 @@ private extension TripDetailView {
                     scrollToActiveDayIfNeeded(using: proxy)
                 }
                 .onPreferenceChange(DayColumnFramesPreferenceKey.self) { framesByID in
-                    guard hasUserScrolledDays else { return }
+                    // Track focus for empty-state CTA animation even before the user has
+                    // intentionally scrolled (map camera still waits on hasUserScrolledDays).
+                    guard tripHasNoItems || hasUserScrolledDays else { return }
                     var bestID: UUID?
                     var bestVisibleWidth: CGFloat = 0
                     
@@ -1664,9 +1870,9 @@ private extension TripDetailView {
                 proxy.scrollTo(dayID, anchor: .center)
             }
             focusedDayID = dayID
-            displayedDayIDForMarkers = annotations(for: dayID).isEmpty ? nil : dayID
+            displayedDayIDForMarkers = dayHasMapContent(dayID) ? dayID : nil
             hasUserScrolledDays = true
-            if let region = regionFitting(annotations(for: dayID)) {
+            if let region = regionFitting(coordinates: coordinates(forDay: dayID)) {
                 setMapRegion(region, animated: false)
             }
         }
@@ -2238,6 +2444,56 @@ private extension TripDetailView {
         }
     }
     
+    func openFlightFromMarker(_ flightID: UUID) {
+        for day in tripDays {
+            if let flight = day.flights.first(where: { $0.id == flightID }) {
+                startEditingFlight(flight, day: day)
+                return
+            }
+        }
+    }
+    
+    @MainActor
+    private func refreshTravelRoadRoutes() async {
+        let candidates: [(id: UUID, from: CLLocationCoordinate2D, to: CLLocationCoordinate2D, mode: TravelMode)] =
+            tripDays.flatMap { day in
+                day.flights.compactMap { flight in
+                    guard flight.travelMode == .drive || flight.travelMode == .walk,
+                          let fromLat = flight.fromLatitude,
+                          let fromLon = flight.fromLongitude,
+                          let toLat = flight.toLatitude,
+                          let toLon = flight.toLongitude
+                    else { return nil }
+                    let from = CLLocationCoordinate2D(latitude: fromLat, longitude: fromLon)
+                    let to = CLLocationCoordinate2D(latitude: toLat, longitude: toLon)
+                    guard CLLocationCoordinate2DIsValid(from), CLLocationCoordinate2DIsValid(to) else { return nil }
+                    return (flight.id, from, to, flight.travelMode)
+                }
+            }
+        
+        let activeIDs = Set(candidates.map(\.id))
+        resolvedTravelRoadRoutes = resolvedTravelRoadRoutes.filter { activeIDs.contains($0.key) }
+        
+        await withTaskGroup(of: (UUID, [CLLocationCoordinate2D]?).self) { group in
+            for candidate in candidates {
+                if resolvedTravelRoadRoutes[candidate.id] != nil { continue }
+                group.addTask {
+                    let coords = await TravelMapRouting.fetchRoadRoute(
+                        from: candidate.from,
+                        to: candidate.to,
+                        mode: candidate.mode
+                    )
+                    return (candidate.id, coords)
+                }
+            }
+            for await (id, coords) in group {
+                if let coords, coords.count >= 2 {
+                    resolvedTravelRoadRoutes[id] = coords
+                }
+            }
+        }
+    }
+    
     func deleteCurrentEvent() {
         guard let event = editingEvent else { return }
         ActivityDocumentStore.delete(documents: event.documents)
@@ -2363,7 +2619,6 @@ private extension TripDetailView {
         flightNumber = ""
         flightNotes = ""
         flightDocuments = []
-        flightAccent = .purple
         flightCost = nil
         flightCostCurrencyCode = UserDefaults.standard.string(forKey: "currencyCode") ?? "USD"
         let base = Calendar.current.startOfDay(for: Date())
@@ -2396,7 +2651,7 @@ private extension TripDetailView {
                 flightNumber: flightNumber,
                 notes: flightNotes,
                 documents: flightDocuments,
-                accent: flightAccent,
+                accent: .neutral,
                 startTime: flightStartTime,
                 endTime: flightEndTime,
                 cost: flightCost,
@@ -2459,7 +2714,7 @@ private extension TripDetailView {
                 flightNumber: flightNumber,
                 notes: flightNotes,
                 documents: flightDocuments,
-                accent: flightAccent,
+                accent: .neutral,
                 startTime: flightStartTime,
                 endTime: flightEndTime,
                 cost: flightCost,
@@ -2486,7 +2741,7 @@ private extension TripDetailView {
                     latitude: nil,
                     longitude: nil,
                     icon: flight.travelMode.systemImageName,
-                    accent: flight.accent,
+                    accent: .neutral,
                     photoData: nil,
                     documents: flight.documents
                 )
@@ -2521,7 +2776,6 @@ private extension TripDetailView {
         flightNumber = flight.flightNumber
         flightNotes = flight.notes
         flightDocuments = flight.documents
-        flightAccent = flight.accent
         flightStartTime = flight.startTime
         flightEndTime = flight.endTime
         flightCost = flight.cost
@@ -2654,7 +2908,7 @@ private extension TripDetailView {
             latitude: nil,
             longitude: nil,
             icon: flight.travelMode.systemImageName,
-            accent: flight.accent,
+            accent: .neutral,
             photoData: nil,
             documents: flight.documents
         )
@@ -3354,9 +3608,19 @@ enum TravelMode: String, Codable, CaseIterable, Hashable {
     var systemImageName: String {
         switch self {
         case .flight: return "airplane"
-        case .drive: return "car.side.fill"
+        case .drive: return "car.fill"
         case .train: return "train.side.front.car"
         case .walk: return "figure.walk"
+        }
+    }
+    
+    /// Map endpoint icons — flights use departure at origin and arrival at destination.
+    func mapEndpointSystemImage(isOrigin: Bool) -> String {
+        switch self {
+        case .flight:
+            return isOrigin ? "airplane.departure" : "airplane.arrival"
+        case .drive, .train, .walk:
+            return systemImageName
         }
     }
 }

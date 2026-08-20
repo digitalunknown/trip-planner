@@ -43,6 +43,9 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
     /// Place Finder category (`restaurant`, `hotel`, …). Empty for plan_day items.
     var category: String
     
+    /// Optional cover from Apple Maps Look Around / snapshot (AI + Explore enrichment).
+    var photoData: Data?
+    
     init(
         id: UUID = UUID(),
         kind: PlanDayItemKind,
@@ -64,7 +67,8 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
         flightNumber: String = "",
         confidence: Double? = nil,
         sourceSnippet: String = "",
-        category: String = ""
+        category: String = "",
+        photoData: Data? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -87,6 +91,7 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
         self.confidence = confidence
         self.sourceSnippet = sourceSnippet
         self.category = category
+        self.photoData = photoData
     }
 }
 

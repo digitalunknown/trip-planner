@@ -3,14 +3,7 @@ import UIKit
 
 extension Font {
     static func app(_ size: CGFloat, weight: AppFontWeight = .regular) -> Font {
-        let descriptor = UIFontDescriptor(fontAttributes: [
-            .name: "Inter",
-            .size: size,
-            kCTFontVariationAttribute as UIFontDescriptor.AttributeName: [
-                2003265652: weight.rawValue
-            ]
-        ])
-        return Font(UIFont(descriptor: descriptor, size: size))
+        Font(AppFont.uiFont(size: size, weight: weight))
     }
     
     static var appTitle: Font { .app(28, weight: .semibold) }
@@ -24,14 +17,36 @@ extension Font {
     static var appCaption: Font { .app(12, weight: .regular) }
 }
 
+enum AppFont {
+    /// PostScript / family name for the bundled Manrope variable font.
+    static let familyName = "Manrope"
+    /// `wght` variation axis tag.
+    private static let weightAxisTag: Int = 2003265652
+    
+    static func uiFont(size: CGFloat, weight: AppFontWeight = .regular) -> UIFont {
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: familyName,
+            .size: size,
+            kCTFontVariationAttribute as UIFontDescriptor.AttributeName: [
+                weightAxisTag: weight.rawValue
+            ]
+        ])
+        return UIFont(descriptor: descriptor, size: size)
+    }
+}
+
 enum AppFontWeight {
     case regular
+    case medium
     case semibold
+    case bold
     
     var rawValue: CGFloat {
         switch self {
         case .regular: return 400
+        case .medium: return 500
         case .semibold: return 600
+        case .bold: return 700
         }
     }
 }

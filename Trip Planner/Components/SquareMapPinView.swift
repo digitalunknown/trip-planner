@@ -41,7 +41,6 @@ struct SquareMapPinView: View {
         .overlay {
             shape.strokeBorder(Color.white.opacity(0.92), lineWidth: isSelected ? borderWidth + 0.5 : borderWidth)
         }
-        .shadow(color: .black.opacity(0.28), radius: 8, x: 0, y: 4)
         .scaleEffect(isSelected ? 1.08 : 1)
         .animation(.easeInOut(duration: 0.15), value: isSelected)
     }

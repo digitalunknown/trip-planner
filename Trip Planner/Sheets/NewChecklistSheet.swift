@@ -11,6 +11,7 @@ struct NewChecklistSheet: View {
     let dayOptions: [DayOption]
     var isEditing: Bool = false
     var onSave: () -> Void
+    var onDelete: (() -> Void)? = nil
     
     @State private var newItemText: String = ""
     @State private var isAddFieldFocused: Bool = false
@@ -226,7 +227,7 @@ struct NewChecklistSheet: View {
                         }
                         .modifier(ChecklistItemsSectionHeader(isEditing: isEditing))
                         
-                        Section {
+                        DetailActionButtonStack {
                             Button {
                                 let lines = items
                                     .map { entry -> String in
@@ -248,14 +249,25 @@ struct NewChecklistSheet: View {
                                     }
                                 }
                             } label: {
-                                HStack {
-                                    Spacer()
-                                    Text(didCopyItems ? "Copied" : "Copy Items")
-                                        .fontWeight(.semibold)
-                                    Spacer()
-                                }
+                                Label(
+                                    didCopyItems ? "Copied" : "Copy Items",
+                                    systemImage: didCopyItems ? "checkmark" : "doc.on.doc"
+                                )
                             }
+                            .buttonStyle(.secondaryCapsuleBlock)
                             .disabled(didCopyItems || items.isEmpty)
+                            .detailActionRow()
+                            
+                            if isEditing {
+                                Button {
+                                    onDelete?()
+                                    dismiss()
+                                } label: {
+                                    Label("Delete Checklist", systemImage: "trash")
+                                }
+                                .buttonStyle(.destructiveCapsuleBlock)
+                                .detailActionRow()
+                            }
                         }
                     }
                     .scrollContentBackground(.hidden)

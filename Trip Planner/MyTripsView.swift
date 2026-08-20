@@ -71,13 +71,21 @@ struct MyTripsView: View {
         NavigationStack(path: $navigationPath) {
             Group {
                 if tripStore.isLoadingTrips {
-                    VStack(spacing: 10) {
-                        ProgressView()
-                        Text("Loading trips")
-                            .font(.appSubheadline)
-                            .foregroundStyle(.secondary)
+                    GeometryReader { geo in
+                        VStack(spacing: 10) {
+                            ProgressView()
+                                .controlSize(.regular)
+                                .frame(width: 28, height: 28)
+                            Text("Loading trips")
+                                .font(.appSubheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Ignore chrome insets so the spinner doesn't re-center when the
+                    // large title / bottom AI accessory settle on first launch.
+                    .ignoresSafeArea()
+                    .transaction { $0.animation = nil }
                 } else if tripStore.trips.isEmpty {
                     emptyStateView
                 } else {
@@ -108,6 +116,7 @@ struct MyTripsView: View {
                                 LiquidGlassToolbarIconLabel(systemName: "sparkles")
                             }
                             .buttonStyle(.plain)
+                            .tint(.primary)
                         }
                         Button {
                             requestCreateTrip()
@@ -115,6 +124,7 @@ struct MyTripsView: View {
                             LiquidGlassToolbarIconLabel(systemName: "plus")
                         }
                         .buttonStyle(.plain)
+                        .tint(.primary)
                     }
                 }
             }
@@ -136,10 +146,17 @@ struct MyTripsView: View {
                             name: trip.name,
                             destination: trip.destination,
                             startDate: trip.isDatesSet ? isoDate(trip.startDate) : nil,
-                            endDate: trip.isDatesSet ? isoDate(trip.endDate) : nil
+                            endDate: trip.isDatesSet ? isoDate(trip.endDate) : nil,
+                            isDatesSet: trip.isDatesSet
                         )
                     },
-                    onCommitTrip: commitAITrip
+                    onCommitTrip: commitAITrip,
+                    onCreateManually: {
+                        // Wait for the AI sheet to finish dismissing before presenting New Trip.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            requestCreateTrip()
+                        }
+                    }
                 )
                 .tint(.primary)
             }
@@ -184,6 +201,16 @@ struct MyTripsView: View {
                     TripCoverAttribution.setName(selection.photographerName, for: trip.id)
                     tripStore.save()
                     tripForUnsplashCoverPicker = nil
+                    
+                    let tripID = trip.id
+                    let query = TripMapSupport.geocodeQuery(for: updated)
+                    Task {
+                        await enrichTripLocationAndCoverIfNeeded(
+                            tripID: tripID,
+                            query: query,
+                            fetchCoverIfMissing: false
+                        )
+                    }
                 }
                 .presentationDetents([.large])
                 .tint(.primary)
@@ -219,6 +246,16 @@ struct MyTripsView: View {
                     tripStore.save()
                     selectedImage = nil
                     tripForImagePicker = nil
+                    
+                    let tripID = tripToUpdate.id
+                    let query = TripMapSupport.geocodeQuery(for: updated)
+                    Task {
+                        await enrichTripLocationAndCoverIfNeeded(
+                            tripID: tripID,
+                            query: query,
+                            fetchCoverIfMissing: false
+                        )
+                    }
                 }
             }
             .onChange(of: showingNewTrip) { _, isPresented in
@@ -233,8 +270,76 @@ struct MyTripsView: View {
                     navigationPath.append(id)
                 }
             }
+            .onAppear {
+                backfillTripMapLocationsIfNeeded()
+            }
+            .onChange(of: tripStore.trips.count) { _, _ in
+                backfillTripMapLocationsIfNeeded()
+            }
         }
         .tint(.primary)
+    }
+    
+    private func backfillTripMapLocationsIfNeeded() {
+        let candidates = tripStore.trips.filter { trip in
+            TripMapSupport.hasCoverImage(trip) && TripMapSupport.needsDestinationGeocode(trip)
+        }
+        guard !candidates.isEmpty else { return }
+        
+        for trip in candidates {
+            let tripID = trip.id
+            let query = TripMapSupport.geocodeQuery(for: trip)
+            Task {
+                await enrichTripLocationAndCoverIfNeeded(
+                    tripID: tripID,
+                    query: query,
+                    fetchCoverIfMissing: false
+                )
+            }
+        }
+    }
+    
+    @MainActor
+    private func enrichTripLocationAndCoverIfNeeded(
+        tripID: UUID,
+        query: String,
+        fetchCoverIfMissing: Bool
+    ) async {
+        let needsLocation: Bool = {
+            guard let trip = tripStore.trips.first(where: { $0.id == tripID }) else { return false }
+            return TripMapSupport.needsDestinationGeocode(trip)
+        }()
+        
+        if needsLocation, let resolved = await TripMapSupport.geocodeDestination(query) {
+            if let index = tripStore.trips.firstIndex(where: { $0.id == tripID }) {
+                var updated = tripStore.trips[index]
+                if updated.latitude == nil { updated.latitude = resolved.latitude }
+                if updated.longitude == nil { updated.longitude = resolved.longitude }
+                if updated.mapSpan == nil { updated.mapSpan = resolved.mapSpan }
+                tripStore.trips[index] = updated
+                tripStore.save()
+            }
+        }
+        
+        guard fetchCoverIfMissing else { return }
+        let needsCover: Bool = {
+            guard let trip = tripStore.trips.first(where: { $0.id == tripID }) else { return false }
+            return !TripMapSupport.hasCoverImage(trip)
+        }()
+        guard needsCover else { return }
+        
+        if let cover = await TripMapSupport.fetchUnsplashCover(query: query) {
+            if let index = tripStore.trips.firstIndex(where: { $0.id == tripID }) {
+                guard tripStore.trips[index].coverImageData == nil else { return }
+                var updated = tripStore.trips[index]
+                updated.coverImageData = cover.data
+                tripStore.trips[index] = updated
+                if let name = cover.photographerName {
+                    TripCoverAttribution.setName(name, for: tripID)
+                }
+                tripStore.save()
+            }
+        }
     }
     
     private func isoDate(_ date: Date) -> String {
@@ -333,13 +438,25 @@ struct MyTripsView: View {
                     longitude: item.longitude,
                     icon: "mappin.and.ellipse",
                     accent: .neutral,
-                    photoData: nil
+                    photoData: item.photoData
                 )
             }
         }
         
         tripStore.addTrip(trip)
         pendingNewTripID = trip.id
+        
+        AchievementCounters.recordAIDaysPlanned(days.count)
+        
+        let tripID = trip.id
+        let query = resolvedDestination
+        Task {
+            await enrichTripLocationAndCoverIfNeeded(
+                tripID: tripID,
+                query: query,
+                fetchCoverIfMissing: true
+            )
+        }
         
         for item in placeItems where item.canSaveToPlaces {
             let placeName = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -348,6 +465,7 @@ struct MyTripsView: View {
                 name: placeName,
                 location: item.location,
                 note: item.notes,
+                photoData: item.photoData,
                 latitude: item.latitude,
                 longitude: item.longitude,
                 placeType: PlaceType.fromAICategory(item.category),
@@ -366,6 +484,10 @@ struct MyTripsView: View {
                 if let dayIndex = item.dayIndex, dayIndex >= 0, dayIndex < days.count {
                     return dayIndex
                 }
+                if let fromLabel = Self.dayIndexFromLabel(item.dayLabel),
+                   fromLabel >= 0, fromLabel < days.count {
+                    return fromLabel
+                }
                 return 0
             }()
             
@@ -380,7 +502,7 @@ struct MyTripsView: View {
                     longitude: item.longitude,
                     icon: "mappin.and.ellipse",
                     accent: .neutral,
-                    photoData: nil
+                    photoData: item.photoData
                 ))
             case .reminder:
                 days[idx].reminders.append(ReminderItem(id: UUID(), text: item.title, createdAt: now))
@@ -422,6 +544,17 @@ struct MyTripsView: View {
                 ))
             }
         }
+    }
+    
+    private static func dayIndexFromLabel(_ label: String) -> Int? {
+        let raw = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"day\s*(\d+)"#, options: .caseInsensitive),
+              let match = regex.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)),
+              match.numberOfRanges > 1,
+              let range = Range(match.range(at: 1), in: raw),
+              let value = Int(raw[range]),
+              value >= 1 else { return nil }
+        return value - 1
     }
     
     private func openCreateTripSheetIfNeeded(force: Bool) {

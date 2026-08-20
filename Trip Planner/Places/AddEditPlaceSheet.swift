@@ -19,6 +19,7 @@ struct AddEditPlaceSheet: View {
     @State private var note: String = ""
     @State private var latitude: Double?
     @State private var longitude: Double?
+    @State private var placeType: PlaceType = .unspecified
     @State private var photoImage: UIImage?
     @State private var showUnsplashPicker = false
     @State private var showImagePicker = false
@@ -51,6 +52,34 @@ struct AddEditPlaceSheet: View {
                         longitude: $longitude,
                         searchRegion: nil
                     )
+                    
+                    Menu {
+                        ForEach(PlaceType.allCases) { type in
+                            Button {
+                                placeType = type
+                            } label: {
+                                if placeType == type {
+                                    Label(type.title, systemImage: "checkmark")
+                                } else {
+                                    Text(type.title)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Type")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(placeType == .unspecified ? "Select type" : placeType.title)
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.app(11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .tint(.primary)
                 }
                 
                 Section {
@@ -153,6 +182,7 @@ struct AddEditPlaceSheet: View {
         note = place.note
         latitude = place.latitude
         longitude = place.longitude
+        placeType = place.placeType
         if let data = place.photoData {
             photoImage = UIImage(data: data)
         }
@@ -171,7 +201,8 @@ struct AddEditPlaceSheet: View {
                 note: note.trimmingCharacters(in: .whitespacesAndNewlines),
                 photoData: photoData,
                 latitude: latitude,
-                longitude: longitude
+                longitude: longitude,
+                placeType: placeType
             )
             onSave(place)
         case .edit(var place):
@@ -181,6 +212,7 @@ struct AddEditPlaceSheet: View {
             place.photoData = photoData
             place.latitude = latitude
             place.longitude = longitude
+            place.placeType = placeType
             onSave(place)
         }
         dismiss()

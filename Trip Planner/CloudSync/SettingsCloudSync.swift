@@ -4,6 +4,7 @@ struct SettingsSnapshot: Codable {
     var appearanceModeRaw: String
     var hapticsEnabled: Bool
     var parallaxEffectsEnabled: Bool
+    var mapStyleRaw: String?
     var prefFood: String
     var prefInterests: String
     var currencyCode: String

@@ -9,10 +9,18 @@ struct SettingsView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @AppStorage("hapticsEnabled") private var hapticsEnabled: Bool = true
     @AppStorage("parallaxEffectsEnabled") private var parallaxEffectsEnabled: Bool = true
+    @AppStorage(AppMapStylePreference.storageKey) private var mapStylePreferenceRaw: String = AppMapStylePreference.standard.rawValue
     @AppStorage("prefFood") private var prefFood: String = ""
     @AppStorage("prefInterests") private var prefInterests: String = ""
     @AppStorage("currencyCode") private var currencyCode: String = "USD"
     @State private var displayNameDraft: String = ""
+    
+    private var mapStylePreference: Binding<AppMapStylePreference> {
+        Binding(
+            get: { AppMapStylePreference(rawValue: mapStylePreferenceRaw) ?? .standard },
+            set: { mapStylePreferenceRaw = $0.rawValue }
+        )
+    }
     
     private struct CurrencyOption: Identifiable {
         let code: String
@@ -101,6 +109,12 @@ struct SettingsView: View {
                         }
                     }
                     
+                    Picker("Map Style", selection: mapStylePreference) {
+                        ForEach(AppMapStylePreference.allCases) { style in
+                            Text(style.title).tag(style)
+                        }
+                    }
+                    
                     Toggle("Haptics", isOn: $hapticsEnabled)
                         .tint(appAccentColor)
                     Toggle("Parallax Effects", isOn: $parallaxEffectsEnabled)
@@ -139,6 +153,7 @@ struct SettingsView: View {
         .onChange(of: appearanceMode) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: hapticsEnabled) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: parallaxEffectsEnabled) { _, _ in saveSettingsToICloudIfNeeded() }
+        .onChange(of: mapStylePreferenceRaw) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: prefFood) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: prefInterests) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: currencyCode) { _, _ in saveSettingsToICloudIfNeeded() }
@@ -170,6 +185,7 @@ struct SettingsView: View {
             appearanceModeRaw: appearanceMode.rawValue,
             hapticsEnabled: hapticsEnabled,
             parallaxEffectsEnabled: parallaxEffectsEnabled,
+            mapStyleRaw: mapStylePreferenceRaw,
             prefFood: prefFood,
             prefInterests: prefInterests,
             currencyCode: currencyCode
@@ -187,6 +203,10 @@ struct SettingsView: View {
         }
         hapticsEnabled = snapshot.hapticsEnabled
         parallaxEffectsEnabled = snapshot.parallaxEffectsEnabled
+        if let mapStyleRaw = snapshot.mapStyleRaw,
+           AppMapStylePreference(rawValue: mapStyleRaw) != nil {
+            mapStylePreferenceRaw = mapStyleRaw
+        }
         prefFood = snapshot.prefFood
         prefInterests = snapshot.prefInterests
         currencyCode = snapshot.currencyCode

@@ -93,11 +93,9 @@ private struct SystemAITabAccessoryLabel: View {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
                     .font(.system(size: placement == .inline ? 14 : 15, weight: .semibold))
-                if placement != .inline {
-                    Text(title)
-                        .font(.app(15, weight: .semibold))
-                        .lineLimit(1)
-                }
+                Text(title)
+                    .font(.app(placement == .inline ? 14 : 15, weight: .semibold))
+                    .lineLimit(1)
             }
             .foregroundStyle(.primary)
             .frame(maxWidth: .infinity)

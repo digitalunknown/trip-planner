@@ -28,7 +28,6 @@ struct NewFlightSheet: View {
     @Binding var flightNumber: String
     @Binding var notes: String
     @Binding var documents: [EventDocument]
-    @Binding var accent: EventAccent
     @Binding var startTime: Date
     @Binding var endTime: Date
     @Binding var cost: Double?
@@ -36,6 +35,7 @@ struct NewFlightSheet: View {
     
     @Binding var selectedDayID: UUID?
     let dayOptions: [DayOption]
+    var tripLocationRegion: MKCoordinateRegion? = nil
     
     var isEditing: Bool
     var onSave: () -> Void
@@ -45,20 +45,10 @@ struct NewFlightSheet: View {
     @State private var showDocumentImagePicker = false
     @State private var showDocumentCameraPicker = false
     @State private var showDocumentFileImporter = false
-    @State private var isExtractingDocumentText = false
     @State private var pendingDocumentImage: UIImage?
     @State private var pendingDocumentCameraImage: UIImage?
-    @State private var extractionReviewResult: DocumentTextExtractor.ExtractionResult?
     @State private var selectedPreviewDocumentID: UUID?
     @State private var selectedQuickLookDocument: EventDocument?
-    
-    private let gridSpacing: CGFloat = 12
-    private let columnsCount: Int = 6
-    private var gridColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: gridSpacing), count: columnsCount)
-    }
-    private let tileHeight: CGFloat = 48
-    private var colorOptions: [EventAccent] { Array(EventAccent.allCases.reversed()) }
     
     private var referenceFieldTitle: String? {
         switch travelMode {
@@ -136,82 +126,6 @@ struct NewFlightSheet: View {
         }
     }
 
-    private func applying(
-        _ components: DateComponents,
-        to baseDate: Date
-    ) -> Date? {
-        guard let hour = components.hour, let minute = components.minute else { return nil }
-        return Calendar.current.date(
-            bySettingHour: hour,
-            minute: minute,
-            second: 0,
-            of: baseDate
-        )
-    }
-
-    private func appendToNotes(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        let existing = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        notes = existing.isEmpty ? trimmed : "\(notes)\n\n\(trimmed)"
-    }
-
-    private func applyExtractionSelections(
-        _ selections: [DocumentTextExtractor.SuggestedField],
-        from result: DocumentTextExtractor.ExtractionResult
-    ) {
-        var appliedValues: [String] = []
-
-        for suggestion in selections {
-            switch suggestion.type {
-            case .startTime:
-                if let components = suggestion.timeComponents,
-                   let detectedStart = applying(components, to: startTime) {
-                    startTime = detectedStart
-                    appliedValues.append(suggestion.value)
-                }
-            case .endTime:
-                if let components = suggestion.timeComponents,
-                   let detectedEnd = applying(components, to: startTime) {
-                    endTime = max(detectedEnd, startTime)
-                    appliedValues.append(suggestion.value)
-                }
-            case .cost:
-                if let amount = suggestion.numericAmount {
-                    cost = amount
-                    appliedValues.append(suggestion.value)
-                }
-            case .currencyCode:
-                costCurrencyCode = suggestion.value.uppercased()
-                appliedValues.append(suggestion.value)
-            case .referenceCode:
-                flightNumber = suggestion.value.uppercased()
-                appliedValues.append(suggestion.value)
-            }
-        }
-
-        let notesBlock = result.notesBlock(excluding: appliedValues)
-        appendToNotes(notesBlock)
-
-        extractionReviewResult = nil
-    }
-
-    private func extractInfoFromDocuments() {
-        guard !documents.isEmpty, !isExtractingDocumentText else { return }
-
-        isExtractingDocumentText = true
-        Task {
-            let extraction = await DocumentTextExtractor.extractInfo(from: documents)
-
-            await MainActor.run {
-                if extraction.hasContent {
-                    extractionReviewResult = extraction
-                }
-                isExtractingDocumentText = false
-            }
-        }
-    }
-
     private func previewPage(_ document: EventDocument) -> some View {
         Group {
             if isImageDocument(document),
@@ -261,9 +175,17 @@ struct NewFlightSheet: View {
                         }
                     }
                     .pickerStyle(.menu)
+                    
+                    if travelMode == .drive {
+                        clearableTextField(
+                            title: "Vehicle / route",
+                            text: $flightNumber,
+                            capitalization: nil
+                        )
+                    }
                 }
                 
-                if let referenceFieldTitle {
+                if let referenceFieldTitle, travelMode != .drive {
                     Section {
                         clearableTextField(
                             title: referenceFieldTitle,
@@ -301,34 +223,6 @@ struct NewFlightSheet: View {
                     }
                 }
                 
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Color")
-                            .font(.appFootnote)
-                            .foregroundStyle(.secondary)
-                        
-                        LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
-                            ForEach(colorOptions, id: \.self) { option in
-                                Button {
-                                    accent = option
-                                } label: {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(option.color)
-                                        .frame(height: tileHeight)
-                                        .overlay {
-                                            if option == accent {
-                                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                    .strokeBorder(Color.primary, lineWidth: 2.5)
-                                            }
-                                        }
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Color")
-                            }
-                        }
-                    }
-                }
-                
                 documentsSection
 
                 Section {
@@ -338,17 +232,15 @@ struct NewFlightSheet: View {
                 }
                 
                 if isEditing {
-                    Section {
-                        Button(role: .destructive) {
+                    DetailActionButtonStack {
+                        Button {
                             onDelete?()
                             dismiss()
                         } label: {
-                            HStack {
-                                Spacer()
-                                Text("Delete \(travelMode.title)")
-                                Spacer()
-                            }
+                            Label("Delete \(travelMode.title)", systemImage: "trash")
                         }
+                        .buttonStyle(.destructiveCapsuleBlock)
+                        .detailActionRow()
                     }
                 }
             }
@@ -417,24 +309,6 @@ struct NewFlightSheet: View {
         .sheet(item: $selectedQuickLookDocument) { document in
             QuickLookPreview(url: ActivityDocumentStore.fileURL(for: document.localRelativePath))
         }
-        .sheet(item: $extractionReviewResult) { result in
-            ExtractionReviewSheet(
-                suggestions: result.suggestions,
-                allowedFieldTypes: referenceFieldTitle == nil
-                    ? [.startTime, .endTime, .cost, .currencyCode]
-                    : [.startTime, .endTime, .cost, .currencyCode, .referenceCode],
-                onApplySelected: { selections in
-                    applyExtractionSelections(selections, from: result)
-                },
-                onSkip: {
-                    let notesBlock = result.notesBlock(excluding: [])
-                    appendToNotes(notesBlock)
-                    extractionReviewResult = nil
-                }
-            )
-            .presentationDetents([.medium, .large])
-            .tint(.primary)
-        }
         .onChange(of: pendingDocumentImage) { _, image in
             guard let image else { return }
             addDocumentFromImage(image)
@@ -493,23 +367,6 @@ struct NewFlightSheet: View {
                     .buttonStyle(.plain)
                 }
                 .padding(.vertical, 2)
-            }
-
-            if !documents.isEmpty {
-                Button {
-                    extractInfoFromDocuments()
-                } label: {
-                    HStack {
-                        if isExtractingDocumentText {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Extracting…")
-                        } else {
-                            Text("Extract information from documents")
-                        }
-                    }
-                }
-                .disabled(isExtractingDocumentText)
             }
         }
     }
@@ -599,18 +456,31 @@ struct NewFlightSheet: View {
                 code: code,
                 city: city,
                 latitude: latitude,
-                longitude: longitude
+                longitude: longitude,
+                searchRegion: tripLocationRegion
             )
             airportCodeField(title: "Airport code", code: code)
             clearableTextField(title: "Terminal", text: terminal, capitalization: .characters)
             clearableTextField(title: "Gate", text: gate, capitalization: .characters)
             
         case .train:
-            clearableTextField(title: "Station", text: name)
+            LocationSearchField(
+                text: name,
+                latitude: latitude,
+                longitude: longitude,
+                resultTypes: [.pointOfInterest, .address],
+                searchRegion: tripLocationRegion
+            )
             stationCodeField(title: "Station code", code: code)
             
         case .drive, .walk:
-            clearableTextField(title: "Location", text: name)
+            LocationSearchField(
+                text: name,
+                latitude: latitude,
+                longitude: longitude,
+                resultTypes: [.pointOfInterest, .address],
+                searchRegion: tripLocationRegion
+            )
         }
     }
     
