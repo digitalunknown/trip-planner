@@ -34,7 +34,7 @@ struct PlaceCardView: View {
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     
     private var title: String {
-        PlaceNaming.title(location: place.location, fallback: place.name)
+        PlaceNaming.displayTitle(name: place.name, location: place.location)
     }
     
     private var subtitle: String? {
@@ -80,8 +80,7 @@ struct PlaceCardView: View {
                 
                 if showsType {
                     HStack(spacing: 5) {
-                        Image(systemName: place.placeType.iconSystemName)
-                            .font(.app(11, weight: .semibold))
+                        AppIcon(systemName: place.placeType.iconSystemName, size: 11, color: textSecondary)
                         Text(place.placeType.title)
                             .font(.app(11, weight: .semibold))
                     }

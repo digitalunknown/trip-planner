@@ -16,15 +16,17 @@ struct FlightCard: View {
     private var separatorColor: Color {
         colorScheme == .dark ? Color.black : Color.black.opacity(0.10)
     }
-    private var iconFill: Color { textPrimary }
-    private var iconGlyphColor: Color {
-        colorScheme == .dark ? Color(hex: 0x171717) : Color.white
-    }
-    private var connectorColor: Color { textPrimary.opacity(colorScheme == .dark ? 0.90 : 0.55) }
+    private var accentColor: Color { flight.accent.background }
+    private var accentForeground: Color { flight.accent.foreground }
+    private var connectorColor: Color { accentColor.opacity(colorScheme == .dark ? 0.70 : 0.45) }
     
-    /// Matches activity card badges (52×52, radius 12), scaled slightly smaller for stacked travel endpoints.
-    private let iconSide: CGFloat = 36
-    private var iconCornerRadius: CGFloat { iconSide * (12.0 / 52.0) }
+    /// Same badge size as activity cards (52×52, radius 12, glyph 26).
+    private let iconSide: CGFloat = 52
+    private var iconCornerRadius: CGFloat { 12 }
+    private var iconGlyphSize: CGFloat { 26 }
+    private var iconInnerStroke: Color {
+        colorScheme == .dark ? Color.white.opacity(0.22) : Color.black.opacity(0.14)
+    }
     /// Visual gap between connector and icon badge.
     private let knockoutStroke: CGFloat = 2
     private let connectorWidth: CGFloat = 2
@@ -113,21 +115,26 @@ struct FlightCard: View {
         let shape = RoundedRectangle(cornerRadius: iconCornerRadius, style: .continuous)
         return ZStack {
             shape
-                .fill(iconFill)
-                .frame(width: iconSide, height: iconSide)
-            Image(systemName: symbol)
-                .font(.app(14, weight: .semibold))
-                .foregroundStyle(iconGlyphColor)
-                .symbolRenderingMode(.monochrome)
+                .fill(accentColor)
+            AppIcon(
+                systemName: symbol,
+                size: iconGlyphSize,
+                strokeWidth: 2,
+                color: accentForeground
+            )
+        }
+        .frame(width: iconSide, height: iconSide)
+        .overlay {
+            shape.strokeBorder(iconInnerStroke, lineWidth: 1)
         }
         .frame(width: railWidth, height: railWidth)
         .accessibilityHidden(true)
     }
     
     private func endpointDetails(isOrigin: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(endpointTitle(isOrigin: isOrigin))
-                .font(.app(12, weight: .semibold))
+                .font(.app(13, weight: .semibold))
                 .foregroundStyle(textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -135,7 +142,7 @@ struct FlightCard: View {
             let meta = endpointMeta(isOrigin: isOrigin)
             if !meta.isEmpty {
                 Text(meta)
-                    .font(.appCaption)
+                    .font(.app(13, weight: .regular))
                     .foregroundStyle(textSecondary)
                     .lineLimit(2)
             }

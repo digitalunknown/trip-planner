@@ -35,17 +35,20 @@ struct NewTripView: View {
         NavigationStack {
             Form {
                 Section {
-                    HStack {
-                        TextField("Trip Name", text: $name)
-                        if !name.isEmpty {
-                            Button {
-                                name = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
+                    Label {
+                        HStack {
+                            TextField("Trip Name", text: $name)
+                            if !name.isEmpty {
+                                Button {
+                                    name = ""
+                                } label: {
+                                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                    } icon: {
+                        AppIcon(lucide: "type", size: AppLucide.chromeSize, color: .primary)
                     }
                     LocationSearchField(
                         text: $destination,
@@ -57,27 +60,31 @@ struct NewTripView: View {
                 }
                 
                 Section {
-                    Toggle("Set Dates", isOn: $isDatesSet)
-                        .tint(appAccentColor)
+                    Toggle(isOn: $isDatesSet) {
+                        Label("Set Dates", appIcon: "calendar-range", color: .primary)
+                    }
+                    .tint(appAccentColor)
                     
                     if isDatesSet {
                         DatePicker(
-                            "Start date",
                             selection: $startDate,
                             in: Date.distantPast...Date.distantFuture,
                             displayedComponents: .date
-                        )
+                        ) {
+                            Label("Start date", appIcon: "calendar", color: .primary)
+                        }
                         
                         DatePicker(
-                            "End date",
                             selection: $endDate,
                             in: startDate...Date.distantFuture,
                             displayedComponents: .date
-                        )
+                        ) {
+                            Label("End date", appIcon: "calendar-days", color: .primary)
+                        }
                     } else {
                         Stepper(value: $unscheduledDaysCount, in: 1...30) {
                             HStack {
-                                Text("Number of Days")
+                                Label("Number of Days", appIcon: "hash", color: .primary)
                                 Spacer()
                                 Text("\(unscheduledDaysCount)")
                                     .foregroundStyle(.secondary)
@@ -100,13 +107,13 @@ struct NewTripView: View {
                                         Button {
                                             showUnsplashPicker = true
                                         } label: {
-                                            Label("Choose from Unsplash", systemImage: "sparkles")
+                                            Label("Choose from Unsplash", appIcon: "sparkles", color: .primary)
                                         }
                                         
                                         Button {
                                             showImagePicker = true
                                         } label: {
-                                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                            Label("Choose from Photos", appIcon: "photo.on.rectangle", color: .primary)
                                         }
                                     } label: {
                                         Color.clear
@@ -134,28 +141,29 @@ struct NewTripView: View {
                             Button {
                                 showUnsplashPicker = true
                             } label: {
-                                Label("Choose from Unsplash", systemImage: "sparkles")
+                                Label("Choose from Unsplash", appIcon: "sparkles", color: .primary)
                             }
                             
                             Button {
                                 showImagePicker = true
                             } label: {
-                                Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                Label("Choose from Photos", appIcon: "photo.on.rectangle", color: .primary)
                             }
                         } label: {
                             HStack {
-                                Text("Add Cover Photo")
+                                Label("Add Cover Photo", appIcon: "image-plus", color: .primary)
                                 Spacer()
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundStyle(.secondary)
+                                AppIcon(systemName: "chevron.up.chevron.down", size: 14, color: .secondary)
                             }
                         }
                     }
                 }
                 
                 Section {
-                    Toggle("Show Ideas", isOn: $showParkedIdeas)
-                        .tint(appAccentColor)
+                    Toggle(isOn: $showParkedIdeas) {
+                        Label("Show Ideas", appIcon: "lightbulb", color: .primary)
+                    }
+                    .tint(appAccentColor)
                 } footer: {
                     Text("Include an extra column for ideation not tied to a day")
                 }

@@ -12,16 +12,18 @@ struct ParkedIdeasColumn: View {
     
     @Environment(\.colorScheme) private var colorScheme
     
-    private var columnBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
+    private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xD0D0D6) }
     private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xA8A8B0) }
+    private var highlightFillColor: Color { colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04) }
     
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Ideas")
-                    .font(.appHeadline)
+                    .font(.app(17, weight: .semibold))
                     .foregroundStyle(textPrimary)
                 Text("Not tied to a day")
                     .font(.appCaption)
@@ -40,26 +42,26 @@ struct ParkedIdeasColumn: View {
                                     Button {
                                         moveLeft(event)
                                     } label: {
-                                        Label("Move Left", systemImage: "arrow.left")
+                                        Label("Move Left", appIcon: "square.arrow.left")
                                     }
                                 }
                                 Divider()
                                 Button {
                                     onTap(event)
                                 } label: {
-                                    Label("Edit Activity", systemImage: "pencil")
+                                    Label("Edit Activity", appIcon: "square.and.pencil")
                                 }
                                 
                                 Button {
                                     onDuplicate(event)
                                 } label: {
-                                    Label("Duplicate Activity", systemImage: "doc.on.doc")
+                                    Label("Duplicate Activity", appIcon: "doc.on.doc")
                                 }
                                 
                                 Button(role: .destructive) {
                                     onDelete(event)
                                 } label: {
-                                    Label("Delete Activity", systemImage: "trash")
+                                    Label("Delete Activity", appIcon: "trash")
                                 }
                             }
                     }
@@ -69,12 +71,13 @@ struct ParkedIdeasColumn: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(width: columnWidth, height: columnHeight)
-        .background(columnBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(columnStroke, lineWidth: 1)
-        )
+        .frame(width: max(columnWidth, 0), height: max(columnHeight, 0), alignment: .top)
+        .modifier(DayColumnGlassChrome(
+            isCurrentDay: false,
+            dayBackground: dayBackground,
+            columnStroke: columnStroke,
+            highlightStrokeColor: highlightStrokeColor,
+            highlightFillColor: highlightFillColor
+        ))
     }
 }
-

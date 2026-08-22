@@ -59,6 +59,15 @@ struct NewFlightSheet: View {
         }
     }
     
+    private var referenceFieldIcon: String {
+        switch travelMode {
+        case .flight: return "tickets-plane"
+        case .train: return "train-front"
+        case .drive: return "car-front"
+        case .walk: return "footprints"
+        }
+    }
+    
     private var isSavable: Bool {
         selectedDayID != nil && (
             !fromName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -142,9 +151,7 @@ struct NewFlightSheet: View {
                 .padding()
             } else {
                 VStack(spacing: 14) {
-                    Image(systemName: "doc.fill")
-                        .font(.app(44, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                    AppIcon(systemName: "doc.fill", size: 44, color: .secondary)
                     Button("Open File") {
                         selectedQuickLookDocument = document
                     }
@@ -159,20 +166,24 @@ struct NewFlightSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Day", selection: $selectedDayID) {
+                    Picker(selection: $selectedDayID) {
                         ForEach(dayOptions) { option in
                             Text(option.title)
                                 .tag(Optional(option.id))
                         }
+                    } label: {
+                        Label("Day", appIcon: "calendar", color: .primary)
                     }
                 }
                 
                 Section {
-                    Picker("Travel method", selection: $travelMode) {
+                    Picker(selection: $travelMode) {
                         ForEach(TravelMode.allCases, id: \.self) { mode in
-                            Text(mode.title)
+                            Label(mode.title, appIcon: mode.systemImageName)
                                 .tag(mode)
                         }
+                    } label: {
+                        Label("Travel method", appIcon: "route", color: .primary, iconTitleSpacing: 4)
                     }
                     .pickerStyle(.menu)
                     
@@ -180,6 +191,7 @@ struct NewFlightSheet: View {
                         clearableTextField(
                             title: "Vehicle / route",
                             text: $flightNumber,
+                            icon: "car-front",
                             capitalization: nil
                         )
                     }
@@ -190,6 +202,7 @@ struct NewFlightSheet: View {
                         clearableTextField(
                             title: referenceFieldTitle,
                             text: $flightNumber,
+                            icon: referenceFieldIcon,
                             capitalization: (travelMode == .flight || travelMode == .train) ? .characters : nil
                         )
                     }
@@ -197,14 +210,18 @@ struct NewFlightSheet: View {
                 
                 Section {
                     locationFields(isFrom: true)
-                    DatePicker("Time", selection: $startTime, displayedComponents: .hourAndMinute)
+                    DatePicker(selection: $startTime, displayedComponents: .hourAndMinute) {
+                        Label("Time", appIcon: "clock")
+                    }
                 } header: {
                     Text("From")
                 }
                 
                 Section {
                     locationFields(isFrom: false)
-                    DatePicker("Time", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                    DatePicker(selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute) {
+                        Label("Time", appIcon: "clock")
+                    }
                 } header: {
                     Text("To")
                 }
@@ -214,7 +231,7 @@ struct NewFlightSheet: View {
                         showCostSheet = true
                     } label: {
                         HStack {
-                            Text("Cost")
+                            Label("Cost", appIcon: "wallet")
                             Spacer()
                             Text(CurrencyFormatting.string(for: cost, currencyCode: costCurrencyCode))
                                 .foregroundStyle(.primary)
@@ -237,7 +254,7 @@ struct NewFlightSheet: View {
                             onDelete?()
                             dismiss()
                         } label: {
-                            Label("Delete \(travelMode.title)", systemImage: "trash")
+                            Label("Delete \(travelMode.title)", appIcon: "trash")
                         }
                         .buttonStyle(.destructiveCapsuleBlock)
                         .detailActionRow()
@@ -333,7 +350,7 @@ struct NewFlightSheet: View {
     }
 
     private var documentsSection: some View {
-        Section("Documents") {
+        Section {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(documents) { document in
@@ -349,17 +366,17 @@ struct NewFlightSheet: View {
                         Button {
                             showDocumentFileImporter = true
                         } label: {
-                            Label("Upload from Files", systemImage: "folder")
+                            Label("Upload from Files", appIcon: "folder")
                         }
                         Button {
                             showDocumentImagePicker = true
                         } label: {
-                            Label("Upload from Photos", systemImage: "photo.on.rectangle")
+                            Label("Upload from Photos", appIcon: "photo.on.rectangle")
                         }
                         Button {
                             showDocumentCameraPicker = true
                         } label: {
-                            Label("Take Photo", systemImage: "camera")
+                            Label("Take Photo", appIcon: "camera")
                         }
                     } label: {
                         addDocumentCard
@@ -368,6 +385,8 @@ struct NewFlightSheet: View {
                 }
                 .padding(.vertical, 2)
             }
+        } header: {
+            Text("Documents")
         }
     }
 
@@ -384,9 +403,7 @@ struct NewFlightSheet: View {
                 Rectangle()
                     .fill(Color(.tertiarySystemGroupedBackground))
                     .overlay {
-                        Image(systemName: "doc.fill")
-                            .font(.app(18, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                        AppIcon(systemName: "doc.fill", size: 18, color: .secondary)
                     }
             }
         }
@@ -399,9 +416,7 @@ struct NewFlightSheet: View {
         return ZStack {
             Rectangle()
                 .fill(Color(.tertiarySystemGroupedBackground))
-            Image(systemName: "plus")
-                .font(.app(16, weight: .semibold))
-                .foregroundStyle(.secondary)
+            AppIcon(systemName: "plus", size: 16, color: .secondary)
         }
         .frame(width: previewSize, height: previewSize)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -429,8 +444,7 @@ struct NewFlightSheet: View {
                     Button(role: .destructive) {
                         removeCurrentlyPreviewedDocument()
                     } label: {
-                        Image(systemName: "trash")
-                            .font(.app(14, weight: .semibold))
+                        AppIcon(systemName: "trash", size: 15, color: .red)
                     }
                     .buttonStyle(.plain)
                 }
@@ -459,9 +473,9 @@ struct NewFlightSheet: View {
                 longitude: longitude,
                 searchRegion: tripLocationRegion
             )
-            airportCodeField(title: "Airport code", code: code)
-            clearableTextField(title: "Terminal", text: terminal, capitalization: .characters)
-            clearableTextField(title: "Gate", text: gate, capitalization: .characters)
+            airportCodeField(title: "Airport code", code: code, icon: "hash")
+            clearableTextField(title: "Terminal", text: terminal, icon: "building-2", capitalization: .characters)
+            clearableTextField(title: "Gate", text: gate, icon: "door-open", capitalization: .characters)
             
         case .train:
             LocationSearchField(
@@ -471,7 +485,7 @@ struct NewFlightSheet: View {
                 resultTypes: [.pointOfInterest, .address],
                 searchRegion: tripLocationRegion
             )
-            stationCodeField(title: "Station code", code: code)
+            stationCodeField(title: "Station code", code: code, icon: "hash")
             
         case .drive, .walk:
             LocationSearchField(
@@ -484,8 +498,9 @@ struct NewFlightSheet: View {
         }
     }
     
-    private func airportCodeField(title: String, code: Binding<String>) -> some View {
-        HStack {
+    private func airportCodeField(title: String, code: Binding<String>, icon: String) -> some View {
+        HStack(spacing: 10) {
+            AppIcon(lucide: icon, size: 17)
             TextField(title, text: code)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
@@ -500,16 +515,16 @@ struct NewFlightSheet: View {
                 Button {
                     code.wrappedValue = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
                 }
                 .buttonStyle(.plain)
             }
         }
     }
     
-    private func stationCodeField(title: String, code: Binding<String>) -> some View {
-        HStack {
+    private func stationCodeField(title: String, code: Binding<String>, icon: String) -> some View {
+        HStack(spacing: 10) {
+            AppIcon(lucide: icon, size: 17)
             TextField(title, text: code)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
@@ -524,8 +539,7 @@ struct NewFlightSheet: View {
                 Button {
                     code.wrappedValue = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -535,9 +549,11 @@ struct NewFlightSheet: View {
     private func clearableTextField(
         title: String,
         text: Binding<String>,
+        icon: String,
         capitalization: TextInputAutocapitalization? = nil
     ) -> some View {
-        HStack {
+        HStack(spacing: 10) {
+            AppIcon(lucide: icon, size: 17)
             TextField(title, text: text)
                 .textInputAutocapitalization(capitalization)
                 .autocorrectionDisabled()
@@ -546,8 +562,7 @@ struct NewFlightSheet: View {
                 Button {
                     text.wrappedValue = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
                 }
                 .buttonStyle(.plain)
             }

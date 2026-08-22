@@ -99,8 +99,7 @@ struct UnsplashCoverPickerSheet: View {
     
     private var searchBar: some View {
         HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+            AppIcon(systemName: "magnifyingglass", size: 16, color: .secondary)
             TextField("Search photos", text: $query)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -113,8 +112,7 @@ struct UnsplashCoverPickerSheet: View {
                     results = []
                     errorText = nil
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
                 }
                 .buttonStyle(.plain)
             }

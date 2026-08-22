@@ -34,25 +34,28 @@ struct LocationSearchField: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                TextField("Location", text: $text)
-                    .onChange(of: text) { _, newValue in
-                        completer.searchQuery = newValue
-                        showingResults = !newValue.isEmpty
+            Label {
+                HStack {
+                    TextField("Location", text: $text)
+                        .onChange(of: text) { _, newValue in
+                            completer.searchQuery = newValue
+                            showingResults = !newValue.isEmpty
+                        }
+                    
+                    if !text.isEmpty {
+                        Button {
+                            text = ""
+                            latitude = nil
+                            longitude = nil
+                            showingResults = false
+                        } label: {
+                            AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                
-                if !text.isEmpty {
-                    Button {
-                        text = ""
-                        latitude = nil
-                        longitude = nil
-                        showingResults = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
                 }
+            } icon: {
+                AppIcon(lucide: "map-pin", size: AppLucide.chromeSize, color: .primary)
             }
             
             if showingResults && !completer.results.isEmpty {
@@ -217,28 +220,31 @@ struct AirportSearchField: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                TextField(title, text: $name)
-                    .onChange(of: name) { _, newValue in
-                        completer.searchQuery = newValue
-                        showingResults = !newValue.isEmpty
-                        scheduleFallbackSearch(for: newValue)
+            Label {
+                HStack {
+                    TextField(title, text: $name)
+                        .onChange(of: name) { _, newValue in
+                            completer.searchQuery = newValue
+                            showingResults = !newValue.isEmpty
+                            scheduleFallbackSearch(for: newValue)
+                        }
+                    
+                    if !name.isEmpty {
+                        Button {
+                            name = ""
+                            code = ""
+                            city = ""
+                            latitude = nil
+                            longitude = nil
+                            showingResults = false
+                        } label: {
+                            AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                
-                if !name.isEmpty {
-                    Button {
-                        name = ""
-                        code = ""
-                        city = ""
-                        latitude = nil
-                        longitude = nil
-                        showingResults = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
                 }
+            } icon: {
+                AppIcon(lucide: "map-pin", size: AppLucide.chromeSize, color: .primary)
             }
             
             if showingResults && !filteredResults.isEmpty {

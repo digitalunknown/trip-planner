@@ -2,6 +2,13 @@ import Foundation
 import UIKit
 
 enum PlaceNaming {
+    /// Prefer an explicit place name; otherwise derive from location.
+    static func displayTitle(name: String, location: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return title(location: location, fallback: "Place")
+    }
+    
     /// Prefer MapKit / address-derived title (first comma segment) over activity titles.
     static func title(location: String, fallback: String = "Place") -> String {
         let loc = location.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -71,6 +78,23 @@ enum PlaceImageResolver {
         }
         
         return nil
+    }
+    
+    /// Downscale cover photos before persisting on activities (avoids OOM on big trips).
+    static func compressedCoverData(_ data: Data?, maxPixelSize: CGFloat = 480) -> Data? {
+        guard let data, !data.isEmpty else { return nil }
+        guard let image = UIImage(data: data) else { return data }
+        let maxSide = max(image.size.width, image.size.height)
+        guard maxSide > maxPixelSize else {
+            return image.jpegData(compressionQuality: 0.72) ?? data
+        }
+        let scale = maxPixelSize / maxSide
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let scaled = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return scaled.jpegData(compressionQuality: 0.72) ?? data
     }
     
     private static func compressedJPEG(from data: Data) -> Data? {

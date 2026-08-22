@@ -5,7 +5,7 @@ import CoreLocation
 enum PlanDayLocationResolver {
     /// Resolve activity locations to street-level MapKit places when the item is a specific establishment.
     /// Always stores coordinates when MapKit finds a match so trip map pins can plot.
-    /// General-area activities keep the AI location text as-is when no POI match is found.
+    /// Unresolved venues get confidence crushed so callers can treat them as a negative signal.
     static func refineLocations(
         in draft: PlanDayDraft,
         destination: String,
@@ -30,6 +30,7 @@ enum PlanDayLocationResolver {
                 destination: destination
             )
             
+            var resolved = false
             for query in queries {
                 if Task.isCancelled { break }
                 guard let mapItem = await searchMapItem(
@@ -49,6 +50,7 @@ enum PlanDayLocationResolver {
                     updated.items[idx].location = refined
                     updated.items[idx].latitude = coordinate.latitude
                     updated.items[idx].longitude = coordinate.longitude
+                    resolved = true
                     break
                 }
                 
@@ -61,7 +63,23 @@ enum PlanDayLocationResolver {
                        let refined = refinedLocationString(for: mapItem, fallbackTitle: title) {
                         updated.items[idx].location = refined
                     }
+                    resolved = true
                     break
+                }
+            }
+            
+            // MapKit found nothing usable — treat as a real negative, not a silent pass-through.
+            if !resolved, shouldRequireMapVerification(item) {
+                let prior = updated.items[idx].confidence ?? 0.7
+                updated.items[idx].confidence = min(prior, 0.15)
+                if updated.items[idx].notes.range(
+                    of: #"unverified"#,
+                    options: [.caseInsensitive, .regularExpression]
+                ) == nil {
+                    let note = updated.items[idx].notes.trimmingCharacters(in: .whitespacesAndNewlines)
+                    updated.items[idx].notes = note.isEmpty
+                        ? "Unverified location"
+                        : "\(note) · Unverified location"
                 }
             }
             
@@ -69,6 +87,21 @@ enum PlanDayLocationResolver {
         }
         
         return updated
+    }
+    
+    /// Venue-like activities/places that should resolve on Apple Maps.
+    private static func shouldRequireMapVerification(_ item: PlanDayItem) -> Bool {
+        switch item.kind {
+        case .activity, .place:
+            let category = item.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            // Skip purely non-venue categories if any appear; default = require verification.
+            if category == "other" && item.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return false
+            }
+            return !item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        default:
+            return false
+        }
     }
     
     // MARK: - Search

@@ -73,7 +73,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 48.8628,
                     longitude: 2.3426,
                     icon: "building.columns.fill",
-                    accent: .blue,
+                    accent: .forest,
                     photoData: nil
                 ),
                 EventItem(
@@ -84,7 +84,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 48.8600,
                     longitude: 2.3266,
                     icon: "clock.fill",
-                    accent: .orange,
+                    accent: .tangerine,
                     photoData: nil
                 ),
                 EventItem(
@@ -95,7 +95,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 48.8553,
                     longitude: 2.3158,
                     icon: "leaf.fill",
-                    accent: .mint,
+                    accent: .lime,
                     photoData: nil
                 ),
                 EventItem(
@@ -106,7 +106,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 48.8660,
                     longitude: 2.3126,
                     icon: "paintpalette.fill",
-                    accent: .purple,
+                    accent: .blush,
                     photoData: nil
                 ),
                 EventItem(
@@ -117,7 +117,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 48.8606,
                     longitude: 2.3376,
                     icon: "building.2.fill",
-                    accent: .yellow,
+                    accent: .mustard,
                     photoData: nil
                 ),
             ]
@@ -145,7 +145,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 43.6536,
                     longitude: -79.3925,
                     icon: "building.columns.fill",
-                    accent: .blue,
+                    accent: .forest,
                     photoData: nil
                 ),
                 EventItem(
@@ -156,7 +156,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 43.6475,
                     longitude: -79.4200,
                     icon: "bag.fill",
-                    accent: .mint,
+                    accent: .lime,
                     photoData: nil
                 ),
                 EventItem(
@@ -167,7 +167,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 43.6560,
                     longitude: -79.4075,
                     icon: "fork.knife",
-                    accent: .orange,
+                    accent: .tangerine,
                     photoData: nil
                 ),
                 EventItem(
@@ -178,7 +178,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 43.6503,
                     longitude: -79.3595,
                     icon: "figure.walk",
-                    accent: .yellow,
+                    accent: .mustard,
                     photoData: nil
                 ),
                 EventItem(
@@ -189,7 +189,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 43.6846,
                     longitude: -79.3656,
                     icon: "leaf.fill",
-                    accent: .purple,
+                    accent: .blush,
                     photoData: nil
                 ),
             ]
@@ -217,7 +217,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 40.7195,
                     longitude: -73.9885,
                     icon: "cup.and.saucer.fill",
-                    accent: .orange,
+                    accent: .tangerine,
                     photoData: nil
                 ),
                 EventItem(
@@ -228,7 +228,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 40.7282,
                     longitude: -73.9857,
                     icon: "fork.knife",
-                    accent: .red,
+                    accent: .plum,
                     photoData: nil
                 ),
                 EventItem(
@@ -239,7 +239,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 40.7424,
                     longitude: -74.0061,
                     icon: "cart.fill",
-                    accent: .mint,
+                    accent: .lime,
                     photoData: nil
                 ),
                 EventItem(
@@ -250,7 +250,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 40.6818,
                     longitude: -74.0003,
                     icon: "flame.fill",
-                    accent: .yellow,
+                    accent: .mustard,
                     photoData: nil
                 ),
                 EventItem(
@@ -261,7 +261,7 @@ struct ExploreStaffPick: Identifiable, Hashable {
                     latitude: 40.7214,
                     longitude: -73.9908,
                     icon: "wineglass.fill",
-                    accent: .purple,
+                    accent: .blush,
                     photoData: nil
                 ),
             ]
@@ -305,8 +305,7 @@ struct ExploreFeedCard: View {
                     HStack {
                         Spacer()
                         HStack(spacing: 5) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 10, weight: .semibold))
+                            AppIcon(systemName: "star.fill", size: 11, strokeWidth: 2, color: .white, filled: true)
                             Text(pick.badge)
                                 .font(.appCaption)
                                 .fontWeight(.medium)
@@ -358,7 +357,6 @@ struct ExploreFeedCard: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(pick.title)
                 .font(.appHeadline)
-                .fontWeight(.bold)
                 .foregroundStyle(.primary)
                 .lineLimit(3)
             
@@ -416,7 +414,8 @@ struct ExploreDetailView: View {
                 longitude: activity.longitude,
                 notes: activity.description,
                 startTime: parseClockTime(activity.time),
-                category: placeType == .unspecified ? "attraction" : placeType.rawValue
+                category: placeType == .unspecified ? "attraction" : placeType.rawValue,
+                photoData: coverByActivityID[activity.id] ?? activity.photoData
             )
         }
     }
@@ -424,24 +423,18 @@ struct ExploreDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(pick.title)
-                        .font(.appTitle)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    ExploreMetadataLine(
-                        destination: pick.destination,
-                        publisher: pick.publisher,
-                        itemCount: pick.activities.count
-                    )
-                }
+                PageWrappingTitle(title: pick.title)
+                
+                ExploreMetadataLine(
+                    destination: pick.destination,
+                    publisher: pick.publisher,
+                    itemCount: pick.activities.count
+                )
                 
                 Button {
                     showCreateTripReview = true
                 } label: {
-                    Label("Create Trip", systemImage: "suitcase.fill")
+                    Label("Create Trip", appIcon: "luggage")
                 }
                 .buttonStyle(.primaryCapsule)
                 
@@ -467,6 +460,7 @@ struct ExploreDetailView: View {
         }
         .background(Color(.systemGroupedBackground))
         .tint(.primary)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .applePlaceCardSheet(item: $selectedAppleMapItem)
         .sheet(isPresented: $showCreateTripReview) {
@@ -533,10 +527,7 @@ struct ExploreDetailView: View {
         )
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(placeCardFill)
-        )
+        .modifier(ExploreDetailCardGlassBackground(fallback: placeCardFill))
         .task(id: activity.id) {
             await loadAppleMapsCoverIfNeeded(for: activity)
         }
@@ -550,14 +541,26 @@ struct ExploreDetailView: View {
             return
         }
         
-        let data = await PlaceAppleImagery.coverJPEG(
+        let mapItem = await ApplePlaceLookup.mapItem(
             name: activity.title,
             location: activity.location,
             latitude: activity.latitude,
-            longitude: activity.longitude
+            longitude: activity.longitude,
+            destinationHint: activity.location
         )
+        let data: Data?
+        if let mapItem {
+            data = await PlaceAppleImagery.coverJPEG(for: mapItem)
+        } else {
+            data = await PlaceAppleImagery.coverJPEG(
+                name: activity.title,
+                location: activity.location,
+                latitude: activity.latitude,
+                longitude: activity.longitude
+            )
+        }
         guard let data, coverByActivityID[activity.id] == nil else { return }
-        coverByActivityID[activity.id] = data
+        coverByActivityID[activity.id] = PlaceImageResolver.compressedCoverData(data)
     }
     
     @MainActor
@@ -634,18 +637,6 @@ struct ExploreDetailView: View {
         return formatter.date(from: trimmed)
     }
     
-    private func timeText(start: Date?, end: Date?) -> String {
-        guard let start else { return "" }
-        let f = DateFormatter()
-        f.dateStyle = .none
-        f.timeStyle = .short
-        let s = f.string(from: start)
-        if let end, end > start {
-            return "\(s) - \(f.string(from: end))"
-        }
-        return s
-    }
-    
     private func commitExploreTrip(
         _ draft: AITripDraft,
         seedItems: [PlanDayItem],
@@ -677,20 +668,22 @@ struct ExploreDetailView: View {
             ))
         }
         
-        for item in seedItems where item.include {
+        var timedSeeds = seedItems
+        PlanDayTiming.fillMissingActivityTimes(&timedSeeds)
+        for item in timedSeeds where item.include {
             let dayIdx = min(max(item.dayIndex ?? 0, 0), days.count - 1)
             guard item.kind == .activity || item.kind == .place else { continue }
             let placeType = PlaceType.fromAICategory(item.category)
             days[dayIdx].events.append(EventItem(
                 title: item.title,
                 description: item.notes,
-                time: timeText(start: item.startTime, end: item.endTime),
+                time: PlanDayTiming.timeText(start: item.startTime, end: item.endTime),
                 location: item.location,
                 latitude: item.latitude,
                 longitude: item.longitude,
-                icon: placeType == .unspecified ? "mappin.and.ellipse" : placeType.iconSystemName,
-                accent: .neutral,
-                photoData: item.photoData
+                icon: placeType.mapIconName,
+                accent: .cream,
+                photoData: PlaceImageResolver.compressedCoverData(item.photoData)
             ))
         }
         
@@ -792,6 +785,22 @@ private struct ExploreBadgeGlassBackground: ViewModifier {
                     Capsule(style: .continuous)
                         .fill(.ultraThinMaterial)
                 }
+        }
+    }
+}
+
+private struct ExploreDetailCardGlassBackground: ViewModifier {
+    let fallback: Color
+    private let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: shape)
+                .clipShape(shape)
+        } else {
+            content
+                .background(fallback, in: shape)
         }
     }
 }

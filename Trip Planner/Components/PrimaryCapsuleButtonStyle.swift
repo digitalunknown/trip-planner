@@ -163,8 +163,11 @@ struct PrimaryCapsuleLabel: View {
     var body: some View {
         HStack(spacing: CapsuleButtonMetrics.iconTitleSpacing) {
             if let systemImage {
-                Image(systemName: systemImage)
-                    .font(.system(size: CapsuleButtonMetrics.blockFontSize, weight: .semibold))
+                AppIcon(
+                    systemName: systemImage,
+                    size: CapsuleButtonMetrics.blockFontSize,
+                    strokeWidth: 2
+                )
             }
             Text(title)
                 .font(.app(CapsuleButtonMetrics.blockFontSize, weight: .semibold))

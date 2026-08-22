@@ -31,11 +31,11 @@ enum TrackerType: String, Codable, CaseIterable, Hashable, Identifiable {
 
     var iconSystemName: String {
         switch self {
-        case .countries: return "globe.americas.fill"
-        case .states: return "map.fill"
-        case .continents: return "globe.europe.africa.fill"
-        case .subwaySystems: return "tram.fill"
-        case .nationalParks: return "mountain.2.fill"
+        case .countries: return "globe"
+        case .states: return "map"
+        case .continents: return "earth"
+        case .subwaySystems: return "train-front-tunnel"
+        case .nationalParks: return "mountain"
         }
     }
 }

@@ -94,9 +94,7 @@ struct TrackerRowCard: View {
                 
                 Spacer(minLength: 0)
                 
-                Image(systemName: "chevron.right")
-                    .font(.app(13, weight: .semibold))
-                    .foregroundStyle(textSecondary)
+                AppIcon(systemName: "chevron.right", size: 13, color: textSecondary)
             }
             
             HStack(spacing: 12) {
@@ -104,9 +102,7 @@ struct TrackerRowCard: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(accentColor.opacity(0.18))
                     
-                    Image(systemName: type.iconSystemName)
-                        .font(.app(20, weight: .regular))
-                        .foregroundStyle(accentColor)
+                    AppIcon(systemName: type.iconSystemName, size: 20, color: accentColor)
                 }
                 .frame(width: 52, height: 52)
                 Spacer(minLength: 0)
@@ -166,9 +162,7 @@ struct TrackerCardView: View {
                     .fill(accentColor.opacity(0.18))
                     .frame(width: 52, height: 52)
 
-                Image(systemName: type.iconSystemName)
-                    .font(.app(20, weight: .regular))
-                    .foregroundStyle(accentColor)
+                AppIcon(systemName: type.iconSystemName, size: 20, color: accentColor)
             }
 
             Text(type.title)
@@ -207,9 +201,11 @@ struct TrackerItemCard: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(isVisited ? accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
 
-                Image(systemName: iconSystemName)
-                    .font(.app(20, weight: .regular))
-                    .foregroundStyle(isVisited ? accentColor : .secondary)
+                AppIcon(
+                    systemName: iconSystemName,
+                    size: 20,
+                    color: isVisited ? accentColor : .secondary
+                )
             }
             .frame(width: 40, height: 40)
 
@@ -228,9 +224,11 @@ struct TrackerItemCard: View {
 
             Spacer(minLength: 0)
 
-            Image(systemName: isVisited ? "checkmark.square.fill" : "square")
-                .font(.app(20, weight: .regular))
-                .foregroundStyle(isVisited ? accentColor : Color.secondary)
+            AppIcon(
+                lucide: isVisited ? "circle-check-big" : "circle",
+                size: 20,
+                color: isVisited ? accentColor : Color.secondary
+            )
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -253,7 +251,7 @@ struct TrackerItemCard: View {
 #Preview {
     VStack(spacing: 12) {
         TrackerCardView(type: .countries, visitedCount: 12, totalCount: 195)
-        TrackerItemCard(title: "Arizona", subtitle: "United States", isVisited: true, iconSystemName: "map.fill")
+        TrackerItemCard(title: "Arizona", subtitle: "United States", isVisited: true, iconSystemName: "map")
     }
     .padding()
 }

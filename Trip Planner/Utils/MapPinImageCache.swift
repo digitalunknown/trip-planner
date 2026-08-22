@@ -6,13 +6,13 @@ import UIKit
 enum MapPinImageCache {
     private static let cache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()
-        cache.countLimit = 200
-        cache.totalCostLimit = 12 * 1024 * 1024 // ~12 MB of decoded pin bitmaps
+        cache.countLimit = 80
+        cache.totalCostLimit = 6 * 1024 * 1024 // ~6 MB of decoded pin bitmaps
         return cache
     }()
     
     /// Pin image for an activity (photo or first image document), sized for `pointSize` @ screen scale.
-    static func image(for event: EventItem, pointSize: CGFloat = 36) -> UIImage? {
+    static func image(for event: EventItem, pointSize: CGFloat = 52) -> UIImage? {
         let maxPixels = pixelSize(for: pointSize)
         let key = cacheKey(
             id: event.id.uuidString,
@@ -30,7 +30,7 @@ enum MapPinImageCache {
     }
     
     /// Pin image from raw image data (e.g. trip cover on the profile globe).
-    static func image(data: Data?, id: String, pointSize: CGFloat = 36) -> UIImage? {
+    static func image(data: Data?, id: String, pointSize: CGFloat = 52) -> UIImage? {
         guard let data, !data.isEmpty else { return nil }
         let maxPixels = pixelSize(for: pointSize)
         let key = cacheKey(id: id, fingerprint: data.count, maxPixels: maxPixels)

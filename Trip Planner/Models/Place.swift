@@ -42,43 +42,50 @@ enum PlaceType: String, Codable, CaseIterable, Identifiable, Hashable {
     var iconSystemName: String {
         switch self {
         case .unspecified: return "tag"
-        case .restaurant: return "fork.knife"
-        case .cafe: return "cup.and.saucer.fill"
-        case .bar: return "wineglass.fill"
-        case .hotel: return "bed.double.fill"
-        case .attraction: return "star.fill"
-        case .museum: return "building.columns.fill"
-        case .park: return "leaf.fill"
-        case .beach: return "beach.umbrella.fill"
-        case .hike: return "figure.hiking"
-        case .shopping: return "bag.fill"
-        case .nightlife: return "moon.stars.fill"
-        case .viewpoint: return "binoculars.fill"
-        case .kids: return "figure.and.child.holdinghands"
-        case .other: return "mappin.and.ellipse"
+        case .restaurant: return "utensils"
+        case .cafe: return "coffee"
+        case .bar: return "beer"
+        case .hotel: return "hotel"
+        case .attraction: return "ferris-wheel"
+        case .museum: return "landmark"
+        case .park: return "tree-palm"
+        case .beach: return "umbrella"
+        case .hike: return "mountain"
+        case .shopping: return "shopping-bag"
+        case .nightlife: return "moon-star"
+        case .viewpoint: return "binoculars"
+        case .kids: return "baby"
+        case .other: return "map-pin"
         }
+    }
+    
+    /// Icon used on map pins when this place has no photo.
+    var mapIconName: String {
+        self == .unspecified ? "map-pinned" : iconSystemName
     }
     
     /// Best-effort type from an activity SF Symbol.
     static func inferred(fromActivityIcon icon: String) -> PlaceType {
         switch icon {
-        case "fork.knife", "carrot.fill", "takeoutbag.and.cup.and.straw.fill", "birthday.cake.fill":
+        case "fork.knife", "carrot.fill", "takeoutbag.and.cup.and.straw.fill", "birthday.cake.fill",
+             "apple", "beef", "cake", "chef-hat", "cooking-pot", "croissant", "donut",
+             "egg-fried", "hamburger", "ice-cream-cone", "pizza", "popcorn":
             return .restaurant
-        case "cup.and.saucer.fill", "mug.fill":
+        case "cup.and.saucer.fill", "mug.fill", "coffee", "cup-soda":
             return .cafe
-        case "wineglass.fill":
+        case "wineglass.fill", "beer", "bottle-wine":
             return .bar
         case "bed.double.fill", "house.fill":
             return .hotel
         case "bag.fill", "cart.fill", "tag.fill", "gift.fill", "creditcard.fill", "duffle.bag.fill":
             return .shopping
-        case "leaf.fill", "tree.fill":
+        case "leaf.fill", "tree.fill", "flower", "tree-palm", "tent-tree":
             return .park
         case "beach.umbrella.fill", "water.waves":
             return .beach
         case "figure.hiking", "figure.walk", "mountain.2.fill":
             return .hike
-        case "building.columns.fill", "atom", "paintpalette.fill", "sparkles":
+        case "building.columns.fill", "atom", "paintpalette.fill", "sparkles", "palette", "pencil-ruler":
             return .museum
         case "binoculars.fill":
             return .viewpoint

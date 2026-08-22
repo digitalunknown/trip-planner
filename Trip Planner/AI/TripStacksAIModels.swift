@@ -74,6 +74,61 @@ struct AITripDraft: Hashable, Codable, Identifiable {
     }
 }
 
+extension AITripDraft {
+    /// Calendar-date math for YYYY-MM-DD strings (never local startOfDay on UTC midnight).
+    fileprivate static var utcCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        return calendar
+    }
+    
+    /// Roll past-year AI dates forward to the next upcoming occurrence.
+    mutating func normalizeUpcomingDates(reference: Date = Date()) {
+        guard isDatesSet else { return }
+        guard var start = Self.parseDraftISODate(startDate),
+              var end = Self.parseDraftISODate(endDate) else { return }
+        
+        let calendar = Self.utcCalendar
+        start = calendar.startOfDay(for: start)
+        end = calendar.startOfDay(for: end)
+        let today = calendar.startOfDay(for: reference)
+        
+        while end < start {
+            end = calendar.date(byAdding: .year, value: 1, to: end) ?? end
+        }
+        var guardCount = 0
+        while end < today, guardCount < 10 {
+            start = calendar.date(byAdding: .year, value: 1, to: start) ?? start
+            end = calendar.date(byAdding: .year, value: 1, to: end) ?? end
+            guardCount += 1
+        }
+        
+        startDate = Self.formatDraftISODate(start)
+        endDate = Self.formatDraftISODate(end)
+        unscheduledDaysCount = 0
+    }
+    
+    private static func parseDraftISODate(_ raw: String?) -> Date? {
+        guard let raw, !raw.isEmpty else { return nil }
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.dateFormat = "yyyy-MM-dd"
+        return df.date(from: raw)
+    }
+    
+    private static func formatDraftISODate(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.dateFormat = "yyyy-MM-dd"
+        return df.string(from: date)
+    }
+}
+
 struct AIRequest: Codable {
     var mode: AIMode
     var text: String
@@ -236,11 +291,23 @@ enum AIDayMapping {
            let start = Self.parseISODate(trip.startDate),
            let end = Self.parseISODate(trip.endDate),
            end >= start {
-            let days = (Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0) + 1
+            let days = (AITripDraft.utcCalendar.dateComponents([.day], from: start, to: end).day ?? 0) + 1
             return min(max(days, 1), 30)
+        }
+        if let extracted = extractTripDateRange(from: promptText) {
+            return resolvedDayCount(
+                for: AITripDraft(isDatesSet: true, startDate: extracted.start, endDate: extracted.end),
+                promptText: promptText
+            )
         }
         let inferred = inferredDayCount(from: promptText) ?? 0
         return min(max(max(trip.unscheduledDaysCount, inferred), 1), 30)
+    }
+    
+    /// Item floor that can finish inside one Gemini response (long trips still get 8–12, not 22).
+    static func completableItemCount(dayCount: Int) -> Int {
+        let days = min(max(dayCount, 1), 30)
+        return max(8, min(days + 4, 12))
     }
     
     /// Spread day-scoped activities across 0…dayCount-1 when the model collapsed onto day 0.
@@ -322,6 +389,193 @@ enum AIDayMapping {
         df.timeZone = TimeZone(secondsFromGMT: 0)
         df.dateFormat = "yyyy-MM-dd"
         return df.date(from: raw)
+    }
+    
+    private static func formatISODate(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.dateFormat = "yyyy-MM-dd"
+        return df.string(from: date)
+    }
+    
+    /// Deterministic date-range extraction (ISO or month/day phrases like "December 23 – January 1").
+    static func extractTripDateRange(from text: String, reference: Date = Date()) -> (start: String, end: String)? {
+        let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        let today = calendar.startOfDay(for: reference)
+        
+        func rollUpcoming(start: Date, end: Date) -> (Date, Date) {
+            var s = calendar.startOfDay(for: start)
+            var e = calendar.startOfDay(for: end)
+            while e < s {
+                e = calendar.date(byAdding: .year, value: 1, to: e) ?? e
+            }
+            var guardCount = 0
+            while e < today, guardCount < 10 {
+                s = calendar.date(byAdding: .year, value: 1, to: s) ?? s
+                e = calendar.date(byAdding: .year, value: 1, to: e) ?? e
+                guardCount += 1
+            }
+            return (s, e)
+        }
+        
+        if let regex = try? NSRegularExpression(
+            pattern: #"\b(\d{4}-\d{2}-\d{2})\s*(?:to|through|thru|until|-|–|—)\s*(\d{4}-\d{2}-\d{2})\b"#,
+            options: .caseInsensitive
+        ),
+           let match = regex.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)),
+           let r1 = Range(match.range(at: 1), in: raw),
+           let r2 = Range(match.range(at: 2), in: raw),
+           let start = parseISODate(String(raw[r1])),
+           let end = parseISODate(String(raw[r2])) {
+            let rolled = rollUpcoming(start: start, end: end)
+            return (formatISODate(rolled.0), formatISODate(rolled.1))
+        }
+        
+        let months = "january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec"
+        let pattern =
+            #"\b("# + months + #")\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?"# +
+            #"\s*(?:to|through|thru|until|-|–|—)\s*"# +
+            #"("# + months + #")\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?\b"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)),
+              match.numberOfRanges >= 6,
+              let m1 = Range(match.range(at: 1), in: raw),
+              let d1 = Range(match.range(at: 2), in: raw),
+              let m2 = Range(match.range(at: 4), in: raw),
+              let d2 = Range(match.range(at: 5), in: raw),
+              let startDay = Int(raw[d1]),
+              let endDay = Int(raw[d2]),
+              let startMonth = monthIndex(String(raw[m1])),
+              let endMonth = monthIndex(String(raw[m2])) else { return nil }
+        
+        let y1Range = Range(match.range(at: 3), in: raw)
+        let y2Range = Range(match.range(at: 6), in: raw)
+        let y1 = y1Range.flatMap { Int(raw[$0]) }
+        let y2 = y2Range.flatMap { Int(raw[$0]) }
+        let refYear = calendar.component(.year, from: today)
+        
+        var startYear = y1 ?? refYear
+        var endYear = y2 ?? startYear
+        if y2 == nil, endMonth < startMonth {
+            endYear = startYear + 1
+        }
+        
+        var startComps = DateComponents(year: startYear, month: startMonth, day: startDay)
+        var endComps = DateComponents(year: endYear, month: endMonth, day: endDay)
+        if y1 == nil, y2 == nil {
+            startComps.year = refYear
+            endComps.year = endMonth < startMonth ? refYear + 1 : refYear
+        }
+        guard let start = calendar.date(from: startComps),
+              let end = calendar.date(from: endComps) else { return nil }
+        let rolled = rollUpcoming(start: start, end: end)
+        return (formatISODate(rolled.0), formatISODate(rolled.1))
+    }
+    
+    private static func monthIndex(_ name: String) -> Int? {
+        let key = name.lowercased()
+        let map: [String: Int] = [
+            "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3, "mar": 3,
+            "april": 4, "apr": 4, "may": 5, "june": 6, "jun": 6, "july": 7, "jul": 7,
+            "august": 8, "aug": 8, "september": 9, "sep": 9, "sept": 9,
+            "october": 10, "oct": 10, "november": 11, "nov": 11, "december": 12, "dec": 12,
+        ]
+        return map[key]
+    }
+    
+    /// Count of venue activities MapKit failed to resolve.
+    static func unresolvedVenueCount(_ items: [PlanDayItem]) -> Int {
+        items.filter(\.isLocationUnresolved).count
+    }
+    
+    static func needsLocationRefill(_ items: [PlanDayItem]) -> Bool {
+        let venues = items.filter {
+            $0.kind == .activity || $0.kind == .place
+        }
+        guard venues.count >= 2 else { return unresolvedVenueCount(items) >= 1 && venues.count == 1 }
+        let unresolved = unresolvedVenueCount(items)
+        return unresolved >= max(2, Int(ceil(Double(venues.count) * 0.4)))
+    }
+    
+    /// Pull an explicit stay from prompts like "staying at The Plaza".
+    static func extractNamedStay(from text: String) -> String? {
+        let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return nil }
+        let patterns = [
+            #"\b(?:staying|stay(?:ing)?|booked|book(?:ed)?|checking\s+in)\s+(?:at|in)\s+((?:the\s+)?[A-Za-z0-9][^.\n,]{2,80})"#,
+            #"\b(?:hotel|resort|inn|lodge|suites?)\s*[:\-–]\s+((?:the\s+)?[A-Za-z0-9][^.\n,]{2,80})"#,
+            #"\bat\s+((?:the\s+)?[A-Za-z][^.\n,]{2,60}\b(?:Hotel|Resort|Inn|Lodge|Suites?|House|Palace|Ritz|Hyatt|Marriott|Hilton|Fairmont|Four Seasons))\b"#,
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                  let match = regex.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)),
+                  match.numberOfRanges > 1,
+                  let range = Range(match.range(at: 1), in: raw) else { continue }
+            let name = String(raw[range])
+                .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'”’")))
+            if name.count >= 3 { return name }
+        }
+        return nil
+    }
+    
+    /// Force the user's named hotel into seed items (replace invented stays).
+    static func applyNamedStay(
+        _ items: [PlanDayItem],
+        fromPrompt text: String,
+        destination: String,
+        clearCoordinatesWhenRenaming: Bool = true
+    ) -> [PlanDayItem] {
+        guard let stayName = extractNamedStay(from: text) else { return items }
+        let dest = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        let location = dest.isEmpty ? stayName : "\(stayName), \(dest)"
+        
+        func isHotel(_ item: PlanDayItem) -> Bool {
+            item.kind == .activity &&
+            item.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "hotel"
+        }
+        
+        let hotels = items.filter(isHotel)
+        if !hotels.isEmpty {
+            return items.map { item in
+                guard isHotel(item) else { return item }
+                var copy = item
+                let alreadyNamed =
+                    copy.title.localizedCaseInsensitiveContains(stayName) ||
+                    copy.location.localizedCaseInsensitiveContains(stayName)
+                copy.title = stayName
+                copy.location = location
+                copy.category = "hotel"
+                if copy.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    copy.notes = "Your stay"
+                }
+                if clearCoordinatesWhenRenaming, !alreadyNamed {
+                    copy.latitude = nil
+                    copy.longitude = nil
+                    copy.photoData = nil
+                }
+                return copy
+            }
+        }
+        
+        let hotel = PlanDayItem(
+            kind: .activity,
+            dayIndex: 0,
+            dayLabel: "Day 1",
+            title: stayName,
+            location: location,
+            notes: "Your stay",
+            confidence: 0.95,
+            sourceSnippet: stayName,
+            category: "hotel"
+        )
+        return [hotel] + items
     }
 }
 

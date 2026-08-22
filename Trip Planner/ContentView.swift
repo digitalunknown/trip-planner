@@ -88,6 +88,14 @@ struct ContentView: View {
                 if selectedTab == .search {
                     selectedTab = lastNonSearchTab
                 }
+            } else {
+                // System rebuilds the liquid-glass Close control after presentation.
+                Task { @MainActor in
+                    for delayNs in [50_000_000, 200_000_000, 450_000_000] as [UInt64] {
+                        try? await Task.sleep(nanoseconds: delayNs)
+                        AppLucide.patchSearchDismissButtons()
+                    }
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .quickActionCreateNewTrip)) { _ in
@@ -107,30 +115,37 @@ struct ContentView: View {
     @available(iOS 18.0, *)
     private var modernTabView: some View {
         TabView(selection: $selectedTab) {
-            // Pass outline names only — the tab bar applies `.fill` to the selected item.
-            Tab("Trips", systemImage: "briefcase", value: RootTab.myTrips) {
+            Tab(value: RootTab.myTrips) {
                 MyTripsView()
+            } label: {
+                LucideTabLabel(title: "Trips", lucideName: "backpack")
             }
             
-            Tab("Places", systemImage: "mappin", value: RootTab.places) {
+            Tab(value: RootTab.places) {
                 NavigationStack {
                     PlacesHomeView()
                 }
+            } label: {
+                LucideTabLabel(title: "Places", lucideName: "map-pinned")
             }
             
-            Tab("Explore", systemImage: "safari", value: RootTab.explore) {
+            Tab(value: RootTab.explore) {
                 NavigationStack {
                     ExploreHomeView()
                 }
+            } label: {
+                LucideTabLabel(title: "Explore", lucideName: "compass")
             }
             
-            Tab("Profile", systemImage: "person", value: RootTab.trackers) {
+            Tab(value: RootTab.trackers) {
                 NavigationStack {
                     TrackersHomeView()
                 }
+            } label: {
+                LucideTabLabel(title: "Profile", lucideName: "user-round")
             }
             
-            Tab("Search", systemImage: "magnifyingglass", value: RootTab.search, role: .search) {
+            Tab(value: RootTab.search, role: .search) {
                 NavigationStack {
                     GlobalSearchView(searchText: $searchText)
                 }
@@ -139,6 +154,8 @@ struct ContentView: View {
                     isPresented: $isSearchPresented,
                     prompt: "Search trips and places"
                 )
+            } label: {
+                LucideTabLabel(title: "Search", lucideName: "search")
             }
         }
         .modifier(SearchTabActivationModifier())
@@ -149,7 +166,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             MyTripsView()
                 .tabItem {
-                    Label("Trips", systemImage: "briefcase")
+                    LucideTabLabel(title: "Trips", lucideName: "backpack")
                 }
                 .tag(RootTab.myTrips)
             
@@ -157,7 +174,7 @@ struct ContentView: View {
                 PlacesHomeView()
             }
             .tabItem {
-                Label("Places", systemImage: "mappin")
+                LucideTabLabel(title: "Places", lucideName: "map-pinned")
             }
             .tag(RootTab.places)
             
@@ -165,7 +182,7 @@ struct ContentView: View {
                 ExploreHomeView()
             }
             .tabItem {
-                Label("Explore", systemImage: "safari")
+                LucideTabLabel(title: "Explore", lucideName: "compass")
             }
             .tag(RootTab.explore)
 
@@ -173,7 +190,7 @@ struct ContentView: View {
                 TrackersHomeView()
             }
             .tabItem {
-                Label("Profile", systemImage: "person")
+                LucideTabLabel(title: "Profile", lucideName: "user-round")
             }
             .tag(RootTab.trackers)
             
@@ -186,7 +203,7 @@ struct ContentView: View {
                 prompt: "Search trips and places"
             )
             .tabItem {
-                Label("Search", systemImage: "magnifyingglass")
+                LucideTabLabel(title: "Search", lucideName: "search")
             }
             .tag(RootTab.search)
         }
@@ -286,33 +303,33 @@ private extension ContentView {
             centerLat: 35.6762,
             centerLon: 139.6503,
             places: [
-                SamplePlace(name: "Senso-ji Temple", address: "2 Chome-3-1 Asakusa, Taito City", lat: 35.7148, lon: 139.7967, icon: "building.columns.fill", accent: .orange, costUSD: nil),
-                SamplePlace(name: "Shibuya Scramble Crossing", address: "Shibuya City", lat: 35.6595, lon: 139.7005, icon: "figure.walk", accent: .mint, costUSD: nil),
-                SamplePlace(name: "Meiji Jingu", address: "1-1 Yoyogikamizonocho, Shibuya City", lat: 35.6764, lon: 139.6993, icon: "leaf.fill", accent: .mint, costUSD: nil),
-                SamplePlace(name: "Tsukiji Outer Market", address: "Tsukiji, Chuo City", lat: 35.6652, lon: 139.7708, icon: "cart.fill", accent: .yellow, costUSD: 22),
-                SamplePlace(name: "Tokyo Skytree", address: "1 Chome-1-2 Oshiage, Sumida City", lat: 35.7101, lon: 139.8107, icon: "mappin.and.ellipse", accent: .blue, costUSD: 22),
-                SamplePlace(name: "Ueno Park", address: "Uenokoen, Taito City", lat: 35.7148, lon: 139.7730, icon: "leaf.fill", accent: .mint, costUSD: nil),
-                SamplePlace(name: "Tokyo Station", address: "1 Chome Marunouchi, Chiyoda City", lat: 35.6812, lon: 139.7671, icon: "tram.fill", accent: .red, costUSD: nil),
-                SamplePlace(name: "teamLab Planets TOKYO", address: "6 Chome-1-16 Toyosu, Koto City", lat: 35.6491, lon: 139.7899, icon: "camera.fill", accent: .purple, costUSD: 30),
-                SamplePlace(name: "Imperial Palace East Gardens", address: "Chiyoda City", lat: 35.6852, lon: 139.7528, icon: "leaf.fill", accent: .mint, costUSD: nil),
-                SamplePlace(name: "Ichiran Ramen (Shibuya)", address: "Shibuya City", lat: 35.6590, lon: 139.6980, icon: "fork.knife", accent: .orange, costUSD: 18),
-                SamplePlace(name: "Shinjuku Gyoen National Garden", address: "11 Naitomachi, Shinjuku City", lat: 35.6852, lon: 139.7100, icon: "leaf.fill", accent: .mint, costUSD: 6),
-                SamplePlace(name: "Akihabara Electric Town", address: "Akihabara, Chiyoda City", lat: 35.6984, lon: 139.7730, icon: "bag.fill", accent: .purple, costUSD: 20),
-                SamplePlace(name: "Ginza", address: "Ginza, Chuo City", lat: 35.6717, lon: 139.7650, icon: "bag.fill", accent: .yellow, costUSD: nil),
-                SamplePlace(name: "Odaiba Seaside Park", address: "Odaiba, Minato City", lat: 35.6280, lon: 139.7765, icon: "water.waves", accent: .blue, costUSD: nil),
-                SamplePlace(name: "Asakusa Street Food", address: "Asakusa, Taito City", lat: 35.7145, lon: 139.7960, icon: "takeoutbag.and.cup.and.straw.fill", accent: .orange, costUSD: 15),
-                SamplePlace(name: "Tokyo Tower", address: "4 Chome-2-8 Shibakoen, Minato City", lat: 35.6586, lon: 139.7454, icon: "mappin.and.ellipse", accent: .red, costUSD: 15),
-                SamplePlace(name: "Shibuya SKY", address: "2 Chome-24-12 Shibuya, Shibuya City", lat: 35.6580, lon: 139.7016, icon: "mappin.and.ellipse", accent: .blue, costUSD: 22),
-                SamplePlace(name: "Takeshita Street", address: "1 Chome Jingumae, Shibuya City", lat: 35.6702, lon: 139.7026, icon: "figure.walk", accent: .mint, costUSD: nil),
-                SamplePlace(name: "Hamarikyu Gardens", address: "1-1 Hamarikyuteien, Chuo City", lat: 35.6591, lon: 139.7633, icon: "leaf.fill", accent: .mint, costUSD: 4),
-                SamplePlace(name: "Kanda Shrine", address: "2 Chome-16-2 Sotokanda, Chiyoda City", lat: 35.7020, lon: 139.7671, icon: "building.columns.fill", accent: .orange, costUSD: nil),
-                SamplePlace(name: "Nakamise-dori", address: "1 Chome-36 Asakusa, Taito City", lat: 35.7139, lon: 139.7964, icon: "cart.fill", accent: .yellow, costUSD: 12)
+                SamplePlace(name: "Senso-ji Temple", address: "2 Chome-3-1 Asakusa, Taito City", lat: 35.7148, lon: 139.7967, icon: "building.columns.fill", accent: .tangerine, costUSD: nil),
+                SamplePlace(name: "Shibuya Scramble Crossing", address: "Shibuya City", lat: 35.6595, lon: 139.7005, icon: "figure.walk", accent: .lime, costUSD: nil),
+                SamplePlace(name: "Meiji Jingu", address: "1-1 Yoyogikamizonocho, Shibuya City", lat: 35.6764, lon: 139.6993, icon: "leaf.fill", accent: .lime, costUSD: nil),
+                SamplePlace(name: "Tsukiji Outer Market", address: "Tsukiji, Chuo City", lat: 35.6652, lon: 139.7708, icon: "cart.fill", accent: .mustard, costUSD: 22),
+                SamplePlace(name: "Tokyo Skytree", address: "1 Chome-1-2 Oshiage, Sumida City", lat: 35.7101, lon: 139.8107, icon: "mappin.and.ellipse", accent: .forest, costUSD: 22),
+                SamplePlace(name: "Ueno Park", address: "Uenokoen, Taito City", lat: 35.7148, lon: 139.7730, icon: "leaf.fill", accent: .lime, costUSD: nil),
+                SamplePlace(name: "Tokyo Station", address: "1 Chome Marunouchi, Chiyoda City", lat: 35.6812, lon: 139.7671, icon: "tram.fill", accent: .plum, costUSD: nil),
+                SamplePlace(name: "teamLab Planets TOKYO", address: "6 Chome-1-16 Toyosu, Koto City", lat: 35.6491, lon: 139.7899, icon: "camera.fill", accent: .blush, costUSD: 30),
+                SamplePlace(name: "Imperial Palace East Gardens", address: "Chiyoda City", lat: 35.6852, lon: 139.7528, icon: "leaf.fill", accent: .lime, costUSD: nil),
+                SamplePlace(name: "Ichiran Ramen (Shibuya)", address: "Shibuya City", lat: 35.6590, lon: 139.6980, icon: "fork.knife", accent: .tangerine, costUSD: 18),
+                SamplePlace(name: "Shinjuku Gyoen National Garden", address: "11 Naitomachi, Shinjuku City", lat: 35.6852, lon: 139.7100, icon: "leaf.fill", accent: .lime, costUSD: 6),
+                SamplePlace(name: "Akihabara Electric Town", address: "Akihabara, Chiyoda City", lat: 35.6984, lon: 139.7730, icon: "bag.fill", accent: .blush, costUSD: 20),
+                SamplePlace(name: "Ginza", address: "Ginza, Chuo City", lat: 35.6717, lon: 139.7650, icon: "bag.fill", accent: .mustard, costUSD: nil),
+                SamplePlace(name: "Odaiba Seaside Park", address: "Odaiba, Minato City", lat: 35.6280, lon: 139.7765, icon: "water.waves", accent: .forest, costUSD: nil),
+                SamplePlace(name: "Asakusa Street Food", address: "Asakusa, Taito City", lat: 35.7145, lon: 139.7960, icon: "takeoutbag.and.cup.and.straw.fill", accent: .tangerine, costUSD: 15),
+                SamplePlace(name: "Tokyo Tower", address: "4 Chome-2-8 Shibakoen, Minato City", lat: 35.6586, lon: 139.7454, icon: "mappin.and.ellipse", accent: .plum, costUSD: 15),
+                SamplePlace(name: "Shibuya SKY", address: "2 Chome-24-12 Shibuya, Shibuya City", lat: 35.6580, lon: 139.7016, icon: "mappin.and.ellipse", accent: .forest, costUSD: 22),
+                SamplePlace(name: "Takeshita Street", address: "1 Chome Jingumae, Shibuya City", lat: 35.6702, lon: 139.7026, icon: "figure.walk", accent: .lime, costUSD: nil),
+                SamplePlace(name: "Hamarikyu Gardens", address: "1-1 Hamarikyuteien, Chuo City", lat: 35.6591, lon: 139.7633, icon: "leaf.fill", accent: .lime, costUSD: 4),
+                SamplePlace(name: "Kanda Shrine", address: "2 Chome-16-2 Sotokanda, Chiyoda City", lat: 35.7020, lon: 139.7671, icon: "building.columns.fill", accent: .tangerine, costUSD: nil),
+                SamplePlace(name: "Nakamise-dori", address: "1 Chome-36 Asakusa, Taito City", lat: 35.7139, lon: 139.7964, icon: "cart.fill", accent: .mustard, costUSD: 12)
             ],
             ideas: [
-                SamplePlace(name: "Ghibli Museum", address: "1 Chome-1-83 Shimorenjaku, Mitaka City, Tokyo", lat: 35.6962, lon: 139.5704, icon: "ticket.fill", accent: .mint, costUSD: 10),
-                SamplePlace(name: "Odaiba night photos", address: "1 Chome-4 Daiba, Minato City, Tokyo", lat: 35.6292, lon: 139.7769, icon: "camera.fill", accent: .purple, costUSD: nil),
-                SamplePlace(name: "Depachika food hall", address: "4 Chome-6-16 Ginza, Chuo City, Tokyo", lat: 35.6717, lon: 139.7650, icon: "cart.fill", accent: .yellow, costUSD: 25),
-                SamplePlace(name: "Sentō / onsen", address: "Thermae-Yu, 1 Chome-1-2 Kabukicho, Shinjuku City, Tokyo", lat: 35.6945, lon: 139.7035, icon: "water.waves", accent: .blue, costUSD: 20)
+                SamplePlace(name: "Ghibli Museum", address: "1 Chome-1-83 Shimorenjaku, Mitaka City, Tokyo", lat: 35.6962, lon: 139.5704, icon: "ticket.fill", accent: .lime, costUSD: 10),
+                SamplePlace(name: "Odaiba night photos", address: "1 Chome-4 Daiba, Minato City, Tokyo", lat: 35.6292, lon: 139.7769, icon: "camera.fill", accent: .blush, costUSD: nil),
+                SamplePlace(name: "Depachika food hall", address: "4 Chome-6-16 Ginza, Chuo City, Tokyo", lat: 35.6717, lon: 139.7650, icon: "cart.fill", accent: .mustard, costUSD: 25),
+                SamplePlace(name: "Sentō / onsen", address: "Thermae-Yu, 1 Chome-1-2 Kabukicho, Shinjuku City, Tokyo", lat: 35.6945, lon: 139.7035, icon: "water.waves", accent: .forest, costUSD: 20)
             ]
         )
         
@@ -334,7 +351,7 @@ private extension ContentView {
             lat: 35.6969,
             lon: 139.7057,
             icon: "bed.double.fill",
-            accent: .purple,
+            accent: .blush,
             costUSD: nil
         )
         
@@ -371,7 +388,7 @@ private extension ContentView {
                 lat: day5Places.first?.lat ?? 35.6938,
                 lon: day5Places.first?.lon ?? 139.7034,
                 icon: day5Places.first?.icon ?? "figure.walk",
-                accent: day5Places.first?.accent ?? .mint,
+                accent: day5Places.first?.accent ?? .lime,
                 costUSD: day5Places.first?.costUSD
             ),
             makeEvent(
@@ -385,7 +402,7 @@ private extension ContentView {
                 lat: 35.6938,
                 lon: 139.7034,
                 icon: "fork.knife",
-                accent: .orange,
+                accent: .tangerine,
                 costUSD: 32
             )
         ]
@@ -471,7 +488,7 @@ private extension ContentView {
                 lat: day5Places.dropFirst().first?.lat ?? 35.6595,
                 lon: day5Places.dropFirst().first?.lon ?? 139.7005,
                 icon: day5Places.dropFirst().first?.icon ?? "bag.fill",
-                accent: day5Places.dropFirst().first?.accent ?? .yellow,
+                accent: day5Places.dropFirst().first?.accent ?? .mustard,
                 costUSD: day5Places.dropFirst().first?.costUSD
             )
         ]
@@ -548,7 +565,7 @@ private extension ContentView {
                 toGate: "B7",
                 flightNumber: "\(home.airportCode)327",
                 notes: "",
-                accent: .neutral,
+                accent: .cream,
                 startTime: startTime,
                 endTime: endTime,
                 cost: cost,
@@ -572,7 +589,7 @@ private extension ContentView {
                 toGate: "A3",
                 flightNumber: "\(destination.airportCode)812",
                 notes: "",
-                accent: .neutral,
+                accent: .cream,
                 startTime: startTime,
                 endTime: endTime,
                 cost: cost,

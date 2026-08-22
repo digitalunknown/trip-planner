@@ -153,46 +153,57 @@ const TRIP_DRAFT_REQUIRED = [
   "confidence",
 ];
 
-const CREATE_TRIP_SCHEMA = {
-  type: "object",
-  properties: {
-    intent: { type: "string", enum: CREATE_TRIP_INTENTS },
-    clarificationNeeded: { type: "boolean" },
-    clarificationPrompt: { type: "string" },
-    trip: {
-      type: "object",
-      properties: TRIP_DRAFT_PROPERTIES,
-      required: TRIP_DRAFT_REQUIRED,
-    },
+/** Static schema kept for reference; prefer buildCreateTripSchema(minItems). */
+const CREATE_TRIP_SCHEMA = buildCreateTripSchema(0);
+
+function buildCreateTripSchema(minItems = 0) {
+  const floor = Math.max(0, Math.min(Number(minItems) || 0, 28));
+  const itemsSchema = {
+    type: "array",
     items: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          kind: { type: "string", enum: PLAN_DAY_KINDS },
-          ...baseItemProperties(),
-        },
-        required: ["kind", ...BASE_REQUIRED],
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: PLAN_DAY_KINDS },
+        ...baseItemProperties(),
       },
+      required: ["kind", ...BASE_REQUIRED],
     },
-    alternatives: {
-      type: "array",
-      items: {
+  };
+  // Structural floor — Gemini cannot return fewer items when floor > 0.
+  if (floor > 0) {
+    itemsSchema.minItems = floor;
+  }
+  return {
+    type: "object",
+    properties: {
+      intent: { type: "string", enum: CREATE_TRIP_INTENTS },
+      clarificationNeeded: { type: "boolean" },
+      clarificationPrompt: { type: "string" },
+      trip: {
         type: "object",
         properties: TRIP_DRAFT_PROPERTIES,
         required: TRIP_DRAFT_REQUIRED,
       },
+      items: itemsSchema,
+      alternatives: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: TRIP_DRAFT_PROPERTIES,
+          required: TRIP_DRAFT_REQUIRED,
+        },
+      },
     },
-  },
-  required: [
-    "intent",
-    "clarificationNeeded",
-    "clarificationPrompt",
-    "trip",
-    "items",
-    "alternatives",
-  ],
-};
+    required: [
+      "intent",
+      "clarificationNeeded",
+      "clarificationPrompt",
+      "trip",
+      "items",
+      "alternatives",
+    ],
+  };
+}
 
 const SHARED_BRAIN = `
 You are TripStacks AI — the planning brain for an iOS trip app.
@@ -222,7 +233,7 @@ PlanItem fields (ALWAYS include every field; use "" or null if not applicable):
 - dayIndex: integer or null (0-based day offset when multi-day / scoped)
 - dayLabel: short label or ""
 - title, subtitle, location, notes: strings
-- startTime / endTime: HH:mm, ISO-8601, or null
+- startTime / endTime: HH:mm (preferred), ISO-8601, or null. For day_plan / multi_day_plan / create_trip venue activities, BOTH are required.
 - checklistItemsText: newline-separated string (checklists)
 - flightFromCode / flightToCode / flightNumber: flight only; else ""
 - confidence: 0.0–1.0
@@ -260,6 +271,7 @@ Rules:
 3. Locations specific and real?
 4. Deduped against existing context and self?
 5. All required fields present?
+6. For day_plan / multi_day_plan / create_trip full itinerary: every venue activity has startTime AND endTime (HH:mm), ordered chronologically?
 `;
 
 function buildPlanDayPrompt() {
@@ -289,8 +301,11 @@ Ground transport: kind=activity (e.g. title="Drive to Fort Wayne"), not a new ki
 favoriteFoodCSV / drinksAlcohol / interestsCSV silently bias choices.
 
 ## Day structure (day_plan / multi_day_plan only)
-Morning→night, 2–3 proximity clusters, default windows (breakfast/lunch/dinner, etc.), 15–30 min transit gaps.
-CRITICAL for day_plan: return MULTIPLE separate activity items (typically 6–8) — one venue/stop per item with its own title/location/startTime.
+Morning→night, 2–3 proximity clusters, realistic meal + sightseeing pacing, 15–30 min transit gaps.
+CRITICAL for day_plan: return MULTIPLE separate activity items (typically 6–8) — one venue/stop per item with its own title/location/startTime/endTime.
+CRITICAL timing: EVERY kind=activity MUST include both startTime AND endTime as HH:mm (24h). Example: breakfast "09:00"/"10:00", museum "10:30"/"12:30", lunch "12:45"/"14:00", afternoon "14:30"/"16:30", dinner "19:00"/"20:30".
+Durations should fit the stop (meals ~60–90m, major attractions ~90–180m, cafes ~45–75m). Sequence times chronologically with no overlaps and short gaps between stops.
+NEVER leave startTime or endTime null on day_plan / multi_day_plan activities.
 NEVER collapse a whole day into a single combined "itinerary" / "sightseeing day" item.
 Reminders/checklists are optional extras (0–2), not a substitute for the activity list.
 
@@ -367,7 +382,9 @@ You draft a NEW trip for the Trips tab — not filling an existing day board, no
 - clarification_needed: missing destination AND dates/duration with nothing inferable
 
 CRITICAL: Always draft ONE concrete trip. Never offer multiple destination/trip choices.
+CRITICAL: If the user states a day count ("3 days", "weekend", "week in X"), intent MUST be full_itinerary — not get_started.
 CRITICAL: "Create a trip to X" with duration/dates often means full_itinerary. "Rough idea for X" / "start a trip" → get_started.
+CRITICAL: Never write a multi-day / "packed itinerary" summary while returning only a hotel or 1–3 filler items. The items array IS the itinerary.
 
 ## trip fields
 - name: short title
@@ -376,6 +393,10 @@ CRITICAL: "Create a trip to X" with duration/dates often means full_itinerary. "
 - isDatesSet false → dates null, unscheduledDaysCount = day count (default 3; use stated length when given)
 - summary: 1–2 sentence pitch
 - confidence 0–1
+
+CRITICAL dates: The app sends today's date in the user JSON (referenceDate). When the user gives month/day without a year (e.g. "December 23 – January 1"), pick the NEXT upcoming occurrence relative to referenceDate — NEVER a past year. If end month is before start month (Dec→Jan), endDate's year is startDate's year + 1. Both dates must be on or after referenceDate when the trip is upcoming.
+
+CRITICAL user-specified venues: If the user names a hotel / stay / restaurant / attraction, that venue MUST appear in items with the exact name (and maps-searchable location). For a named hotel: use it as the ONLY category=hotel item — do NOT invent a substitute accommodation.
 
 ## items — seed itinerary (plan_day kinds only; NEVER kind=place)
 dayID always null. Set dayIndex (0-based) + dayLabel ("Day 1", …) for scheduled items.
@@ -390,16 +411,21 @@ Aim for a balanced starter pack across sections (≈8–14 items):
 - 1 packing or prep checklist
 - 1–2 reminders (bookings, docs, etc.)
 Do NOT leave items nearly empty unless the user said they'll plan later → items=[].
+HARD FLOOR for get_started: items.length ≥ 8 unless the user explicitly declined a starter itinerary. A single hotel is invalid.
+When seeding restaurants/activities, still set startTime/endTime (HH:mm) so the trip opens as a usable schedule.
 
 ### full_itinerary (pack it)
 Fill the stay for the trip length (use dates or unscheduledDaysCount; default 3–5 days):
 - 1 primary hotel (or 1 per city if multi-city) — dayIndex 0, dayLabel "Day 1"
 - ~1–2 meals/day as restaurant/cafe/bar activities (vary cuisine/neighborhood)
-- ~2–3 activities/attractions per day with dayIndex/dayLabel and rough startTime when natural
+- ~2–3 activities/attractions per day with dayIndex/dayLabel
 - 1 flight item if flights are implied; else skip
 - 1 solid packing checklist (8–12 lines in checklistItemsText) — dayIndex 0
 - 2–4 reminders (visa/passport, reservations, transit passes, etc.) — dayIndex 0
 Target roughly 12–28 items for a 3–5 day trip — never stop at 1–3 filler highlights.
+HARD FLOOR: items.length must be ≥ 8 for any 2+ day trip (typically ≥ 4×dayCount venue activities + hotel + checklist + reminders). A single hotel is NEVER a valid full_itinerary.
+CRITICAL timing: every venue activity (meals + attractions) MUST set both startTime and endTime as HH:mm, sequenced morning→night on that day with no overlaps. Hotel / checklist / reminder items may leave times null.
+Keep notes to one short sentence so the full items array fits in one response.
 
 ## Day spreading (HARD — full_itinerary and any multi-day ask)
 - unscheduledDaysCount (or date span) is the trip length D. Use every day.
@@ -427,32 +453,33 @@ function safeString(v) {
 
 /** True only when the user clearly asked for N places/options (not coords/dates/addresses). */
 function hasExplicitPlaceCount(text) {
+  return explicitPlaceCountValue(text) != null;
+}
+
+/** Parsed N from "top 5" / "exactly 8" style asks, else null. */
+function explicitPlaceCountValue(text) {
   const raw = safeString(text);
-  if (!raw) return false;
-  if (/\bexactly\s+([1-9]|1[0-2])\b/i.test(raw)) return true;
+  if (!raw) return null;
+  let m = raw.match(/\bexactly\s+([1-9]|1[0-2])\b/i);
+  if (m) return parseInt(m[1], 10);
   if (
     /\b(?:top|best)\s*([1-9]|1[0-2])\b/i.test(raw) &&
     /\b(places?|restaurants?|cafes?|hotels?|stays?|bars?|hikes?|trails?|spots?|venues?|options?|ideas?|recommendations?|activities|museums?|parks?)\b/i.test(
       raw
     )
   ) {
-    return true;
+    m = raw.match(/\b(?:top|best)\s*([1-9]|1[0-2])\b/i);
+    if (m) return parseInt(m[1], 10);
   }
-  if (
-    /\b([1-9]|1[0-2])\s+(?:places?|restaurants?|cafes?|hotels?|stays?|bars?|hikes?|trails?|spots?|venues?|options?|ideas?|recommendations?|activities|museums?|parks?)\b/i.test(
-      raw
-    )
-  ) {
-    return true;
-  }
-  if (
-    /\b(?:find|suggest|give|show|list|return|recommend)\s+(?:me\s+)?([1-9]|1[0-2])\b/i.test(
-      raw
-    )
-  ) {
-    return true;
-  }
-  return false;
+  m = raw.match(
+    /\b([1-9]|1[0-2])\s+(?:places?|restaurants?|cafes?|hotels?|stays?|bars?|hikes?|trails?|spots?|venues?|options?|ideas?|recommendations?|activities|museums?|parks?)\b/i
+  );
+  if (m) return parseInt(m[1], 10);
+  m = raw.match(
+    /\b(?:find|suggest|give|show|list|return|recommend)\s+(?:me\s+)?([1-9]|1[0-2])\b/i
+  );
+  if (m) return parseInt(m[1], 10);
+  return null;
 }
 
 /** Append an explicit multi-item count for place_finder / plan_day when the user didn't ask for N. */
@@ -479,6 +506,7 @@ function enforceItemCount(text, mode) {
       `${raw}\n\n` +
       "Return 6–8 distinct itinerary items in the items array " +
       "(one venue/stop per item, short notes). " +
+      "Every activity MUST include startTime and endTime as HH:mm, sequenced morning to night with no overlaps. " +
       "Never return a single combined day summary."
     );
   }
@@ -536,25 +564,395 @@ function inferTripDayCountFromText(text) {
   return null;
 }
 
-/** Append hard day-count + spread requirements for create_trip. */
-function enforceCreateTripDays(text) {
+/** Append hard day-count + spread + item-count requirements for create_trip. */
+function enforceCreateTripDays(text, referenceDate = new Date(), extractedDates = null) {
   const raw = safeString(text).trim();
   if (!raw) return raw;
-  const days = inferTripDayCountFromText(raw);
+  const todayISO = toISODateOnly(referenceDate);
+  const namedStay = extractNamedStay(raw);
+  const stayLine = namedStay
+    ? ` USER-SPECIFIED STAY (HARD): Use exactly "${namedStay}" as the only category=hotel item. Do NOT invent a different hotel.`
+    : "";
+  const datesLine = extractedDates?.startDate && extractedDates?.endDate
+    ? ` HARD DATES (from user text): isDatesSet=true, startDate="${extractedDates.startDate}", endDate="${extractedDates.endDate}", unscheduledDaysCount=0. Do NOT return unscheduled days.`
+    : ` Today's date is ${todayISO}. Any month/day without a year must resolve to the next upcoming occurrence (never a past year).`;
+  const days =
+    extractedDates?.startDate && extractedDates?.endDate
+      ? resolveCreateTripDayCount(
+          {
+            isDatesSet: true,
+            startDate: extractedDates.startDate,
+            endDate: extractedDates.endDate,
+          },
+          inferTripDayCountFromText(raw)
+        )
+      : inferTripDayCountFromText(raw);
   if (!days || days < 2) {
     return (
       `${raw}\n\n` +
+      datesLine +
+      stayLine +
+      "\nUnless the user said they'll plan later: return a rich starter itinerary in items " +
+      "(at least 8 entries: 1 hotel, several restaurants, several activities, 1 checklist, 1–2 reminders). " +
+      "Never return only a hotel. Keep notes under 12 words. " +
       "If this is a multi-day trip, set trip.unscheduledDaysCount to the day count and spread " +
       "activity items across every dayIndex (never put the whole itinerary on day 0)."
     );
   }
+  const minItems = completableCreateTripItemCount(days);
   return (
     `${raw}\n\n` +
-    `This is a ${days}-day trip. Set trip.unscheduledDaysCount=${days} ` +
-    `(or dates spanning ${days} days if dates are known). ` +
-    `Return a full_itinerary with activities on EVERY dayIndex from 0 to ${days - 1}. ` +
-    `Each day-scoped activity must include dayIndex and dayLabel ("Day 1"…"Day ${days}"). ` +
-    `Do not place all sightseeing/meals on dayIndex 0.`
+    datesLine +
+    ` This is a ${days}-day trip. Intent = full_itinerary. ` +
+    (extractedDates
+      ? ""
+      : `Set trip.isDatesSet=true with YYYY-MM-DD dates when the user gave calendar dates; otherwise unscheduledDaysCount=${days}. `) +
+    stayLine +
+    ` Return AT LEAST ${minItems} items: 1 hotel, one real highlight on most dayIndexes from 0 to ${days - 1} (not 4 meals per day), ` +
+    `1 packing checklist, and 1–2 reminders. ` +
+    `Each day-scoped activity must include dayIndex and dayLabel ("Day 1"…"Day ${days}"), startTime, and endTime (HH:mm). ` +
+    `Do not place all sightseeing/meals on dayIndex 0. ` +
+    `Never return only accommodations — a single hotel is invalid. Keep notes under 12 words.`
+  );
+}
+
+/** Pull an explicit stay name from prompts like "staying at The Plaza". */
+function extractNamedStay(text) {
+  const raw = safeString(text);
+  if (!raw) return null;
+  const patterns = [
+    /\b(?:staying|stay(?:ing)?|booked|book(?:ed)?|checking\s+in)\s+(?:at|in)\s+((?:the\s+)?[A-Za-z0-9][^.\n,]{2,80})/i,
+    /\b(?:hotel|resort|inn|lodge|suites?)\s*[:\-–]\s+((?:the\s+)?[A-Za-z0-9][^.\n,]{2,80})/i,
+    /\bat\s+(the\s+)?([A-Za-z][^.\n,]{2,60}\b(?:Hotel|Resort|Inn|Lodge|Suites?|House|Palace|Ritz|Hyatt|Marriott|Hilton|Fairmont|Four Seasons))\b/i,
+    /\b(?:i'?m\s+)?(?:at|in)\s+(the\s+)?([A-Za-z][^.\n,]{2,60}\b(?:Hotel|Resort|Inn|Lodge|Suites?))\b/i,
+  ];
+  for (const re of patterns) {
+    const m = raw.match(re);
+    if (!m) continue;
+    const name = safeString(m[2] || m[1])
+      .replace(/\s+/g, " ")
+      .replace(/[’”'".,;:]+$/g, "")
+      .trim();
+    if (name.length >= 3) return name;
+  }
+  return null;
+}
+
+function toISODateOnly(d) {
+  const date = d instanceof Date ? d : new Date();
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseISODateOnly(raw) {
+  const s = safeString(raw).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const t = Date.parse(`${s}T00:00:00.000Z`);
+  return Number.isFinite(t) ? t : null;
+}
+
+function addUTCFullYears(ms, years) {
+  const d = new Date(ms);
+  d.setUTCFullYear(d.getUTCFullYear() + years);
+  return d.getTime();
+}
+
+const MONTH_NAME_TO_INDEX = {
+  january: 0,
+  jan: 0,
+  february: 1,
+  feb: 1,
+  march: 2,
+  mar: 2,
+  april: 3,
+  apr: 3,
+  may: 4,
+  june: 5,
+  jun: 5,
+  july: 6,
+  jul: 6,
+  august: 7,
+  aug: 7,
+  september: 8,
+  sep: 8,
+  sept: 8,
+  october: 9,
+  oct: 9,
+  november: 10,
+  nov: 10,
+  december: 11,
+  dec: 11,
+};
+
+function utcMs(year, monthIndex, day) {
+  return Date.UTC(year, monthIndex, day);
+}
+
+function rollRangeToUpcoming(startMs, endMs, referenceDate) {
+  let start = startMs;
+  let end = endMs;
+  while (end < start) {
+    end = addUTCFullYears(end, 1);
+  }
+  const today = Date.UTC(
+    referenceDate.getUTCFullYear(),
+    referenceDate.getUTCMonth(),
+    referenceDate.getUTCDate()
+  );
+  let guard = 0;
+  while (end < today && guard < 10) {
+    start = addUTCFullYears(start, 1);
+    end = addUTCFullYears(end, 1);
+    guard += 1;
+  }
+  return { start, end };
+}
+
+/**
+ * Deterministic date-range extraction from the user prompt.
+ * Covers ISO ranges and month/day phrases like "December 23 – January 1".
+ */
+function extractTripDateRangeFromText(text, referenceDate = new Date()) {
+  const raw = safeString(text);
+  if (!raw) return null;
+
+  // Explicit ISO: 2026-12-23 to 2027-01-01 / 2026-12-23 – 2027-01-01
+  const iso = raw.match(
+    /\b(\d{4}-\d{2}-\d{2})\s*(?:to|through|thru|until|-|–|—)\s*(\d{4}-\d{2}-\d{2})\b/i
+  );
+  if (iso) {
+    let start = parseISODateOnly(iso[1]);
+    let end = parseISODateOnly(iso[2]);
+    if (start != null && end != null) {
+      const rolled = rollRangeToUpcoming(start, end, referenceDate);
+      return {
+        startDate: toISODateOnly(new Date(rolled.start)),
+        endDate: toISODateOnly(new Date(rolled.end)),
+        source: "iso",
+      };
+    }
+  }
+
+  const month = Object.keys(MONTH_NAME_TO_INDEX).join("|");
+  // December 23, 2026 – January 1, 2027  OR  Dec 23 - Jan 1
+  const re = new RegExp(
+    `\\b(${month})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s*(\\d{4}))?` +
+      `\\s*(?:to|through|thru|until|-|–|—)\\s*` +
+      `(${month})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s*(\\d{4}))?\\b`,
+    "i"
+  );
+  const m = raw.match(re);
+  if (!m) return null;
+
+  const startMonth = MONTH_NAME_TO_INDEX[m[1].toLowerCase()];
+  const startDay = parseInt(m[2], 10);
+  const endMonth = MONTH_NAME_TO_INDEX[m[4].toLowerCase()];
+  const endDay = parseInt(m[5], 10);
+  if (
+    startMonth == null ||
+    endMonth == null ||
+    !Number.isFinite(startDay) ||
+    !Number.isFinite(endDay)
+  ) {
+    return null;
+  }
+
+  const refYear = referenceDate.getUTCFullYear();
+  let startYear = m[3] ? parseInt(m[3], 10) : refYear;
+  let endYear = m[6] ? parseInt(m[6], 10) : startYear;
+  // Cross-year Dec→Jan without explicit end year.
+  if (!m[6] && endMonth < startMonth) {
+    endYear = startYear + 1;
+  }
+  // If neither year given, pick upcoming occurrence vs referenceDate.
+  if (!m[3] && !m[6]) {
+    let start = utcMs(refYear, startMonth, startDay);
+    let end = utcMs(endMonth < startMonth ? refYear + 1 : refYear, endMonth, endDay);
+    const rolled = rollRangeToUpcoming(start, end, referenceDate);
+    return {
+      startDate: toISODateOnly(new Date(rolled.start)),
+      endDate: toISODateOnly(new Date(rolled.end)),
+      source: "month_day",
+    };
+  }
+
+  let start = utcMs(startYear, startMonth, startDay);
+  let end = utcMs(endYear, endMonth, endDay);
+  const rolled = rollRangeToUpcoming(start, end, referenceDate);
+  return {
+    startDate: toISODateOnly(new Date(rolled.start)),
+    endDate: toISODateOnly(new Date(rolled.end)),
+    source: "month_day",
+  };
+}
+
+function applyExtractedDatesToTrip(trip, extracted) {
+  if (!trip || !extracted?.startDate || !extracted?.endDate) return trip;
+  trip.isDatesSet = true;
+  trip.startDate = extracted.startDate;
+  trip.endDate = extracted.endDate;
+  trip.unscheduledDaysCount = 0;
+  return trip;
+}
+
+/**
+ * Roll AI trip dates forward so upcoming stays are not stuck in a past year
+ * (common when the model emits Dec 2025 for "Dec 23 – Jan 1" asked in 2026).
+ */
+function normalizeCreateTripDates(trip, referenceDate = new Date()) {
+  if (!trip || typeof trip !== "object" || trip.isDatesSet !== true) return trip;
+  let start = parseISODateOnly(trip.startDate);
+  let end = parseISODateOnly(trip.endDate);
+  if (start == null || end == null) return trip;
+
+  // Cross-year range returned with end before start.
+  while (end < start) {
+    end = addUTCFullYears(end, 1);
+  }
+
+  const today = Date.UTC(
+    referenceDate.getUTCFullYear(),
+    referenceDate.getUTCMonth(),
+    referenceDate.getUTCDate()
+  );
+  // Keep shifting the whole range forward until the trip hasn't already ended.
+  let guard = 0;
+  while (end < today && guard < 10) {
+    start = addUTCFullYears(start, 1);
+    end = addUTCFullYears(end, 1);
+    guard += 1;
+  }
+
+  trip.startDate = toISODateOnly(new Date(start));
+  trip.endDate = toISODateOnly(new Date(end));
+  trip.unscheduledDaysCount = 0;
+  return trip;
+}
+
+/** Force the user's named hotel into seed items (replace invented stays). */
+function applyNamedStayToItems(items, stayName, trip) {
+  const name = safeString(stayName).trim();
+  if (!name || !Array.isArray(items)) return items;
+
+  const dest = safeString(trip?.destination).trim();
+  const location = dest ? `${name}, ${dest}` : name;
+  const isHotel = (item) =>
+    item &&
+    item.kind === "activity" &&
+    safeString(item.category).toLowerCase() === "hotel";
+
+  const hotels = items.filter(isHotel);
+  if (hotels.length > 0) {
+    return items.map((item) => {
+      if (!isHotel(item)) return item;
+      return {
+        ...item,
+        title: name,
+        location: location,
+        category: "hotel",
+        notes: item.notes || "Your stay",
+      };
+    });
+  }
+
+  return [
+    {
+      id: cryptoRandomId(),
+      kind: "activity",
+      include: true,
+      dayID: null,
+      dayIndex: 0,
+      dayLabel: "Day 1",
+      title: name,
+      subtitle: "",
+      location,
+      notes: "Your stay",
+      startTime: null,
+      endTime: null,
+      checklistItemsText: "",
+      flightFromCode: "",
+      flightToCode: "",
+      flightNumber: "",
+      confidence: 0.95,
+      sourceSnippet: name,
+      category: "hotel",
+    },
+    ...items,
+  ];
+}
+
+/** Day length for create_trip floors. */
+function createTripDayCount(trip, text) {
+  const inferred = inferTripDayCountFromText(text);
+  return resolveCreateTripDayCount(trip || {}, inferred);
+}
+
+/**
+ * Structural / retry floor that can finish in one Gemini response.
+ * Long trips used to demand 22 fully-specified items (plus 7×5 slot refills),
+ * which routinely hit MAX_TOKENS and salvaged a single hotel.
+ */
+function completableCreateTripItemCount(days) {
+  const n = Math.max(1, Math.min(Number(days) || 3, 30));
+  return Math.max(8, Math.min(n + 4, 12));
+}
+
+/** Minimum seed items for a usable create_trip draft. */
+function minCreateTripItemCount(trip, text) {
+  return completableCreateTripItemCount(createTripDayCount(trip, text));
+}
+
+/** Explicit day-by-day slots so under-delivery retries can't collapse to a hotel. */
+function buildCreateTripSlotList(days, destination) {
+  const dest = safeString(destination).trim() || "the destination city";
+  const n = Math.max(1, Math.min(Number(days) || 3, 10));
+  const kinds = ["cafe", "attraction", "restaurant", "hike", "beach"];
+  const lines = [];
+  let i = 1;
+  lines.push(
+    `${i++}. kind=activity category=hotel dayIndex=0 dayLabel="Day 1" — real hotel in ${dest}`
+  );
+  for (let d = 0; d < n; d++) {
+    const label = `Day ${d + 1}`;
+    const category = kinds[d % kinds.length];
+    lines.push(
+      `${i++}. kind=activity category=${category} dayIndex=${d} dayLabel="${label}" — one real ${category} with startTime/endTime HH:mm`
+    );
+  }
+  lines.push(
+    `${i++}. kind=checklist dayIndex=0 dayLabel="Day 1" — packing list with 6 short lines in checklistItemsText`
+  );
+  lines.push(
+    `${i++}. kind=reminder dayIndex=0 dayLabel="Day 1" — one prep reminder`
+  );
+  return lines.join("\n");
+}
+
+function createTripVenueCount(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.filter(
+    (item) =>
+      item &&
+      item.kind === "activity" &&
+      safeString(item.category).toLowerCase() !== "hotel"
+  ).length;
+}
+
+function isCreateTripUnderDelivered(trip, items, text, truncated) {
+  const draftTrip = trip && typeof trip === "object" ? trip : {};
+  const minItems = minCreateTripItemCount(draftTrip, text);
+  const itemCount = Array.isArray(items) ? items.length : 0;
+  const venueCount = createTripVenueCount(items);
+  const days = resolveCreateTripDayCount(
+    draftTrip,
+    inferTripDayCountFromText(text)
+  );
+  return (
+    truncated ||
+    itemCount < minItems ||
+    venueCount < Math.max(4, Math.min(days, 8))
   );
 }
 
@@ -636,9 +1034,15 @@ function redistributeCreateTripItems(items, dayCount) {
 function sanitizeItem(item, mode) {
   if (!item || typeof item !== "object") return null;
 
+  // place_finder: model often emits kind=activity for restaurants — coerce, don't drop.
+  let kind = safeString(item.kind).toLowerCase();
+  if (mode === "place_finder") {
+    kind = "place";
+  }
+
   const allowedKinds =
     mode === "place_finder" ? ["place"] : PLAN_DAY_KINDS;
-  if (!allowedKinds.includes(item.kind)) return null;
+  if (!allowedKinds.includes(kind)) return null;
 
   let dayIndex = coerceInt(item.dayIndex);
   if (dayIndex == null) {
@@ -647,7 +1051,7 @@ function sanitizeItem(item, mode) {
 
   const clean = {
     id: typeof item.id === "string" && item.id.length > 0 ? item.id : cryptoRandomId(),
-    kind: item.kind,
+    kind,
     include: item.include !== false,
     dayID: null,
     dayIndex,
@@ -856,10 +1260,17 @@ export default async function handler(req, res) {
           ? "create_trip"
           : "plan_day";
 
+    const rawUserText = safeString(body?.text ?? "").trim();
+    const referenceDate = new Date();
+    const extractedDates =
+      mode === "create_trip"
+        ? extractTripDateRangeFromText(rawUserText, referenceDate)
+        : null;
     const text =
       mode === "create_trip"
-        ? enforceCreateTripDays(body?.text ?? "")
-        : enforceItemCount(body?.text ?? "", mode);
+        ? enforceCreateTripDays(rawUserText, referenceDate, extractedDates)
+        : enforceItemCount(rawUserText, mode);
+    const requestedPlaceCount = explicitPlaceCountValue(rawUserText);
     const facts = body?.facts ?? {};
     const tripContext = body?.tripContext ?? {};
     const preferences = body?.preferences ?? null;
@@ -867,6 +1278,21 @@ export default async function handler(req, res) {
     const existingPlaces = Array.isArray(body?.existingPlaces) ? body.existingPlaces : [];
     const existingTrips = Array.isArray(body?.existingTrips) ? body.existingTrips : [];
     const scopeHint = body?.scopeHint ?? "";
+
+    // Structural item floor for create_trip (schema minItems), not just prose.
+    const createTripMinItems =
+      mode === "create_trip"
+        ? minCreateTripItemCount(
+            extractedDates
+              ? {
+                  isDatesSet: true,
+                  startDate: extractedDates.startDate,
+                  endDate: extractedDates.endDate,
+                }
+              : {},
+            text
+          )
+        : 0;
 
     const systemInstruction =
       mode === "place_finder"
@@ -879,7 +1305,7 @@ export default async function handler(req, res) {
       mode === "place_finder"
         ? PLACE_FINDER_SCHEMA
         : mode === "create_trip"
-          ? CREATE_TRIP_SCHEMA
+          ? buildCreateTripSchema(createTripMinItems)
           : PLAN_DAY_SCHEMA;
 
     const outputRequirements =
@@ -888,12 +1314,28 @@ export default async function handler(req, res) {
         : mode === "plan_day"
           ? "Unless clarificationNeeded or a single checklist/reminder/flight ask: items MUST contain multiple distinct itinerary entries (6–8 activities for day_plan; 8 options for options_list). Keep notes to one short sentence. Never collapse a day into one summary item."
           : mode === "create_trip"
-            ? "For multi-day trips: set unscheduledDaysCount (or dates) to the stated length. Spread activity items across EVERY dayIndex — never put the full itinerary on day 0. Each day-scoped activity needs dayIndex + dayLabel."
+            ? "Unless clarificationNeeded: items MUST be a real itinerary (never just a hotel). " +
+              `The items array MUST contain at least ${createTripMinItems} entries (schema-enforced). ` +
+              "One highlight per day is enough for long trips — do not write 4–5 venues per day. " +
+              (extractedDates
+                ? `HARD: trip.isDatesSet=true, startDate=${extractedDates.startDate}, endDate=${extractedDates.endDate}, unscheduledDaysCount=0. `
+                : "Set unscheduledDaysCount (or dates) to the stated length. ") +
+              "Spread activities across EVERY dayIndex — never dump everything on day 0. " +
+              "Each day-scoped activity needs dayIndex, dayLabel, startTime, and endTime. Keep notes under 12 words so the full array fits."
             : undefined;
 
     const userMessage = {
       mode,
       text,
+      referenceDate: toISODateOnly(referenceDate),
+      ...(extractedDates
+        ? {
+            extractedTripDates: {
+              startDate: extractedDates.startDate,
+              endDate: extractedDates.endDate,
+            },
+          }
+        : {}),
       scopeHint,
       facts,
       tripContext,
@@ -904,6 +1346,17 @@ export default async function handler(req, res) {
       ...(outputRequirements ? { outputRequirements } : {}),
     };
 
+    if (mode === "create_trip") {
+      console.log(
+        JSON.stringify({
+          event: "create_trip_request",
+          createTripMinItems,
+          extractedDates,
+          rawPreview: rawUserText.slice(0, 180),
+        })
+      );
+    }
+
     const model =
       (process.env.GEMINI_MODEL || DEFAULT_MODEL).toString().trim() || DEFAULT_MODEL;
 
@@ -912,7 +1365,14 @@ export default async function handler(req, res) {
     );
     url.searchParams.set("key", apiKey);
 
-    async function callGemini(messagePayload) {
+    async function callGemini(messagePayload, options = {}) {
+      const temperature =
+        typeof options.temperature === "number"
+          ? options.temperature
+          : mode === "place_finder"
+            ? 0.7
+            : 0.5;
+      const schema = options.responseSchema || responseSchema;
       const geminiRes = await fetch(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -927,15 +1387,15 @@ export default async function handler(req, res) {
             },
           ],
           generationConfig: {
-            temperature: mode === "place_finder" ? 0.7 : 0.5,
+            temperature,
             maxOutputTokens:
               mode === "place_finder"
                 ? 8192
                 : mode === "create_trip"
-                  ? 16384
+                  ? 32768
                   : 8192,
             responseMimeType: "application/json",
-            responseSchema,
+            responseSchema: schema,
           },
         }),
       });
@@ -963,6 +1423,22 @@ export default async function handler(req, res) {
       const blockReason = geminiJSON?.promptFeedback?.blockReason ?? null;
 
       const parsed = extractJSON(candidateText);
+      const itemCount = Array.isArray(parsed?.items) ? parsed.items.length : 0;
+      console.log(
+        JSON.stringify({
+          event: "gemini_create_trip_attempt",
+          mode,
+          finishReason,
+          blockReason,
+          ok: Boolean(parsed && typeof parsed === "object"),
+          itemCount,
+          truncated: finishReason === "MAX_TOKENS" || finishReason === "LENGTH",
+          isDatesSet: parsed?.trip?.isDatesSet ?? null,
+          startDate: parsed?.trip?.startDate ?? null,
+          endDate: parsed?.trip?.endDate ?? null,
+          textLength: String(candidateText).length,
+        })
+      );
       if (!parsed || typeof parsed !== "object") {
         // Do not echo the raw model payload to clients (can be huge).
         console.error("Gemini returned no usable JSON", {
@@ -986,6 +1462,8 @@ export default async function handler(req, res) {
     let firstCall = await callGemini(userMessage);
     // Parse failure: retry once with a smaller, shorter payload (truncation / empty candidates).
     if (!firstCall.ok && firstCall.error === "Gemini returned no usable JSON") {
+      const compactMin =
+        mode === "create_trip" ? Math.min(createTripMinItems, 10) : 0;
       const compactMessage = {
         ...userMessage,
         outputRequirements:
@@ -993,9 +1471,16 @@ export default async function handler(req, res) {
             ? "Return exactly 6 distinct kind=place venues. Keep notes under 12 words. Valid complete JSON only."
             : mode === "plan_day"
               ? "Return exactly 6 distinct activity items for this ask. Keep notes under 12 words. One venue per item. Valid complete JSON only."
-              : userMessage.outputRequirements,
+              : mode === "create_trip"
+                ? `Return a COMPLETE trip JSON with at least ${compactMin || 10} seed items: 1 hotel, 3 restaurants, 4 activities across the days, 1 checklist, 1 reminder. Notes under 10 words. Valid complete JSON only — never only a hotel.`
+                : userMessage.outputRequirements,
       };
-      const compactRetry = await callGemini(compactMessage);
+      const compactRetry = await callGemini(compactMessage, {
+        responseSchema:
+          mode === "create_trip"
+            ? buildCreateTripSchema(compactMin || 10)
+            : responseSchema,
+      });
       if (compactRetry.ok) {
         firstCall = compactRetry;
       }
@@ -1010,30 +1495,48 @@ export default async function handler(req, res) {
     }
 
     let result = firstCall.result;
+    let finishReason = firstCall.finishReason ?? null;
+
+    // Truncated create_trip salvage often leaves only a hotel — force a recount retry.
+    const truncatedCreateTrip =
+      mode === "create_trip" &&
+      !result.clarificationNeeded &&
+      (finishReason === "MAX_TOKENS" || finishReason === "LENGTH");
 
     // place_finder / plan_day often under-deliver (1–3 items). Retry once with a hard recount.
+    // Use the *original* user text for count checks — enforceItemCount appends "exactly 10"
+    // which would falsely suppress retries.
     const underDeliveredList =
       !result.clarificationNeeded &&
       Array.isArray(result.items) &&
       result.items.length > 0 &&
       result.items.length < 5 &&
-      !hasExplicitPlaceCount(text);
+      requestedPlaceCount == null;
 
-    if (mode === "place_finder" && underDeliveredList) {
-      const retryCall = await callGemini({
-        ...userMessage,
-        priorItemCount: result.items.length,
-        outputRequirements:
-          `Your previous answer only returned ${result.items.length} place(s). That is invalid. ` +
-          "Return a COMPLETE new JSON response with exactly 8 distinct kind=place venues for the same ask. " +
-          "Keep notes under 12 words. Do not apologize; do not return fewer than 8.",
-      });
-      if (
-        retryCall.ok &&
-        Array.isArray(retryCall.result.items) &&
-        retryCall.result.items.length > result.items.length
-      ) {
-        result = retryCall.result;
+    if (mode === "place_finder" && !result.clarificationNeeded) {
+      const priorCount = Array.isArray(result.items) ? result.items.length : 0;
+      const targetCount = requestedPlaceCount ?? 10;
+      const minAcceptable = requestedPlaceCount ?? 8;
+      if (priorCount > 0 && priorCount < minAcceptable) {
+        const retryCall = await callGemini(
+          {
+            ...userMessage,
+            priorItemCount: priorCount,
+            outputRequirements:
+              `Your previous answer only returned ${priorCount} place(s). That is invalid. ` +
+              `Return a COMPLETE new JSON response with exactly ${targetCount} distinct kind=place venues for the same ask. ` +
+              "Each item MUST use kind=\"place\" (never activity). Notes under 10 words. Do not apologize; do not return fewer than requested.",
+          },
+          { temperature: 0.4 }
+        );
+        if (
+          retryCall.ok &&
+          Array.isArray(retryCall.result.items) &&
+          retryCall.result.items.length > priorCount
+        ) {
+          result = retryCall.result;
+          finishReason = retryCall.finishReason ?? finishReason;
+        }
       }
     } else if (
       mode === "plan_day" &&
@@ -1054,16 +1557,93 @@ export default async function handler(req, res) {
         retryCall.result.items.length > result.items.length
       ) {
         result = retryCall.result;
+        finishReason = retryCall.finishReason ?? finishReason;
       }
       // Keep the short first answer if the recount retry failed to parse.
+    } else if (mode === "create_trip" && !result.clarificationNeeded) {
+      // Thin drafts (especially Toronto) sometimes return only a hotel — refill with explicit slots.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (
+          !isCreateTripUnderDelivered(
+            result.trip,
+            result.items,
+            text,
+            attempt === 0 && truncatedCreateTrip
+          )
+        ) {
+          break;
+        }
+        const draftTrip = sanitizeTripDraft(result.trip);
+        const days = resolveCreateTripDayCount(
+          draftTrip,
+          inferTripDayCountFromText(text)
+        );
+        const minItems = minCreateTripItemCount(draftTrip, text);
+        const itemCount = Array.isArray(result.items) ? result.items.length : 0;
+        const venueCount = createTripVenueCount(result.items);
+        const destination =
+          safeString(draftTrip.destination) ||
+          safeString(draftTrip.name) ||
+          "the destination";
+        const slotList = buildCreateTripSlotList(days, destination);
+        const retryCall = await callGemini(
+          {
+            ...userMessage,
+            text:
+              `Fill a COMPLETE ${days}-day itinerary for ${destination}. ` +
+              `Reuse trip name "${safeString(draftTrip.name) || destination}" and ` +
+              (extractedDates
+                ? `isDatesSet=true startDate=${extractedDates.startDate} endDate=${extractedDates.endDate}. `
+                : `unscheduledDaysCount=${days}. `) +
+              `Intent=full_itinerary.\n\n` +
+              `Previous answer only had ${itemCount} item(s)` +
+              (venueCount === 0 ? " (hotel-only — invalid)" : "") +
+              `. Replace items with ALL of these slots (real venues only):\n${slotList}\n\n` +
+              `Return at least ${minItems} items. Notes ≤8 words. Valid complete JSON only.`,
+            priorItemCount: itemCount,
+            outputRequirements:
+              `Return a COMPLETE create_trip JSON for ${destination} with at least ${minItems} items matching the slot list. ` +
+              "Never return only a hotel. Keep notes under 8 words. Include startTime/endTime on venue activities.",
+          },
+          {
+            temperature: 0.35,
+            responseSchema: buildCreateTripSchema(minItems),
+          }
+        );
+        if (
+          retryCall.ok &&
+          Array.isArray(retryCall.result.items) &&
+          retryCall.result.items.length > itemCount
+        ) {
+          // Prefer refill items; keep prior trip shell if refill omitted fields.
+          const mergedTrip =
+            retryCall.result.trip && typeof retryCall.result.trip === "object"
+              ? { ...draftTrip, ...sanitizeTripDraft(retryCall.result.trip) }
+              : draftTrip;
+          result = {
+            ...retryCall.result,
+            trip: mergedTrip,
+            clarificationNeeded: false,
+            intent: retryCall.result.intent || "full_itinerary",
+          };
+          finishReason = retryCall.finishReason ?? finishReason;
+        } else if (!retryCall.ok) {
+          break;
+        }
+      }
     }
 
     if (mode === "create_trip") {
       if (!result.trip || typeof result.trip !== "object") {
         return res.status(502).json({ error: "Invalid Gemini JSON shape (missing trip)" });
       }
-      const trip = sanitizeTripDraft(result.trip);
-      const inferredDays = inferTripDayCountFromText(text);
+      let trip = sanitizeTripDraft(result.trip);
+      // Ground-truth dates from the prompt beat a soft model miss (isDatesSet=false).
+      if (extractedDates) {
+        trip = applyExtractedDatesToTrip(trip, extractedDates);
+      }
+      trip = normalizeCreateTripDates(trip, referenceDate);
+      const inferredDays = inferTripDayCountFromText(rawUserText);
       if (
         inferredDays &&
         inferredDays >= 2 &&
@@ -1073,12 +1653,13 @@ export default async function handler(req, res) {
         trip.unscheduledDaysCount = inferredDays;
       }
       const dayCount = resolveCreateTripDayCount(trip, inferredDays);
-      const cleanedItems = Array.isArray(result.items)
+      let cleanedItems = Array.isArray(result.items)
         ? redistributeCreateTripItems(
             result.items.map((item) => sanitizeItem(item, "create_trip")).filter(Boolean),
             dayCount
           )
         : [];
+      cleanedItems = applyNamedStayToItems(cleanedItems, extractNamedStay(rawUserText), trip);
       return res.status(200).json({
         intent: result.intent ?? "unknown",
         clarificationNeeded: Boolean(result.clarificationNeeded),

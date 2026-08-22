@@ -55,8 +55,7 @@ struct TrackerDetailView: View {
                 .padding(.bottom, 10)
                 
                 HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(textSecondary)
+                    AppIcon(systemName: "magnifyingglass", size: 16, color: textSecondary)
                     TextField("Search", text: $query)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -64,8 +63,7 @@ struct TrackerDetailView: View {
                         Button {
                             query = ""
                         } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(textSecondary)
+                            AppIcon(systemName: "xmark.circle.fill", size: 16, color: textSecondary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -83,7 +81,6 @@ struct TrackerDetailView: View {
                             title: item.name,
                             subtitle: item.subtitle,
                             isVisited: store.isVisited(item.id, in: type),
-                            iconSystemName: icon(for: type),
                             pillBackground: pillBackground,
                             pillHighlight: pillHighlight,
                             textPrimary: textPrimary,
@@ -111,9 +108,11 @@ struct TrackerDetailView: View {
                                 ZStack {
                                     Circle()
                                         .fill(Color.orange)
-                                    Image(systemName: store.isVisited(item.id, in: type) ? "arrow.uturn.left" : "checkmark")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(.white)
+                                    AppIcon(
+                                        systemName: store.isVisited(item.id, in: type) ? "arrow.uturn.left" : "checkmark",
+                                        size: 18,
+                                        color: .white
+                                    )
                                 }
                                 .frame(width: 44, height: 44)
                             }
@@ -128,26 +127,12 @@ struct TrackerDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
     }
-
-    private func icon(for type: TrackerType) -> String {
-        switch type {
-        case .countries: return "globe.americas.fill"
-        case .states: return "map.fill"
-        case .continents: return "globe.europe.africa.fill"
-        case .subwaySystems: return "tram.fill"
-        case .nationalParks: return "mountain.2.fill"
-        }
-    }
-    
 }
 
 private struct TrackerItemRow: View {
-    @Environment(\.appAccentColor) private var accentColor
-    
     let title: String
     let subtitle: String?
     let isVisited: Bool
-    let iconSystemName: String
     let pillBackground: Color
     let pillHighlight: Color
     let textPrimary: Color
@@ -155,9 +140,11 @@ private struct TrackerItemRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: isVisited ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 20))
-                .foregroundStyle(textPrimary)
+            AppIcon(
+                lucide: isVisited ? "circle-check-big" : "circle",
+                size: 20,
+                color: textPrimary
+            )
             
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -182,4 +169,3 @@ private struct TrackerItemRow: View {
         .contentShape(Capsule())
     }
 }
-

@@ -65,7 +65,7 @@ struct TravelGlobeCard: View {
                 } else {
                     Map(position: $position, interactionModes: mapInteractionModes) {
                         ForEach(pins) { pin in
-                            Annotation(pin.title, coordinate: pin.coordinate, anchor: .center) {
+                            Annotation(pin.title, coordinate: pin.coordinate, anchor: .bottom) {
                                 Button {
                                     pauseAutoRotateTemporarily()
                                     selectedPinID = pin.id
@@ -252,31 +252,16 @@ private struct DestinationPinView: View {
     let count: Int
     var isSelected: Bool = false
     
-    private let size: CGFloat = 36
+    private let size: CGFloat = 52
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            SquareMapPinView(
-                size: size,
-                image: MapPinImageCache.image(data: coverImageData, id: pinID.uuidString, pointSize: size),
-                fallbackColor: Color(hex: 0x4DA1F7),
-                fallbackSystemImage: "suitcase.fill",
-                isSelected: isSelected
-            )
-            
-            if count > 1 {
-                Text("\(count)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(Color.black.opacity(0.82), in: Capsule(style: .continuous))
-                    .overlay {
-                        Capsule(style: .continuous)
-                            .strokeBorder(.white.opacity(0.95), lineWidth: 1)
-                    }
-                    .offset(x: 6, y: -6)
-            }
-        }
+        SquareMapPinView(
+            size: size,
+            image: MapPinImageCache.image(data: coverImageData, id: pinID.uuidString, pointSize: size),
+            fallbackColor: Color(hex: 0x4DA1F7),
+            fallbackSystemImage: "suitcase.fill",
+            isSelected: isSelected,
+            badgeCount: count > 1 ? count : nil
+        )
     }
 }

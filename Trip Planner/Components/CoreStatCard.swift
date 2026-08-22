@@ -39,9 +39,7 @@ struct CoreStatCard: View {
                     .foregroundStyle(textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.app(13, weight: .semibold))
-                    .foregroundStyle(textSecondary)
+                AppIcon(systemName: "chevron.right", size: 13, color: textSecondary)
             }
             
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -70,9 +68,7 @@ struct CoreStatCard: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                    Image(systemName: iconSystemName)
-                        .font(.app(18, weight: .semibold))
-                        .foregroundStyle(accentColor)
+                    AppIcon(systemName: iconSystemName, size: 18, color: accentColor)
                 }
                 .frame(width: 44, height: 44)
             }
@@ -126,9 +122,7 @@ struct CollectionStatRow: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(accentColor.opacity(0.14))
-                Image(systemName: type.iconSystemName)
-                    .font(.app(16, weight: .semibold))
-                    .foregroundStyle(accentColor)
+                AppIcon(systemName: type.iconSystemName, size: 16, color: accentColor)
             }
             .frame(width: 40, height: 40)
             
@@ -150,9 +144,7 @@ struct CollectionStatRow: View {
                     .foregroundStyle(textSecondary)
             }
             
-            Image(systemName: "chevron.right")
-                .font(.app(13, weight: .semibold))
-                .foregroundStyle(textSecondary)
+            AppIcon(systemName: "chevron.right", size: 13, color: textSecondary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

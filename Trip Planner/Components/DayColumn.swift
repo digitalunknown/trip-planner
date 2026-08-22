@@ -29,12 +29,13 @@ struct DayColumn: View {
     let onMoveFlightLeft: (FlightItem) -> Void
     let onMoveFlightRight: (FlightItem) -> Void
     let onMoveFlightToParked: ((FlightItem) -> Void)?
-    var onPlanDay: (() -> Void)? = nil
-    let showEmptyPlaceholder: Bool
-    /// When true, empty-state CTA is fully visible; otherwise it animates completely out.
-    var isEmptyStateFocused: Bool = true
     
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isBreakdownExpanded = false
+    @State private var showHeaderDivider = false
+    @State private var breakdownExpandGeneration = 0
+    
+    private let breakdownExpandDuration: TimeInterval = 0.24
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xD0D0D6) }
@@ -42,6 +43,10 @@ struct DayColumn: View {
     private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
     private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xA8A8B0) }
     private var highlightFillColor: Color { colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04) }
+    private var inactiveSegmentColor: Color { colorScheme == .dark ? Color(hex: 0x3A3A3A) : Color(hex: 0xD0D0D6) }
+    private var headerDividerColor: Color { colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.08) }
+    
+    private var dayBreakdown: DayBreakdown { DayBreakdown.make(from: day) }
     
     private struct TimedRow: Identifiable {
         enum Kind {
@@ -86,35 +91,12 @@ struct DayColumn: View {
             }
     }
 
-    private var isDayEmpty: Bool {
-        day.events.isEmpty && day.reminders.isEmpty && day.checklists.isEmpty && day.flights.isEmpty
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(isUnscheduled ? "No Date" : day.displayTitle)
-                    .font(.app(17, weight: .semibold))
-                    .foregroundStyle(textPrimary)
-                Text("Day \(day.order) of \(totalDays)")
-                    .font(.appCaption)
-                    .foregroundStyle(textSecondary)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if isDayEmpty && showEmptyPlaceholder {
-                dayEmptyState
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .opacity(isEmptyStateFocused ? 1 : 0)
-                    .scaleEffect(isEmptyStateFocused ? 1 : 0.92, anchor: .center)
-                    .allowsHitTesting(isEmptyStateFocused)
-                    .animation(.easeInOut(duration: 0.32), value: isEmptyStateFocused)
-            } else {
-                dayContentScroll
-            }
+            dayHeader
+            dayContentScroll
         }
-        .frame(width: columnWidth, height: columnHeight, alignment: .top)
+        .frame(width: max(columnWidth, 0), height: max(columnHeight, 0), alignment: .top)
         .modifier(DayColumnGlassChrome(
             isCurrentDay: isCurrentDay,
             dayBackground: dayBackground,
@@ -122,6 +104,141 @@ struct DayColumn: View {
             highlightStrokeColor: highlightStrokeColor,
             highlightFillColor: highlightFillColor
         ))
+    }
+    
+    private var dayHeader: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                toggleDayBreakdown()
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(isUnscheduled ? "No Date" : day.displayTitle)
+                            .font(.app(17, weight: .semibold))
+                            .foregroundStyle(textPrimary)
+                        Text("Day \(day.order) of \(totalDays)")
+                            .font(.appCaption)
+                            .foregroundStyle(textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    AppIcon(
+                        systemName: isBreakdownExpanded ? "chevron.up" : "chevron.down",
+                        size: 16,
+                        color: textSecondary
+                    )
+                    .padding(.top, 2)
+                }
+                .padding(14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            
+            if isBreakdownExpanded {
+                dayBreakdownExpanded
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 14)
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.animation(.easeOut(duration: 0.10))
+                                .combined(with: .move(edge: .top)),
+                            removal: .opacity.animation(.easeIn(duration: 0.08))
+                                .combined(with: .move(edge: .top))
+                        )
+                    )
+            }
+            
+            if showHeaderDivider {
+                Rectangle()
+                    .fill(headerDividerColor)
+                    .frame(height: 1)
+                    .transition(.opacity)
+            }
+        }
+    }
+    
+    private func toggleDayBreakdown() {
+        if isBreakdownExpanded {
+            breakdownExpandGeneration += 1
+            showHeaderDivider = false
+            withAnimation(.snappy(duration: breakdownExpandDuration)) {
+                isBreakdownExpanded = false
+            }
+            return
+        }
+        
+        breakdownExpandGeneration += 1
+        let generation = breakdownExpandGeneration
+        withAnimation(.snappy(duration: breakdownExpandDuration)) {
+            isBreakdownExpanded = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + breakdownExpandDuration) {
+            guard generation == breakdownExpandGeneration, isBreakdownExpanded else { return }
+            withAnimation(.easeOut(duration: 0.14)) {
+                showHeaderDivider = true
+            }
+        }
+    }
+    
+    private var dayBreakdownExpanded: some View {
+        let breakdown = dayBreakdown
+        let segments = breakdown.segments(inactiveColor: inactiveSegmentColor)
+        
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(DayBreakdown.formatActive(breakdown.totalActiveMinutes))
+                    .font(.app(17, weight: .semibold))
+                    .foregroundStyle(textPrimary)
+                Text("Total active")
+                    .font(.appCaption)
+                    .foregroundStyle(textSecondary)
+            }
+            
+            GeometryReader { geo in
+                let gap: CGFloat = 3
+                let visible = segments.filter { $0.minutes > 0 }
+                let gaps = CGFloat(max(visible.count - 1, 0)) * gap
+                let rawWidth = geo.size.width
+                let width = (rawWidth.isFinite && rawWidth > 0) ? rawWidth : 0
+                let available = max(0, width - gaps)
+                let dayTotal = CGFloat(DayBreakdown.dayMinutes)
+                
+                HStack(spacing: gap) {
+                    ForEach(visible) { segment in
+                        let segmentWidth: CGFloat = {
+                            guard available > 0, dayTotal > 0 else { return 0 }
+                            let value = available * CGFloat(segment.minutes) / dayTotal
+                            guard value.isFinite, value >= 0 else { return 0 }
+                            return value
+                        }()
+                        Capsule(style: .continuous)
+                            .fill(segment.color)
+                            .frame(width: segmentWidth)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            }
+            .frame(height: 7)
+            
+            HStack(spacing: 14) {
+                ForEach(segments.filter { $0.id != "inactive" }) { segment in
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(segment.color)
+                            .frame(width: 7, height: 7)
+                        Text(segment.title)
+                            .font(.app(12, weight: .regular))
+                            .foregroundStyle(textSecondary)
+                        Text(DayBreakdown.formatHours(segment.minutes))
+                            .font(.app(12, weight: .semibold))
+                            .foregroundStyle(textPrimary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
     
     private var dayContentScroll: some View {
@@ -138,21 +255,21 @@ struct DayColumn: View {
                                         Button {
                                             onMoveReminderLeft(reminder)
                                         } label: {
-                                            Label("Move Left", systemImage: "arrow.left")
+                                            Label("Move Left", appIcon: "square.arrow.left")
                                         }
                                     }
                                     if day.order < totalDays {
                                         Button {
                                             onMoveReminderRight(reminder)
                                         } label: {
-                                            Label("Move Right", systemImage: "arrow.right")
+                                            Label("Move Right", appIcon: "square.arrow.right")
                                         }
                                     }
                                     if let moveToParked = onMoveReminderToParked {
                                         Button {
                                             moveToParked(reminder)
                                         } label: {
-                                            Label("Move to Ideas", systemImage: "arrow.right")
+                                            Label("Move to Ideas", appIcon: "lightbulb")
                                         }
                                     }
                                     Divider()
@@ -160,13 +277,13 @@ struct DayColumn: View {
                                     Button {
                                         onTapReminder(reminder)
                                     } label: {
-                                        Label("Edit Reminder", systemImage: "pencil")
+                                        Label("Edit Reminder", appIcon: "square.and.pencil")
                                     }
                                     
                                     Button(role: .destructive) {
                                         onDeleteReminder(reminder)
                                     } label: {
-                                        Label("Delete Reminder", systemImage: "trash")
+                                        Label("Delete Reminder", appIcon: "trash")
                                     }
                                     .tint(.red)
                                 }
@@ -184,21 +301,21 @@ struct DayColumn: View {
                                         Button {
                                             onMoveChecklistLeft(checklist)
                                         } label: {
-                                            Label("Move Left", systemImage: "arrow.left")
+                                            Label("Move Left", appIcon: "square.arrow.left")
                                         }
                                     }
                                     if day.order < totalDays {
                                         Button {
                                             onMoveChecklistRight(checklist)
                                         } label: {
-                                            Label("Move Right", systemImage: "arrow.right")
+                                            Label("Move Right", appIcon: "square.arrow.right")
                                         }
                                     }
                                     if let moveToParked = onMoveChecklistToParked {
                                         Button {
                                             moveToParked(checklist)
                                         } label: {
-                                            Label("Move to Ideas", systemImage: "arrow.right")
+                                            Label("Move to Ideas", appIcon: "lightbulb")
                                         }
                                     }
                                     Divider()
@@ -206,13 +323,13 @@ struct DayColumn: View {
                                     Button {
                                         onTapChecklist(checklist)
                                     } label: {
-                                        Label("Edit Checklist", systemImage: "pencil")
+                                        Label("Edit Checklist", appIcon: "square.and.pencil")
                                     }
                                     
                                     Button(role: .destructive) {
                                         onDeleteChecklist(checklist)
                                     } label: {
-                                        Label("Delete Checklist", systemImage: "trash")
+                                        Label("Delete Checklist", appIcon: "trash")
                                     }
                                     .tint(.red)
                                 }
@@ -230,21 +347,21 @@ struct DayColumn: View {
                                     Button {
                                         onMoveFlightLeft(flight)
                                     } label: {
-                                        Label("Move Left", systemImage: "arrow.left")
+                                        Label("Move Left", appIcon: "square.arrow.left")
                                     }
                                 }
                                 if day.order < totalDays {
                                     Button {
                                         onMoveFlightRight(flight)
                                     } label: {
-                                        Label("Move Right", systemImage: "arrow.right")
+                                        Label("Move Right", appIcon: "square.arrow.right")
                                     }
                                 }
                                 if let moveToParked = onMoveFlightToParked {
                                     Button {
                                         moveToParked(flight)
                                     } label: {
-                                        Label("Move to Ideas", systemImage: "arrow.right")
+                                        Label("Move to Ideas", appIcon: "lightbulb")
                                     }
                                 }
                                 Divider()
@@ -252,13 +369,13 @@ struct DayColumn: View {
                                 Button {
                                     onTapFlight(flight)
                                 } label: {
-                                    Label("Edit Travel", systemImage: "pencil")
+                                    Label("Edit Travel", appIcon: "square.and.pencil")
                                 }
                                 
                                 Button(role: .destructive) {
                                     onDeleteFlight(flight)
                                 } label: {
-                                    Label("Delete Travel", systemImage: "trash")
+                                    Label("Delete Travel", appIcon: "trash")
                                 }
                                 .tint(.red)
                             }
@@ -270,21 +387,21 @@ struct DayColumn: View {
                                     Button {
                                         onMoveEventLeft(event)
                                     } label: {
-                                        Label("Move Left", systemImage: "arrow.left")
+                                        Label("Move Left", appIcon: "square.arrow.left")
                                     }
                                 }
                                 if day.order < totalDays {
                                     Button {
                                         onMoveEventRight(event)
                                     } label: {
-                                        Label("Move Right", systemImage: "arrow.right")
+                                        Label("Move Right", appIcon: "square.arrow.right")
                                     }
                                 }
                                 if let moveToParked = onMoveEventToParked {
                                     Button {
                                         moveToParked(event)
                                     } label: {
-                                        Label("Move to Ideas", systemImage: "arrow.right")
+                                        Label("Move to Ideas", appIcon: "lightbulb")
                                     }
                                 }
                                 Divider()
@@ -292,19 +409,19 @@ struct DayColumn: View {
                                 Button {
                                     onEdit(event)
                                 } label: {
-                                    Label("Edit Activity", systemImage: "pencil")
+                                    Label("Edit Activity", appIcon: "square.and.pencil")
                                 }
                                 
                                 Button {
                                     onDuplicate(event)
                                 } label: {
-                                    Label("Duplicate Activity", systemImage: "doc.on.doc")
+                                    Label("Duplicate Activity", appIcon: "doc.on.doc")
                                 }
                                 
                                 Button(role: .destructive) {
                                     onDelete(event)
                                 } label: {
-                                    Label("Delete Activity", systemImage: "trash")
+                                    Label("Delete Activity", appIcon: "trash")
                                 }
                                 .tint(.red)
                             }
@@ -316,42 +433,11 @@ struct DayColumn: View {
             .padding(14)
         }
     }
-    
-    private var dayEmptyState: some View {
-        ViewThatFits(in: .vertical) {
-            emptyStateStack(spacing: 18, showsMessage: true)
-            emptyStateStack(spacing: 10, showsMessage: true)
-            emptyStateStack(spacing: 0, showsMessage: false)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    private func emptyStateStack(spacing: CGFloat, showsMessage: Bool) -> some View {
-        VStack(spacing: spacing) {
-            if showsMessage {
-                Text("You haven’t added anything to this day yet")
-                    .font(.app(15, weight: .semibold))
-                    .foregroundStyle(textPrimary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 28)
-            }
-            
-            Button {
-                onPlanDay?()
-            } label: {
-                Label("Plan Day", systemImage: "sparkles")
-            }
-            .buttonStyle(.primaryCapsule)
-            .padding(.horizontal, 28)
-        }
-        .frame(maxWidth: .infinity)
-    }
 }
 
 /// Liquid glass day-column chrome in dark mode on iOS 26+; solid fill + stroke in light
 /// mode (and on earlier OS) so columns stay visible against the sheet.
-private struct DayColumnGlassChrome: ViewModifier {
+struct DayColumnGlassChrome: ViewModifier {
     let isCurrentDay: Bool
     let dayBackground: Color
     let columnStroke: Color

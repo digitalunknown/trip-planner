@@ -4,21 +4,17 @@ struct PassportView: View {
     @Environment(TripStore.self) private var tripStore
     @Environment(\.colorScheme) private var colorScheme
     
-    private let passportStampSize: CGFloat = 220
+    private let stampWidth: CGFloat = 220
     
     private var pageBackground: Color { colorScheme == .dark ? Color(hex: 0x0A0A0A) : Color(hex: 0xE0E0E0) }
     private var dotColor: Color { colorScheme == .dark ? Color.white.opacity(0.09) : Color.black.opacity(0.08) }
+    private var textSecondary: Color {
+        (colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717))
+            .opacity(colorScheme == .dark ? 0.72 : 0.62)
+    }
     
-    private var completedTrips: [Trip] {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        return tripStore.trips
-            .filter { trip in
-                guard trip.isDatesSet else { return false }
-                let end = calendar.startOfDay(for: trip.endDate)
-                return end < today
-            }
-            .sorted { $0.endDate > $1.endDate }
+    private var loggedCities: [String] {
+        AchievementsCatalog.loggedCities(from: tripStore.trips)
     }
     
     var body: some View {
@@ -29,29 +25,39 @@ struct PassportView: View {
             
             ScrollView(.vertical, showsIndicators: true) {
                 LazyVStack(spacing: 28) {
-                    if completedTrips.isEmpty {
-                        PassportStampView(
-                            destination: "TripStacks",
-                            iconSystemName: "sparkles",
-                            date: Date(),
-                            size: passportStampSize,
-                            tint: .primary
-                        )
+                    if loggedCities.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(AchievementsCatalog.cityStampAsset)
+                                .resizable()
+                                .interpolation(.high)
+                                .scaledToFit()
+                                .frame(width: stampWidth)
+                                .opacity(0.45)
+                            Text("Complete a trip to earn your first city stamp.")
+                                .font(.appCallout)
+                                .foregroundStyle(textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.horizontal, 24)
                     } else {
-                        ForEach(completedTrips) { trip in
-                            PassportStampView(
-                                destination: trip.destination,
-                                iconSystemName: "globe",
-                                date: trip.endDate,
-                                size: passportStampSize,
-                                tint: .primary
-                            )
+                        ForEach(loggedCities, id: \.self) { city in
+                            VStack(spacing: 10) {
+                                Image(AchievementsCatalog.cityStampAsset)
+                                    .resizable()
+                                    .interpolation(.high)
+                                    .scaledToFit()
+                                    .frame(width: stampWidth)
+                                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.35 : 0.12), radius: 16, y: 10)
+                                Text(city)
+                                    .font(.app(15, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                                    .multilineTextAlignment(.center)
+                            }
                             .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
                 }
-                // Extra bottom padding so the last stamp's shadow isn't clipped by the ScrollView bounds.
                 .padding(.top, 24)
                 .padding(.bottom, 56)
                 .padding(.horizontal, 16)
@@ -88,5 +94,3 @@ private struct DotGridBackground: View {
         .allowsHitTesting(false)
     }
 }
-
-

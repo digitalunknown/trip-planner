@@ -86,6 +86,7 @@ enum AchievementCategory: String, CaseIterable, Identifiable, Hashable {
     case placesSaved
     case restaurantsTried
     case nationalParks
+    case cities
     case aiTripPlanning
     case checklistsCompleted
     
@@ -102,6 +103,7 @@ enum AchievementCategory: String, CaseIterable, Identifiable, Hashable {
         case .placesSaved: return "Places saved"
         case .restaurantsTried: return "Restaurants tried"
         case .nationalParks: return "National Parks"
+        case .cities: return "Cities"
         case .aiTripPlanning: return "AI trip planning"
         case .checklistsCompleted: return "Checklists completed"
         }
@@ -109,17 +111,18 @@ enum AchievementCategory: String, CaseIterable, Identifiable, Hashable {
     
     var systemImage: String {
         switch self {
-        case .tripLogging: return "suitcase.fill"
-        case .countries: return "globe.americas.fill"
-        case .continents: return "globe.europe.africa.fill"
+        case .tripLogging: return "luggage"
+        case .countries: return "globe"
+        case .continents: return "earth"
         case .daysTraveled: return "calendar"
-        case .flights: return "airplane"
-        case .drives: return "car.fill"
-        case .placesSaved: return "mappin.and.ellipse"
-        case .restaurantsTried: return "fork.knife"
-        case .nationalParks: return "mountain.2.fill"
+        case .flights: return "plane"
+        case .drives: return "car"
+        case .placesSaved: return "map-pinned"
+        case .restaurantsTried: return "utensils"
+        case .nationalParks: return "mountain"
+        case .cities: return "building-2"
         case .aiTripPlanning: return "sparkles"
-        case .checklistsCompleted: return "checklist"
+        case .checklistsCompleted: return "list-checks"
         }
     }
     
@@ -155,6 +158,7 @@ struct AchievementDefinition: Identifiable, Hashable {
 
 enum AchievementsCatalog {
     static let nationalParkBadgeAsset = "illustrations/badge-national-park"
+    static let cityStampAsset = "illustrations/stamp-city"
     static let lockedBadgeAsset = "illustrations/badge-locked"
     
     /// Park-specific badge art keyed by tracker item id (`nps-…`).
@@ -168,6 +172,14 @@ enum AchievementsCatalog {
     
     private static func badgeAsset(forParkID id: String) -> String {
         nationalParkBadgeAssetsByID[id] ?? nationalParkBadgeAsset
+    }
+    
+    private static func cityBadgeID(forName name: String) -> String {
+        let slug = name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+        return "city-\(slug)"
     }
     
     /// Milestone badges (locked ones still appear in the sheet).
@@ -249,21 +261,64 @@ enum AchievementsCatalog {
             }
     }
     
-    /// Milestones plus earned park badges, unlocked newest-first, then locked milestones.
+    /// One stamp badge per logged city (from completed trip destinations).
+    static func unlockedCityBadges(cityNames: [String]) -> [AchievementDefinition] {
+        cityNames.map { name in
+            AchievementDefinition(
+                id: cityBadgeID(forName: name),
+                category: .cities,
+                tier: 1,
+                threshold: 1,
+                title: name,
+                description: name,
+                customIllustrationName: cityStampAsset,
+                hidesWhenLocked: true
+            )
+        }
+    }
+    
+    /// Unique non-empty destinations from completed / past trips, newest first.
+    static func loggedCities(from trips: [Trip], calendar: Calendar = .current) -> [String] {
+        let today = calendar.startOfDay(for: Date())
+        let completed = trips
+            .filter { trip in
+                guard trip.isDatesSet else { return false }
+                return calendar.startOfDay(for: trip.endDate) < today
+            }
+            .sorted { $0.endDate > $1.endDate }
+        
+        var seen = Set<String>()
+        var cities: [String] = []
+        for trip in completed {
+            let name = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { continue }
+            let key = name.lowercased()
+            if seen.insert(key).inserted {
+                cities.append(name)
+            }
+        }
+        return cities
+    }
+    
+    /// Milestones plus earned park / city badges, unlocked newest-first, then locked milestones.
     static func visibleAchievements(
         progress: AchievementProgress,
-        visitedParkIDs: Set<String>
+        visitedParkIDs: Set<String>,
+        loggedCities: [String] = []
     ) -> [AchievementDefinition] {
-        let combined = milestones + unlockedNationalParkBadges(visitedIDs: visitedParkIDs)
+        let combined = milestones
+            + unlockedNationalParkBadges(visitedIDs: visitedParkIDs)
+            + unlockedCityBadges(cityNames: loggedCities)
         return AchievementUnlockStore.sorted(combined, progress: progress)
     }
     
     static func unlockedCount(
         progress: AchievementProgress,
-        visitedParkIDs: Set<String>
+        visitedParkIDs: Set<String>,
+        loggedCities: [String] = []
     ) -> Int {
         let milestoneUnlocked = milestones.filter { progress.isUnlocked($0) }.count
-        return milestoneUnlocked + visitedParkIDs.count
+        return milestoneUnlocked + visitedParkIDs.count + loggedCities.count
     }
     
     private static func make(
@@ -307,6 +362,7 @@ struct AchievementProgress {
         case .placesSaved: return placesSaved
         case .restaurantsTried: return restaurantsTried
         case .nationalParks: return 0 // per-park badges are handled separately
+        case .cities: return 0 // per-city stamps are handled separately
         case .aiTripPlanning: return aiDaysPlanned
         case .checklistsCompleted: return checklistsCompleted
         }

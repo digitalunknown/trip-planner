@@ -42,7 +42,7 @@ struct PlacesHomeView: View {
         guard let place = placeForImageUpdate else { return "" }
         let loc = place.location.trimmingCharacters(in: .whitespacesAndNewlines)
         if !loc.isEmpty { return loc }
-        return PlaceNaming.title(location: place.location, fallback: place.name)
+        return PlaceNaming.displayTitle(name: place.name, location: place.location)
     }
     
     private var masonryColumns: (left: [Place], right: [Place]) {
@@ -286,7 +286,7 @@ struct PlacesHomeView: View {
                     }
                 }
             } label: {
-                Label("Add to Trip", systemImage: "suitcase")
+                Label("Add to Trip", appIcon: "suitcase")
             }
             
             Menu {
@@ -294,25 +294,25 @@ struct PlacesHomeView: View {
                     placeForImageUpdate = place
                     showUnsplashPicker = true
                 } label: {
-                    Label("Choose from Unsplash", systemImage: "sparkles")
+                    Label("Choose from Unsplash", appIcon: "sparkles")
                 }
                 Button {
                     placeForImageUpdate = place
                     photosPickerPresented = true
                 } label: {
-                    Label("Upload from Photos", systemImage: "photo.on.rectangle")
+                    Label("Upload from Photos", appIcon: "photo.on.rectangle")
                 }
             } label: {
                 Label(
                     place.hasPhoto ? "Update Image" : "Add Image",
-                    systemImage: place.hasPhoto ? "photo" : "photo.badge.plus"
+                    appIcon: place.hasPhoto ? "photo" : "photo.badge.plus"
                 )
             }
             
             Button {
                 placeToEdit = place
             } label: {
-                Label("Edit", systemImage: "pencil")
+                Label("Edit", appIcon: "square.and.pencil")
             }
             
             Divider()
@@ -320,7 +320,7 @@ struct PlacesHomeView: View {
             Button(role: .destructive) {
                 placePendingDelete = place
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("Delete", appIcon: "trash")
             }
         }
     }
@@ -328,7 +328,7 @@ struct PlacesHomeView: View {
     private func addPlace(_ place: Place, to trip: Trip) {
         guard let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) else { return }
         
-        let title = PlaceNaming.title(location: place.location, fallback: place.name)
+        let title = PlaceNaming.displayTitle(name: place.name, location: place.location)
         let event = EventItem(
             title: title,
             description: place.note,
@@ -336,8 +336,8 @@ struct PlacesHomeView: View {
             location: place.location.isEmpty ? title : place.location,
             latitude: place.latitude,
             longitude: place.longitude,
-            icon: place.placeType == .unspecified ? "mappin.and.ellipse" : place.placeType.iconSystemName,
-            accent: .neutral,
+            icon: place.placeType.mapIconName,
+            accent: .cream,
             photoData: place.photoData
         )
         
@@ -463,11 +463,13 @@ private struct PlaceTypeFilterChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 if isSelected {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .bold))
+                    AppIcon(systemName: "xmark", size: 10, color: foreground)
                 }
-                Image(systemName: iconSystemName)
-                    .font(.system(size: 12, weight: .semibold))
+                AppIcon(
+                    systemName: iconSystemName,
+                    size: 12,
+                    color: foreground.opacity(isSelected ? 1 : 0.78)
+                )
                 Text(title)
                     .font(.app(13, weight: .semibold))
             }

@@ -48,7 +48,7 @@ struct SettingsView: View {
                 Section {
                     if auth.isSignedIn {
                         HStack {
-                            Text("Account")
+                            Label("Account", appIcon: "user-round", color: .primary)
                             Spacer()
                             Text(auth.displayName ?? "Apple ID")
                                 .foregroundStyle(.secondary)
@@ -58,7 +58,7 @@ struct SettingsView: View {
                         Button(role: .destructive) {
                             auth.signOut()
                         } label: {
-                            Text("Sign out")
+                            Label("Sign out", appIcon: "log-out", color: .red)
                         }
                     } else {
                         SignInWithAppleButton(.signIn) { request in
@@ -90,51 +90,70 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                 }
                 
-                Section("Personal") {
-                    TextField("Display Name", text: $displayNameDraft)
-                        .textContentType(.name)
-                        .textInputAutocapitalization(.words)
+                Section {
+                    Label {
+                        TextField("Display Name", text: $displayNameDraft)
+                            .textContentType(.name)
+                            .textInputAutocapitalization(.words)
+                    } icon: {
+                        AppIcon(lucide: "user-round", size: AppLucide.chromeSize, color: .primary)
+                    }
                     
-                    Picker("Home Currency", selection: $currencyCode) {
+                    Picker(selection: $currencyCode) {
                         ForEach(popularCurrencies) { option in
                             Text(option.label).tag(option.code)
                         }
+                    } label: {
+                        Label("Home Currency", appIcon: "circle-dollar-sign", color: .primary)
                     }
+                } header: {
+                    Text("Personal")
                 }
                 
-                Section("App Settings") {
-                    Picker("Appearance", selection: $appearanceMode) {
+                Section {
+                    Picker(selection: $appearanceMode) {
                         ForEach(AppearanceMode.allCases) { mode in
                             Text(mode.title).tag(mode)
                         }
+                    } label: {
+                        Label("Appearance", appIcon: "sun-moon", color: .primary)
                     }
                     
-                    Picker("Map Style", selection: mapStylePreference) {
+                    Picker(selection: mapStylePreference) {
                         ForEach(AppMapStylePreference.allCases) { style in
                             Text(style.title).tag(style)
                         }
+                    } label: {
+                        Label("Map Style", appIcon: "map", color: .primary)
                     }
                     
-                    Toggle("Haptics", isOn: $hapticsEnabled)
-                        .tint(appAccentColor)
-                    Toggle("Parallax Effects", isOn: $parallaxEffectsEnabled)
-                        .tint(appAccentColor)
+                    Toggle(isOn: $hapticsEnabled) {
+                        Label("Haptics", appIcon: "vibrate", color: .primary)
+                    }
+                    .tint(appAccentColor)
+                    
+                    Toggle(isOn: $parallaxEffectsEnabled) {
+                        Label("Parallax Effects", appIcon: "move-3d", color: .primary)
+                    }
+                    .tint(appAccentColor)
                     
                     Link(destination: URL(string: "https://apps.apple.com/us/app/tripstacks-travel-organizer/id6757321257?action=write-review")!) {
                         HStack {
-                            Text("Review TripStacks")
+                            Label("Review TripStacks", appIcon: "star", color: .primary)
                             Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .foregroundStyle(.secondary)
+                            AppIcon(systemName: "arrow.up.right", size: 14, color: .secondary)
                         }
                     }
+                    .foregroundStyle(.primary)
                     
                     HStack {
-                        Text("Version")
+                        Label("Version", appIcon: "info", color: .primary)
                         Spacer()
                         Text("1.2")
                             .foregroundStyle(.secondary)
                     }
+                } header: {
+                    Text("App Settings")
                 }
             }
             .navigationTitle("Settings")

@@ -17,6 +17,7 @@ struct PlaceDetailView: View {
     @State private var selectedAppleMapItem: MKMapItem?
     @State private var isPreviewingAppleMaps = false
     @State private var draftNote: String = ""
+    @State private var draftName: String = ""
     @State private var draftLocation: String = ""
     @State private var draftLatitude: Double?
     @State private var draftLongitude: Double?
@@ -25,6 +26,7 @@ struct PlaceDetailView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var selectedTripID: UUID?
     @FocusState private var isNotesFocused: Bool
+    @FocusState private var isNameFocused: Bool
     
     private var place: Place? {
         placeStore.place(id: placeID)
@@ -42,7 +44,7 @@ struct PlaceDetailView: View {
     }
     
     private func placeTitle(for place: Place) -> String {
-        PlaceNaming.title(location: place.location, fallback: place.name)
+        PlaceNaming.displayTitle(name: place.name, location: place.location)
     }
     
     private var heroImage: UIImage? {
@@ -62,15 +64,9 @@ struct PlaceDetailView: View {
             if let place {
                 Form {
                     Section {
-                        LocationSearchField(
-                            text: $draftLocation,
-                            latitude: $draftLatitude,
-                            longitude: $draftLongitude,
-                            searchRegion: nil
-                        )
-                        .onChange(of: draftLocation) { _, _ in persistLocation(on: place) }
-                        .onChange(of: draftLatitude) { _, _ in persistLocation(on: place) }
-                        .onChange(of: draftLongitude) { _, _ in persistLocation(on: place) }
+                        nameField(for: place)
+                        
+                        locationField(for: place)
                         
                         placeTypeMenu(for: place)
                     }
@@ -138,7 +134,7 @@ struct PlaceDetailView: View {
                     tripDetail(for: tripID)
                 }
                 .safeAreaInset(edge: .bottom) {
-                    if isNotesFocused {
+                    if isNotesFocused || isNameFocused {
                         Color.clear.frame(height: 36)
                     }
                 }
@@ -193,6 +189,10 @@ struct PlaceDetailView: View {
                         draftNote = newValue
                     }
                 }
+                .onChange(of: place.name) { _, _ in
+                    guard !isNameFocused else { return }
+                    draftName = editableNameDraft(for: place)
+                }
             } else {
                 ContentUnavailableView("Place unavailable", systemImage: "mappin.slash")
             }
@@ -200,6 +200,34 @@ struct PlaceDetailView: View {
     }
     
     // MARK: - Form sections
+    
+    @ViewBuilder
+    private func nameField(for place: Place) -> some View {
+        let locationName = PlaceNaming.title(location: place.location, fallback: "Name")
+        Label {
+            HStack {
+                TextField(locationName, text: $draftName)
+                    .textInputAutocapitalization(.words)
+                    .focused($isNameFocused)
+                    .onChange(of: draftName) { _, newValue in
+                        persistName(newValue, on: place)
+                    }
+                
+                if !draftName.isEmpty {
+                    Button {
+                        draftName = ""
+                        persistName("", on: place)
+                    } label: {
+                        AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear name")
+                }
+            }
+        } icon: {
+            AppIcon(lucide: "type", size: AppLucide.chromeSize, color: .primary)
+        }
+    }
     
     @ViewBuilder
     private var tripsSection: some View {
@@ -367,8 +395,7 @@ struct PlaceDetailView: View {
                         Text("Add Photo")
                             .foregroundStyle(.primary)
                         Spacer()
-                        Image(systemName: "chevron.up.chevron.down")
-                            .foregroundStyle(.secondary)
+                        AppIcon(systemName: "chevron.up.chevron.down", size: 14, color: .secondary)
                     }
                 }
                 .tint(.primary)
@@ -377,42 +404,82 @@ struct PlaceDetailView: View {
     }
     
     private func placeTypeMenu(for place: Place) -> some View {
-        Menu {
+        Picker(
+            selection: Binding(
+                get: { place.placeType },
+                set: { setPlaceType($0, on: place) }
+            )
+        ) {
             ForEach(PlaceType.allCases) { type in
-                Button {
-                    setPlaceType(type, on: place)
-                } label: {
-                    if place.placeType == type {
-                        Label(type.title, systemImage: "checkmark")
-                    } else {
-                        Text(type.title)
-                    }
-                }
+                Text(type.title)
+                    .tag(type)
             }
         } label: {
-            HStack {
-                Text("Type")
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text(place.placeType == .unspecified ? "Select type" : place.placeType.title)
-                    .foregroundStyle(.secondary)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.app(11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
+            Label("Type", appIcon: "tag", color: .primary, iconTitleSpacing: 4)
         }
-        .buttonStyle(.plain)
+        .pickerStyle(.menu)
         .tint(.primary)
+    }
+    
+    @ViewBuilder
+    private func locationField(for place: Place) -> some View {
+        let lockedLocation = place.location.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !lockedLocation.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Location")
+                    .font(.appCaption)
+                    .foregroundStyle(.secondary)
+                Text(lockedLocation)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Location")
+            .accessibilityValue(lockedLocation)
+        } else {
+            // Only allow setting location when none exists yet — never editing an existing one.
+            LocationSearchField(
+                text: $draftLocation,
+                latitude: $draftLatitude,
+                longitude: $draftLongitude,
+                searchRegion: nil
+            )
+            .onChange(of: draftLocation) { _, _ in persistLocation(on: place) }
+            .onChange(of: draftLatitude) { _, _ in persistLocation(on: place) }
+            .onChange(of: draftLongitude) { _, _ in persistLocation(on: place) }
+        }
     }
     
     // MARK: - Persistence helpers
     
     private func syncDrafts(from place: Place) {
         draftNote = place.note
+        draftName = editableNameDraft(for: place)
         draftLocation = place.location
         draftLatitude = place.latitude
         draftLongitude = place.longitude
+    }
+    
+    /// Empty draft when the stored name is just the location title — placeholder shows that instead.
+    private func editableNameDraft(for place: Place) -> String {
+        let stored = place.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fromLocation = PlaceNaming.title(location: place.location, fallback: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if stored.isEmpty { return "" }
+        if !fromLocation.isEmpty, stored.compare(fromLocation, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
+            return ""
+        }
+        return place.name
+    }
+    
+    private func persistName(_ raw: String, on place: Place) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fromLocation = PlaceNaming.title(location: place.location, fallback: "")
+        let next = trimmed.isEmpty ? fromLocation : raw
+        guard next != place.name else { return }
+        var updated = place
+        updated.name = next
+        placeStore.update(updated, rematchMapKitIfNeeded: false)
     }
     
     private func persistLocation(on place: Place) {
@@ -424,7 +491,10 @@ struct PlaceDetailView: View {
         updated.location = draftLocation
         updated.latitude = draftLatitude
         updated.longitude = draftLongitude
-        updated.name = PlaceNaming.title(location: draftLocation, fallback: place.name)
+        // Keep using the location title whenever the name field is empty / not customized.
+        if draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            updated.name = PlaceNaming.title(location: draftLocation, fallback: place.name)
+        }
         // Rematch only when MapKit picks coords — avoid clearing the match on every keystroke.
         placeStore.update(updated, rematchMapKitIfNeeded: coordsChanged)
     }
@@ -438,7 +508,7 @@ struct PlaceDetailView: View {
     private func addPlace(_ place: Place, to trip: Trip) {
         guard let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) else { return }
         
-        let title = PlaceNaming.title(location: place.location, fallback: place.name)
+        let title = PlaceNaming.displayTitle(name: place.name, location: place.location)
         let event = EventItem(
             title: title,
             description: place.note,
@@ -446,8 +516,8 @@ struct PlaceDetailView: View {
             location: place.location.isEmpty ? title : place.location,
             latitude: place.latitude,
             longitude: place.longitude,
-            icon: place.placeType == .unspecified ? "mappin.and.ellipse" : place.placeType.iconSystemName,
-            accent: .neutral,
+            icon: place.placeType.mapIconName,
+            accent: .cream,
             photoData: place.photoData
         )
         
@@ -507,37 +577,28 @@ struct PlaceDetailView: View {
         isPreviewingAppleMaps = true
         defer { isPreviewingAppleMaps = false }
         
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = query
-        request.resultTypes = [.pointOfInterest, .address]
-        if let lat = place.latitude, let lon = place.longitude {
-            request.region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                latitudinalMeters: 4_000,
-                longitudinalMeters: 4_000
-            )
-        }
+        guard let mapItem = await ApplePlaceLookup.mapItem(
+            name: place.name,
+            location: place.location,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            destinationHint: place.location
+        ) else { return }
         
-        do {
-            let response = try await MKLocalSearch(request: request).start()
-            guard let mapItem = response.mapItems.first else { return }
-            selectedAppleMapItem = mapItem
-            
-            // Persist a confident match when possible so the rich row appears next time.
-            if #available(iOS 18.0, *), let identifier = mapItem.identifier?.rawValue {
-                var updated = place
-                updated.mapKitIdentifier = identifier
-                updated.mapKitMatchStatus = .matched
-                if updated.latitude == nil || updated.longitude == nil {
-                    let coordinate = mapItemCoordinate(mapItem)
-                    updated.latitude = coordinate?.latitude
-                    updated.longitude = coordinate?.longitude
-                }
-                placeStore.update(updated, rematchMapKitIfNeeded: false)
-                appleMapItem = mapItem
+        selectedAppleMapItem = mapItem
+        
+        // Persist a confident match when possible so the rich row appears next time.
+        if #available(iOS 18.0, *), let identifier = mapItem.identifier?.rawValue {
+            var updated = place
+            updated.mapKitIdentifier = identifier
+            updated.mapKitMatchStatus = .matched
+            if updated.latitude == nil || updated.longitude == nil {
+                let coordinate = mapItemCoordinate(mapItem)
+                updated.latitude = coordinate?.latitude
+                updated.longitude = coordinate?.longitude
             }
-        } catch {
-            // Keep the preview row available for retry.
+            placeStore.update(updated, rematchMapKitIfNeeded: false)
+            appleMapItem = mapItem
         }
     }
 }

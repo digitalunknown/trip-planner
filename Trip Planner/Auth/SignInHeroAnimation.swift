@@ -72,7 +72,7 @@ struct SignInHeroAnimation: View {
                             toGate: "",
                             flightNumber: "AF83",
                             notes: "",
-                            accent: .purple,
+                            accent: .blush,
                             startTime: Date(),
                             endTime: Date().addingTimeInterval(36000)
                         ))
@@ -91,7 +91,7 @@ struct SignInHeroAnimation: View {
                             latitude: nil,
                             longitude: nil,
                             icon: "building.2.fill",
-                            accent: .purple,
+                            accent: .blush,
                             photoData: nil,
                             rating: 0
                         ))
@@ -110,7 +110,7 @@ struct SignInHeroAnimation: View {
                             latitude: nil,
                             longitude: nil,
                             icon: "paintpalette.fill",
-                            accent: .purple,
+                            accent: .blush,
                             photoData: nil,
                             rating: 0
                         ))
@@ -129,7 +129,7 @@ struct SignInHeroAnimation: View {
                             latitude: nil,
                             longitude: nil,
                             icon: "ferry.fill",
-                            accent: .purple,
+                            accent: .blush,
                             photoData: nil,
                             rating: 0
                         ))

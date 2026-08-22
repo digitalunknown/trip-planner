@@ -161,7 +161,7 @@ struct GlobalSearchView: View {
                 
                 if place.placeType != .unspecified {
                     HStack(spacing: 4) {
-                        Image(systemName: place.placeType.iconSystemName)
+                        AppIcon(systemName: place.placeType.iconSystemName, size: 11, color: textSecondary)
                         Text(place.placeType.title)
                     }
                     .font(.app(11, weight: .semibold))
@@ -206,9 +206,11 @@ struct GlobalSearchView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(rowBackground)
-                Image(systemName: place.placeType == .unspecified ? "mappin.and.ellipse" : place.placeType.iconSystemName)
-                    .foregroundStyle(textSecondary)
-                    .font(.app(18, weight: .semibold))
+                AppIcon(
+                    systemName: place.placeType.mapIconName,
+                    size: 18,
+                    color: textSecondary
+                )
             }
             .frame(width: 52, height: 52)
         }

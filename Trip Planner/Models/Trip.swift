@@ -142,7 +142,7 @@ struct Trip: Identifiable, Hashable, Codable {
                     latitude: nil,
                     longitude: nil,
                     icon: "fork.knife",
-                    accent: .yellow,
+                    accent: .mustard,
                     photoData: nil
                 )
             ],

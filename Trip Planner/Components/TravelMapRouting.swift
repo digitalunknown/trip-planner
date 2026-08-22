@@ -8,11 +8,15 @@ struct TravelMapOverlay: Identifiable, Hashable {
     let dayID: UUID
     let flightID: UUID
     let travelMode: TravelMode
+    let accent: EventAccent
     let fromCoordinate: CLLocationCoordinate2D
     let toCoordinate: CLLocationCoordinate2D
     /// Polyline to draw (geodesic or road route). Always includes at least from/to.
     let routeCoordinates: [CLLocationCoordinate2D]
     let isRoadRoute: Bool
+    
+    var accentColor: Color { accent.background }
+    var accentForeground: Color { accent.foreground }
     
     var usesDashedStroke: Bool {
         switch travelMode {
@@ -27,6 +31,7 @@ struct TravelMapOverlay: Identifiable, Hashable {
     
     static func == (lhs: TravelMapOverlay, rhs: TravelMapOverlay) -> Bool {
         lhs.id == rhs.id
+            && lhs.accent == rhs.accent
             && lhs.routeCoordinates.count == rhs.routeCoordinates.count
             && lhs.isRoadRoute == rhs.isRoadRoute
     }
@@ -71,6 +76,7 @@ enum TravelMapRouting {
                     dayID: day.id,
                     flightID: flight.id,
                     travelMode: flight.travelMode,
+                    accent: flight.accent,
                     fromCoordinate: from,
                     toCoordinate: to,
                     routeCoordinates: route,

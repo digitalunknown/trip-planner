@@ -426,8 +426,7 @@ struct TripStacksAISheet: View {
                     Text(placeholderText)
                         .font(.appBody)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(promptTextContainerInset)
                         .allowsHitTesting(false)
                 }
@@ -465,20 +464,21 @@ struct TripStacksAISheet: View {
                         runTask = Task { await run(prompt: promptText) }
                     }
                 } label: {
-                    Image(systemName: isProcessing ? "stop.fill" : "arrow.up")
-                        .font(.system(size: isProcessing ? 13 : 17, weight: .bold))
-                        .foregroundStyle(
-                            (isProcessing || canSend) ? Color(.systemBackground) : Color.secondary
-                        )
-                        .frame(width: 36, height: 36)
-                        .background(
-                            Circle()
-                                .fill(
-                                    (isProcessing || canSend)
-                                        ? Color.primary
-                                        : Color(.tertiarySystemFill)
-                                )
-                        )
+                    let isActive = isProcessing || canSend
+                    let strongFill = colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717)
+                    let strongGlyph = colorScheme == .dark ? Color(hex: 0x171717) : Color.white
+                    AppIcon(
+                        systemName: isProcessing ? "stop.fill" : "arrow.up",
+                        size: isProcessing ? 13 : 18,
+                        strokeWidth: 2.25,
+                        color: isActive ? strongGlyph : Color.secondary,
+                        filled: isProcessing
+                    )
+                    .frame(width: 36, height: 36)
+                    .background {
+                        Circle()
+                            .fill(isActive ? strongFill : Color(.tertiarySystemFill))
+                    }
                 }
                 .buttonStyle(.plain)
                 .disabled(!isProcessing && !canSend)
@@ -506,7 +506,7 @@ struct TripStacksAISheet: View {
         let textWidth = max(width - inset.leading - inset.trailing, 1)
         let font = AppFont.uiFont(size: 17, weight: .regular)
         
-        let measureText = promptText.isEmpty ? " " : promptText
+        let measureText = promptText.isEmpty ? placeholderText : promptText
         let bounding = (measureText as NSString).boundingRect(
             with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
@@ -536,11 +536,14 @@ struct TripStacksAISheet: View {
             runTask = Task { await runChip(chip) }
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: chip.systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(chipForeground.opacity(0.85))
-                    .frame(width: 36, height: 36)
-                    .background(chipFallback, in: Circle())
+                AppIcon(
+                    systemName: chip.systemImage,
+                    size: 18,
+                    strokeWidth: 2,
+                    color: chipForeground.opacity(0.85)
+                )
+                .frame(width: 36, height: 36)
+                .background(chipFallback, in: Circle())
                 
                 Text(chip.title)
                     .font(.app(16, weight: .regular))
@@ -614,6 +617,19 @@ struct TripStacksAISheet: View {
         return "\(trimmed)\n\nReturn exactly 10 specific named places (not one summary recommendation)."
     }
     
+    private func placeFinderFillPrompt(original: String, destination: String, priorCount: Int) -> String {
+        let dest = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        let whereClause = dest.isEmpty ? "the requested area" : dest
+        return """
+        \(original)
+        
+        Previous answer only returned \(priorCount) place(s) — that is invalid.
+        Return exactly 10 distinct kind=place venues around \(whereClause).
+        Each must be a specific named venue with a maps-searchable location. Notes under 10 words.
+        Never return a single recommendation.
+        """
+    }
+    
     /// Ensures day-plan / options prompts ask for multiple itinerary items (not one summary).
     private func planDayListPrompt(_ title: String) -> String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -630,7 +646,98 @@ struct TripStacksAISheet: View {
             && !(lower.contains("day") || lower.contains("sightseeing") || lower.contains("food")
                  || lower.contains("option") || lower.contains("activit") || lower.contains("itinerary"))
         if looksSingleKind { return trimmed }
-        return "\(trimmed)\n\nReturn 6–8 distinct itinerary items. One venue/stop per item with short notes — never a single combined day summary."
+        return "\(trimmed)\n\nReturn 6–8 distinct itinerary items. One venue/stop per item with short notes and start/end times (HH:mm) sequenced morning to night — never a single combined day summary."
+    }
+    
+    /// Ensures create-trip prompts ask for a full starter itinerary (not a lone hotel).
+    private func createTripListPrompt(_ title: String) -> String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.range(of: #"at least \d+ (seed )?items"#, options: [.regularExpression, .caseInsensitive]) != nil {
+            return trimmed
+        }
+        if trimmed.range(of: #"never return only (a )?hotel"#, options: [.regularExpression, .caseInsensitive]) != nil {
+            return trimmed
+        }
+        let days = AIDayMapping.resolvedDayCount(for: AITripDraft(), promptText: trimmed)
+        let minItems = AIDayMapping.completableItemCount(dayCount: days)
+        return """
+        \(trimmed)
+        
+        Return a full_itinerary draft with at least \(minItems) items for this \(days)-day trip: 1 hotel, a few real restaurants/cafes, activities spread across dayIndex 0…\(days - 1) (not every meal every day), 1 packing checklist, and 1–2 reminders. Include startTime/endTime (HH:mm) on venue activities. Keep notes under 12 words. Never return only a hotel.
+        """
+    }
+    
+    private func createTripNeedsRefill(_ items: [PlanDayItem], dayCount: Int) -> Bool {
+        let venues = items.filter {
+            $0.kind == .activity &&
+            $0.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != "hotel"
+        }
+        let minItems = AIDayMapping.completableItemCount(dayCount: dayCount)
+        return items.count < minItems || venues.count < max(4, min(dayCount, 8))
+    }
+    
+    private func createTripFillPrompt(trip: AITripDraft, dayCount: Int, priorCount: Int, prompt: String) -> String {
+        let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dest = destination.isEmpty ? trip.name : destination
+        let days = max(1, min(dayCount, 10))
+        let minItems = AIDayMapping.completableItemCount(dayCount: days)
+        let namedStay = AIDayMapping.extractNamedStay(from: prompt)
+        let hotelSlot = namedStay.map {
+            "1. kind=activity category=hotel dayIndex=0 — MUST be exactly \"\($0)\" (user-specified stay; do not invent another hotel)"
+        } ?? "1. kind=activity category=hotel dayIndex=0 — real hotel in \(dest)"
+        var slots: [String] = [hotelSlot]
+        var i = 2
+        // One highlight per day — 5 slots/day for a 10-day trip will not fit in one response.
+        for d in 0..<days {
+            let label = "Day \(d + 1)"
+            let kind = ["cafe", "attraction", "restaurant", "hike", "beach"][d % 5]
+            slots.append("\(i). \(kind) dayIndex=\(d) (\(label)) one real venue with startTime/endTime"); i += 1
+        }
+        slots.append("\(i). checklist packing list (6 lines)"); i += 1
+        slots.append("\(i). reminder prep task")
+        
+        return """
+        Fill a COMPLETE \(days)-day itinerary for \(dest). Intent=full_itinerary. \
+        Trip name "\(trip.name.isEmpty ? dest : trip.name)". unscheduledDaysCount=\(days).
+        Previous answer only returned \(priorCount) item(s) — that is invalid (never hotel-only).
+        Return at least \(minItems) items covering ALL slots:
+        \(slots.joined(separator: "\n"))
+        Notes under 8 words. Real venues only. Valid complete JSON.
+        """
+    }
+    
+    /// Refill when MapKit could not verify a large share of venues.
+    private func createTripLocationRefillPrompt(
+        trip: AITripDraft,
+        dayCount: Int,
+        badVenueNames: [String],
+        prompt: String
+    ) -> String {
+        let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dest = destination.isEmpty ? trip.name : destination
+        let days = max(1, min(dayCount, 10))
+        let minItems = AIDayMapping.completableItemCount(dayCount: days)
+        let badList = badVenueNames.isEmpty
+            ? "several invented venues"
+            : badVenueNames.map { "\"\($0)\"" }.joined(separator: ", ")
+        let namedStay = AIDayMapping.extractNamedStay(from: prompt)
+        let hotelLine = namedStay.map {
+            "Keep hotel exactly \"\($0)\". "
+        } ?? ""
+        let datesLine: String = {
+            if trip.isDatesSet, let s = trip.startDate, let e = trip.endDate {
+                return "Keep isDatesSet=true startDate=\(s) endDate=\(e). "
+            }
+            return "Keep unscheduledDaysCount=\(days). "
+        }()
+        return """
+        Rewrite the \(days)-day itinerary for \(dest). Intent=full_itinerary. \
+        \(datesLine)\(hotelLine)\
+        Apple Maps could not verify these venues (they are likely invented): \(badList). \
+        Replace ALL venues with well-known, MapKit-resolvable places in \(dest) only — \
+        official names people can search in Apple Maps. Return at least \(minItems) items \
+        with dayIndex/dayLabel/startTime/endTime on activities. Notes under 8 words. Valid complete JSON.
+        """
     }
     
     /// Matches intentional counts like "top 5" / "3 restaurants" — not coords or street numbers.
@@ -743,6 +850,9 @@ struct TripStacksAISheet: View {
         if mode == .placeFinder {
             text = placeFinderListPrompt(raw)
         }
+        if mode == .createTrip {
+            text = createTripListPrompt(raw)
+        }
         
         var requestTripContext = ignoreTripContext ? nil : tripContext
         var placeFinderDestination = tripContext?.destination ?? ""
@@ -816,23 +926,53 @@ struct TripStacksAISheet: View {
                     destination: destination,
                     biasRegion: searchBiasRegion()
                 )
+                var timedItems = refined.items
+                if PlanDayTiming.shouldAutoSchedule(intent: response.intent) {
+                    PlanDayTiming.fillMissingActivityTimes(&timedItems)
+                }
                 try Task.checkCancellation()
                 await MainActor.run {
                     guard generation == runGeneration else { return }
                     responseIntent = response.intent
                     aiReplyText = AIReplyCopy.planDay(
                         intent: response.intent,
-                        itemCount: refined.items.count,
+                        itemCount: timedItems.count,
                         destination: destination
                     )
-                    planDraft = refined
+                    planDraft = PlanDayDraft(
+                        items: timedItems,
+                        extractedText: refined.extractedText,
+                        extractedFacts: refined.extractedFacts
+                    )
                     showPlanPreview = true
                     isProcessing = false
                     Haptics.bump()
                 }
                 
             case .placeFinder:
-                let places = response.items.filter { $0.kind == .place || !$0.category.isEmpty }
+                var places = response.items.filter { $0.kind == .place || !$0.category.isEmpty }
+                // Model sometimes returns 1 place for list asks — refill once.
+                if places.count < 5, !Task.isCancelled {
+                    let fillText = placeFinderFillPrompt(
+                        original: raw,
+                        destination: placeFinderDestination,
+                        priorCount: places.count
+                    )
+                    let fillRequest = AIRequest(
+                        mode: .placeFinder,
+                        text: fillText,
+                        tripContext: requestTripContext,
+                        preferences: prefs.isEmpty ? nil : prefs,
+                        existingPlaces: existingPlaces
+                    )
+                    if let fillResponse = try? await client.generate(fillRequest),
+                       !fillResponse.clarificationNeeded {
+                        let fillPlaces = fillResponse.items.filter { $0.kind == .place || !$0.category.isEmpty }
+                        if fillPlaces.count > places.count {
+                            places = fillPlaces
+                        }
+                    }
+                }
                 let normalized: [PlanDayItem] = places.map { item in
                     var copy = item
                     copy.kind = .place
@@ -878,28 +1018,132 @@ struct TripStacksAISheet: View {
                     }
                     return
                 }
-                if !trip.isDatesSet,
-                   let inferred = AIDayMapping.inferredDayCount(from: raw),
-                   inferred > max(1, trip.unscheduledDaysCount) {
+                // Ground-truth dates from the prompt beat a soft model miss.
+                if let extracted = AIDayMapping.extractTripDateRange(from: raw) {
+                    trip.isDatesSet = true
+                    trip.startDate = extracted.start
+                    trip.endDate = extracted.end
+                    trip.unscheduledDaysCount = 0
+                } else if !trip.isDatesSet,
+                          let inferred = AIDayMapping.inferredDayCount(from: raw),
+                          inferred > max(1, trip.unscheduledDaysCount) {
                     trip.unscheduledDaysCount = inferred
                 }
+                trip.normalizeUpcomingDates()
                 let dayCount = AIDayMapping.resolvedDayCount(for: trip, promptText: raw)
-                let seeds = AIDayMapping.spreadCreateTripItems(
-                    sanitizePlanItems(response.items),
-                    dayCount: dayCount
+                var seeds = AIDayMapping.applyNamedStay(
+                    AIDayMapping.spreadCreateTripItems(
+                        sanitizePlanItems(response.items),
+                        dayCount: dayCount
+                    ),
+                    fromPrompt: raw,
+                    destination: trip.destination
                 )
+                
+                // Thin count — refill once (server may still under-deliver without schema deploy).
+                if createTripNeedsRefill(seeds, dayCount: dayCount) {
+                    let fillText = createTripFillPrompt(
+                        trip: trip,
+                        dayCount: dayCount,
+                        priorCount: seeds.count,
+                        prompt: raw
+                    )
+                    let fillRequest = AIRequest(
+                        mode: .createTrip,
+                        text: fillText,
+                        preferences: prefs.isEmpty ? nil : prefs,
+                        existingTrips: existingTrips
+                    )
+                    if let fillResponse = try? await client.generate(fillRequest),
+                       !fillResponse.clarificationNeeded {
+                        let fillSeeds = AIDayMapping.applyNamedStay(
+                            AIDayMapping.spreadCreateTripItems(
+                                sanitizePlanItems(fillResponse.items),
+                                dayCount: dayCount
+                            ),
+                            fromPrompt: raw,
+                            destination: trip.destination
+                        )
+                        if fillSeeds.count > seeds.count {
+                            seeds = fillSeeds
+                        }
+                        if let filledTrip = fillResponse.trip,
+                           !filledTrip.destination.isEmpty || !filledTrip.name.isEmpty {
+                            trip.name = filledTrip.name.isEmpty ? trip.name : filledTrip.name
+                            trip.destination = filledTrip.destination.isEmpty ? trip.destination : filledTrip.destination
+                            trip.summary = filledTrip.summary.isEmpty ? trip.summary : filledTrip.summary
+                            if let extracted = AIDayMapping.extractTripDateRange(from: raw) {
+                                trip.isDatesSet = true
+                                trip.startDate = extracted.start
+                                trip.endDate = extracted.end
+                                trip.unscheduledDaysCount = 0
+                            } else if !filledTrip.isDatesSet {
+                                trip.unscheduledDaysCount = max(trip.unscheduledDaysCount, filledTrip.unscheduledDaysCount, dayCount)
+                            }
+                            trip.normalizeUpcomingDates()
+                        }
+                    }
+                }
+                
                 let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
-                let refinedSeeds = await PlanDayLocationResolver.refineLocations(
+                var refinedSeeds = await PlanDayLocationResolver.refineLocations(
                     in: PlanDayDraft(items: seeds, extractedText: raw, extractedFacts: PlanDayFacts()),
                     destination: destination.isEmpty ? trip.name : destination,
                     biasRegion: searchBiasRegion()
                 )
+                
+                // Unresolved MapKit venues → one location-aware refill with real venue names.
+                if AIDayMapping.needsLocationRefill(refinedSeeds.items) {
+                    let badNames = refinedSeeds.items
+                        .filter(\.isLocationUnresolved)
+                        .prefix(8)
+                        .map(\.title)
+                    let locationFill = createTripLocationRefillPrompt(
+                        trip: trip,
+                        dayCount: dayCount,
+                        badVenueNames: Array(badNames),
+                        prompt: raw
+                    )
+                    let locRequest = AIRequest(
+                        mode: .createTrip,
+                        text: locationFill,
+                        preferences: prefs.isEmpty ? nil : prefs,
+                        existingTrips: existingTrips
+                    )
+                    if let locResponse = try? await client.generate(locRequest),
+                       !locResponse.clarificationNeeded {
+                        let locSeeds = AIDayMapping.applyNamedStay(
+                            AIDayMapping.spreadCreateTripItems(
+                                sanitizePlanItems(locResponse.items),
+                                dayCount: dayCount
+                            ),
+                            fromPrompt: raw,
+                            destination: trip.destination
+                        )
+                        if locSeeds.count >= seeds.count / 2 {
+                            seeds = locSeeds
+                            refinedSeeds = await PlanDayLocationResolver.refineLocations(
+                                in: PlanDayDraft(items: seeds, extractedText: raw, extractedFacts: PlanDayFacts()),
+                                destination: destination.isEmpty ? trip.name : destination,
+                                biasRegion: searchBiasRegion()
+                            )
+                        }
+                    }
+                }
+                
+                var timedSeeds = AIDayMapping.applyNamedStay(
+                    refinedSeeds.items,
+                    fromPrompt: raw,
+                    destination: trip.destination,
+                    clearCoordinatesWhenRenaming: false
+                )
+                PlanDayTiming.fillMissingActivityTimes(&timedSeeds)
                 try Task.checkCancellation()
                 await MainActor.run {
                     guard generation == runGeneration else { return }
-                    aiReplyText = AIReplyCopy.createTrip(trip: trip, itemCount: refinedSeeds.items.count)
+                    aiReplyText = AIReplyCopy.createTrip(trip: trip, itemCount: timedSeeds.count)
                     tripDraft = trip
-                    tripSeedItems = refinedSeeds.items
+                    tripSeedItems = timedSeeds
                     showTripPreview = true
                     isProcessing = false
                     Haptics.bump()

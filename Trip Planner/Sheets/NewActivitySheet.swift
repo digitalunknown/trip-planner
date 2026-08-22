@@ -26,6 +26,8 @@ struct NewActivitySheet: View {
     var onAdd: () -> Void
     var onDelete: (() -> Void)?
     var onAddToPlaces: (() -> Void)?
+    /// When the icon picker confirms with “Apply to all”, recolor every trip item.
+    var onApplyAccentToAll: ((EventAccent) -> Void)?
     var isEditing: Bool = false
     /// True when this activity is already linked in Places (sourceEventID).
     var isAlreadyInPlaces: Bool = false
@@ -49,6 +51,7 @@ struct NewActivitySheet: View {
         onAdd: @escaping () -> Void,
         onDelete: (() -> Void)? = nil,
         onAddToPlaces: (() -> Void)? = nil,
+        onApplyAccentToAll: ((EventAccent) -> Void)? = nil,
         isEditing: Bool = false,
         isAlreadyInPlaces: Bool = false
     ) {
@@ -70,6 +73,7 @@ struct NewActivitySheet: View {
         self.onAdd = onAdd
         self.onDelete = onDelete
         self.onAddToPlaces = onAddToPlaces
+        self.onApplyAccentToAll = onApplyAccentToAll
         self.isEditing = isEditing
         self.isAlreadyInPlaces = isAlreadyInPlaces
     }
@@ -84,7 +88,7 @@ struct NewActivitySheet: View {
     @State private var selectedPreviewDocumentID: UUID?
     @State private var selectedQuickLookDocument: EventDocument?
     @State private var draftIcon: String = ""
-    @State private var draftAccent: EventAccent = .purple
+    @State private var draftAccent: EventAccent = .blush
     @State private var appleMapItem: MKMapItem?
     @State private var selectedAppleMapItem: MKMapItem?
     @State private var isLoadingApplePlace = false
@@ -297,19 +301,29 @@ struct NewActivitySheet: View {
         
         "fork.knife",
         "carrot.fill",
-        "cup.and.saucer.fill",
-        "mug.fill",
+        "coffee",
         "takeoutbag.and.cup.and.straw.fill",
         "wineglass.fill",
         "waterbottle",
-        "birthday.cake.fill",
+        "apple",
+        "beef",
+        "beer",
+        "bottle-wine",
+        "cake",
+        "chef-hat",
+        "cooking-pot",
+        "croissant",
+        "cup-soda",
+        "donut",
+        "egg-fried",
+        "hamburger",
+        "ice-cream-cone",
+        "pizza",
+        "popcorn",
         
         "airplane",
         "suitcase.fill",
         "car.fill",
-        "cablecar.fill",
-        "bus.fill",
-        "bus.doubledecker.fill",
         "tram.fill",
         "train.side.front.car",
         "ferry.fill",
@@ -319,6 +333,20 @@ struct NewActivitySheet: View {
         "fuelpump.fill",
         "bicycle",
         "figure.walk",
+        "baggage-claim",
+        "bus",
+        "cable-car",
+        "car-front",
+        "caravan",
+        "circle-parking",
+        "drone",
+        "ev-charger",
+        "helicopter",
+        "kayak",
+        "plane-landing",
+        "plane-takeoff",
+        "sailboat",
+        "tickets-plane",
         
         "cart.fill",
         "bag.fill",
@@ -343,6 +371,9 @@ struct NewActivitySheet: View {
         "cloud.snow.fill",
         "cloud.bolt.rain.fill",
         "wind",
+        "tent-tree",
+        "tree-palm",
+        "flower",
         "camera.fill",
         "ticket.fill",
         "theatermasks.fill",
@@ -352,12 +383,11 @@ struct NewActivitySheet: View {
         "dumbbell.fill",
         "trophy.fill",
         "heart.fill",
-        "figure.run",
-        "figure.yoga",
+        "palette",
+        "pencil-ruler",
         "building.columns.fill",
         "airpods.max",
         "stroller.fill",
-        "drone.fill",
         "sunglasses.fill",
         "shoe.fill",
         "tshirt.fill",
@@ -380,7 +410,11 @@ struct NewActivitySheet: View {
                 openURL(url)
             }
         } label: {
-            Label(title, systemImage: systemImage)
+            Label {
+                Text(title)
+            } icon: {
+                AppIcon(systemName: systemImage, size: 15, color: .primary)
+            }
         }
         .buttonStyle(.secondaryCapsule)
         .disabled(url == nil)
@@ -471,10 +505,8 @@ struct NewActivitySheet: View {
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .fill(accent.color.opacity(0.18))
-                        Image(systemName: icon)
-                            .foregroundStyle(accent.color)
-                            .font(.app(52, weight: .semibold))
+                            .fill(accent.background)
+                        AppIcon(systemName: icon, size: 52, color: accent.foreground)
                     }
                     .frame(width: 112, height: 112)
                 }
@@ -492,11 +524,12 @@ struct NewActivitySheet: View {
                 .font(.app(40, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.primary)
-                .tint(appAccentColor) // caret color
+                .tint(.primary) // caret color
                 .focused($isTitleFocused)
-                .lineLimit(1...2)
+                .lineLimit(1...3)
+                .scrollDisabled(true)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 18)
-                .frame(minHeight: 72)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 6)
@@ -508,26 +541,35 @@ struct NewActivitySheet: View {
     
     private var timingSection: some View {
         Section {
-            Picker("Day", selection: $selectedDayID) {
+            Picker(selection: $selectedDayID) {
                 ForEach(dayOptions) { option in
                     Text(option.title)
                         .tag(Optional(option.id))
                 }
+            } label: {
+                Label("Day", appIcon: "calendar", color: .primary)
             }
-            DatePicker("From", selection: $startTime, displayedComponents: .hourAndMinute)
             
-            Toggle("Add end time", isOn: $hasEndTime)
-                .tint(appAccentColor)
-                .onChange(of: hasEndTime) { _, newValue in
-                    if !newValue {
-                        endTime = startTime
-                    } else if endTime <= startTime {
-                        endTime = startTime.addingTimeInterval(60 * 60)
-                    }
+            DatePicker(selection: $startTime, displayedComponents: .hourAndMinute) {
+                Label("From", appIcon: "clock")
+            }
+            
+            Toggle(isOn: $hasEndTime) {
+                Label("Add end time", appIcon: "clock-plus")
+            }
+            .tint(appAccentColor)
+            .onChange(of: hasEndTime) { _, newValue in
+                if !newValue {
+                    endTime = startTime
+                } else if endTime <= startTime {
+                    endTime = startTime.addingTimeInterval(60 * 60)
                 }
+            }
             
             if hasEndTime {
-                DatePicker("To", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                DatePicker(selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute) {
+                    Label("To", appIcon: "clock-arrow-down")
+                }
             }
             if let durationText = durationString {
                 Text("Duration: \(durationText)")
@@ -628,7 +670,7 @@ struct NewActivitySheet: View {
                     showCostSheet = true
                 } label: {
                     HStack {
-                        Text("Cost")
+                        Label("Cost", appIcon: "wallet")
                         Spacer()
                         Text(CurrencyFormatting.string(for: cost, currencyCode: costCurrencyCode))
                             .foregroundStyle(.primary)
@@ -650,10 +692,14 @@ struct NewActivitySheet: View {
                 Button {
                     addToPlaces()
                 } label: {
-                    Label(
-                        isAlreadyInPlaces ? "Added to Places" : "Add to Places",
-                        systemImage: "mappin.and.ellipse"
-                    )
+                    Label {
+                        Text(isAlreadyInPlaces ? "Added to Places" : "Add to Places")
+                    } icon: {
+                        AppIcon(
+                            lucide: isAlreadyInPlaces ? "map-pin-check" : "map-pin-plus",
+                            size: 15
+                        )
+                    }
                 }
                 .buttonStyle(.secondaryCapsuleBlock)
                 .disabled(isAlreadyInPlaces || !canAddToPlaces || onAddToPlaces == nil)
@@ -663,7 +709,11 @@ struct NewActivitySheet: View {
                     Button {
                         deleteEvent()
                     } label: {
-                        Label("Delete Activity", systemImage: "trash")
+                        Label {
+                            Text("Delete Activity")
+                        } icon: {
+                            AppIcon(systemName: "trash", size: 15, color: .red)
+                        }
                     }
                     .buttonStyle(.destructiveCapsuleBlock)
                     .detailActionRow()
@@ -695,8 +745,7 @@ struct NewActivitySheet: View {
                     Button(role: .destructive) {
                         removeCurrentlyPreviewedDocument()
                     } label: {
-                        Image(systemName: "trash")
-                            .font(.app(14, weight: .semibold))
+                        AppIcon(systemName: "trash", size: 16, color: .red)
                     }
                     .buttonStyle(.plain)
                 }
@@ -713,8 +762,8 @@ struct NewActivitySheet: View {
             
             LinearGradient(
                 colors: [
-                    accent.color.opacity(0.18),
-                    accent.color.opacity(0.10),
+                    accent.background.opacity(0.28),
+                    accent.background.opacity(0.12),
                     .clear
                 ],
                 startPoint: .top,
@@ -773,10 +822,13 @@ struct NewActivitySheet: View {
                     accent: $draftAccent,
                     iconOptions: iconOptions,
                     onCancel: { showIconPickerSheet = false },
-                    onDone: {
+                    onDone: { applyColorToAll in
                         icon = draftIcon
                         accent = draftAccent
                         showIconPickerSheet = false
+                        if applyColorToAll {
+                            onApplyAccentToAll?(draftAccent)
+                        }
                     }
                 )
                 .presentationDetents([.large])
@@ -870,7 +922,9 @@ private struct IconAndColorPickerSheet: View {
     @Binding var accent: EventAccent
     let iconOptions: [String]
     let onCancel: () -> Void
-    let onDone: () -> Void
+    let onDone: (_ applyColorToAll: Bool) -> Void
+    
+    @State private var applyColorToAll = true
     
     private let gridSpacing: CGFloat = 12
     private let columnsCount: Int = 6
@@ -881,7 +935,7 @@ private struct IconAndColorPickerSheet: View {
     private let tileHeight: CGFloat = 48
     
     private var colorOptions: [EventAccent] {
-        Array(EventAccent.allCases.reversed())
+        EventAccent.allCases
     }
     
     private struct IconCategory: Identifiable {
@@ -912,36 +966,63 @@ private struct IconAndColorPickerSheet: View {
         
         categories.append(cat("Transportation", [
             "airplane",
+            "plane-takeoff",
+            "plane-landing",
+            "tickets-plane",
+            "baggage-claim",
+            "car-front",
             "car.fill",
+            "caravan",
+            "circle-parking",
+            "ev-charger",
             "fuelpump.fill",
             "motorcycle.fill",
             "scooter",
             "truck.box.fill",
-            "bus.fill",
-            "bus.doubledecker.fill",
+            "bus",
             "tram.fill",
-            "cablecar.fill",
+            "cable-car",
             "train.side.front.car",
             "ferry.fill",
+            "sailboat",
+            "kayak",
+            "helicopter",
+            "drone",
             "bicycle",
             "figure.walk"
         ]))
         
         categories.append(cat("Food & Drink", [
             "fork.knife",
+            "chef-hat",
+            "cooking-pot",
             "carrot.fill",
-            "birthday.cake.fill",
-            "cup.and.saucer.fill",
-            "mug.fill",
+            "apple",
+            "beef",
+            "egg-fried",
+            "pizza",
+            "hamburger",
+            "croissant",
+            "donut",
+            "cake",
+            "ice-cream-cone",
+            "popcorn",
+            "coffee",
+            "cup-soda",
+            "beer",
+            "bottle-wine",
+            "wineglass.fill",
             "takeoutbag.and.cup.and.straw.fill",
-            "waterbottle",
-            "wineglass.fill"
+            "waterbottle"
         ]))
         
         categories.append(cat("Nature", [
             "mountain.2.fill",
             "water.waves",
             "leaf.fill",
+            "flower",
+            "tree-palm",
+            "tent-tree",
             "sun.max.fill",
             "sunrise",
             "sunset",
@@ -975,9 +1056,9 @@ private struct IconAndColorPickerSheet: View {
             "figure.hiking",
             "dumbbell.fill",
             "trophy.fill",
-            "figure.run",
-            "figure.yoga",
-            "heart.fill"
+            "heart.fill",
+            "palette",
+            "pencil-ruler"
         ]))
         
         // Remove any empty categories (in case icons list changes).
@@ -992,7 +1073,7 @@ private struct IconAndColorPickerSheet: View {
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(accent.color.opacity(icon == symbol ? 0.22 : 0.10))
+                            .fill(accent.background)
                             .overlay {
                                 if icon == symbol {
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -1000,9 +1081,11 @@ private struct IconAndColorPickerSheet: View {
                                 }
                             }
                         
-                        Image(systemName: symbol)
-                            .font(.app(22, weight: .semibold))
-                            .foregroundStyle(accent.color.opacity(icon == symbol ? 1.0 : 0.78))
+                        AppIcon(
+                            systemName: symbol,
+                            size: 24,
+                            color: accent.foreground.opacity(icon == symbol ? 1.0 : 0.78)
+                        )
                     }
                     .frame(height: tileHeight)
                 }
@@ -1026,8 +1109,15 @@ private struct IconAndColorPickerSheet: View {
                                 Button {
                                     accent = option
                                 } label: {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(option.color)
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(option.background)
+                                        AppIcon(
+                                            lucide: "paintbrush-vertical",
+                                            size: 20,
+                                            color: option.foreground
+                                        )
+                                    }
                                         .frame(height: tileHeight)
                                         .overlay {
                                             if option == accent {
@@ -1040,6 +1130,11 @@ private struct IconAndColorPickerSheet: View {
                                 .accessibilityLabel("Color")
                             }
                         }
+                        
+                        Toggle(isOn: $applyColorToAll) {
+                            Label("Apply to all", appIcon: "paintbrush", color: .primary)
+                        }
+                        .tint(appAccentColor)
                     }
                 }
                 
@@ -1066,11 +1161,14 @@ private struct IconAndColorPickerSheet: View {
                     LiquidGlassIconButton(systemName: "xmark") { onCancel() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    LiquidGlassIconButton(systemName: "checkmark") { onDone() }
+                    LiquidGlassIconButton(systemName: "checkmark") { onDone(applyColorToAll) }
                 }
             }
         }
         .tint(.primary)
+        .onAppear {
+            applyColorToAll = true
+        }
     }
 }
 

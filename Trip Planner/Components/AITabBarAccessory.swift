@@ -64,13 +64,12 @@ struct AITabBarAccessory: View {
     private var floatingLabel: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 15, weight: .semibold))
+                AppIcon(systemName: "sparkles", size: 15, color: AppLucide.labelColor)
                 Text(title)
                     .font(.app(15, weight: .semibold))
                     .lineLimit(1)
             }
-            .foregroundStyle(.primary)
+            .foregroundStyle(AppLucide.labelColor)
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
             .contentShape(Capsule())
@@ -91,13 +90,16 @@ private struct SystemAITabAccessoryLabel: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: placement == .inline ? 14 : 15, weight: .semibold))
+                AppIcon(
+                    systemName: "sparkles",
+                    size: placement == .inline ? 14 : 15,
+                    color: AppLucide.labelColor
+                )
                 Text(title)
                     .font(.app(placement == .inline ? 14 : 15, weight: .semibold))
                     .lineLimit(1)
             }
-            .foregroundStyle(.primary)
+            .foregroundStyle(AppLucide.labelColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, placement == .inline ? 2 : 4)
             .contentShape(Rectangle())

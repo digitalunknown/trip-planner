@@ -60,8 +60,22 @@ extension PlanDayItem {
         }
     }
     
+    /// Venue item that MapKit failed to resolve (no coords after refine).
+    var isLocationUnresolved: Bool {
+        switch kind {
+        case .activity, .place:
+            guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+            return latitude == nil || longitude == nil
+        default:
+            return false
+        }
+    }
+    
     var aiResultSubtitle: String {
+        let time = PlanDayTiming.timeText(start: startTime, end: endTime)
         let notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !time.isEmpty, !notes.isEmpty { return "\(time) · \(notes)" }
+        if !time.isEmpty { return time }
         if !notes.isEmpty { return notes }
         if kind == .checklist {
             let checklist = checklistItemsText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -118,14 +132,25 @@ enum AIReplyCopy {
     
     static func places(itemCount: Int, destinationHint: String?, items: [PlanDayItem] = []) -> String {
         let place = destinationHint?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let n = max(itemCount, 1)
+        let n = max(itemCount, 0)
         let mix = placesCategoryBlurb(for: items)
-        let saveHint = "Tap Save to Places on any you’d like to keep, or Save All to add them to your library."
+        let saveHint = n <= 1
+            ? "Tap Save to Places to keep it, or Save All to add it to your library."
+            : "Tap Save to Places on any you’d like to keep, or Save All to add them to your library."
+        let countPhrase: String = {
+            if n == 0 { return "a few places" }
+            if n == 1 { return "1 highlight" }
+            return "\(n) highlights"
+        }()
         
         if place.isEmpty {
-            return "I put together \(n) places that felt worth saving\(mix). \(saveHint)"
+            let emptyMix = mix.isEmpty ? " that felt worth saving" : mix
+            return "I put together \(countPhrase)\(emptyMix). \(saveHint)"
         }
-        return "I put together \(n) highlights around \(place)\(mix). They’re a mix of local favorites and easy-to-revisit spots. \(saveHint)"
+        if n <= 1 {
+            return "I found \(countPhrase) around \(place)\(mix). \(saveHint)"
+        }
+        return "I put together \(countPhrase) around \(place)\(mix). They’re a mix of local favorites and easy-to-revisit spots. \(saveHint)"
     }
     
     private static func placesCategoryBlurb(for items: [PlanDayItem]) -> String {
@@ -207,8 +232,7 @@ struct AIResultActionCapsule: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 17, weight: .medium))
+                AppIcon(systemName: systemImage, size: 17, color: foreground)
                 Text(title)
                     .font(.app(15, weight: .semibold))
             }
@@ -238,9 +262,7 @@ struct AIResultMapIconButton: View {
                     ProgressView()
                         .controlSize(.small)
                 } else {
-                    Image(systemName: "map")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(foreground)
+                    AppIcon(systemName: "map", size: 17, color: foreground)
                 }
             }
             .frame(width: 40, height: 40)
@@ -283,6 +305,8 @@ struct AIResultItemCard<Accessory: View>: View {
     var isMapLoading: Bool = false
     /// Reserves the image slot and shows a spinner while the cover loads.
     var showsPhotoPlaceholder: Bool = false
+    /// MapKit could not verify this venue — show a visible warning.
+    var showsUnverifiedLocation: Bool = false
     var onMapTap: (() -> Void)? = nil
     @ViewBuilder var accessory: () -> Accessory
     
@@ -294,6 +318,7 @@ struct AIResultItemCard<Accessory: View>: View {
         showsMapButton: Bool = true,
         isMapLoading: Bool = false,
         showsPhotoPlaceholder: Bool = false,
+        showsUnverifiedLocation: Bool = false,
         onMapTap: (() -> Void)? = nil,
         @ViewBuilder accessory: @escaping () -> Accessory
     ) {
@@ -304,6 +329,7 @@ struct AIResultItemCard<Accessory: View>: View {
         self.showsMapButton = showsMapButton
         self.isMapLoading = isMapLoading
         self.showsPhotoPlaceholder = showsPhotoPlaceholder
+        self.showsUnverifiedLocation = showsUnverifiedLocation
         self.onMapTap = onMapTap
         self.accessory = accessory
     }
@@ -324,6 +350,13 @@ struct AIResultItemCard<Accessory: View>: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                if showsUnverifiedLocation {
+                    Text("Unverified location")
+                        .font(.app(13, weight: .medium))
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             
@@ -365,7 +398,7 @@ struct AIResultItemCard<Accessory: View>: View {
         case .savePlace(let isOn):
             AIResultActionCapsule(
                 title: isOn.wrappedValue ? "Saved to Places" : "Save to Places",
-                systemImage: "mappin"
+                systemImage: isOn.wrappedValue ? "map-pin-check" : "map-pin-plus"
             ) {
                 // One-way save — not a checkbox like trip Include.
                 guard !isOn.wrappedValue else { return }
@@ -374,7 +407,7 @@ struct AIResultItemCard<Accessory: View>: View {
         case .include(let isOn):
             AIResultActionCapsule(
                 title: isOn.wrappedValue ? "Included" : "Include",
-                systemImage: isOn.wrappedValue ? "checkmark.circle.fill" : "circle"
+                systemImage: isOn.wrappedValue ? "circle-check-big" : "circle"
             ) {
                 isOn.wrappedValue.toggle()
             }
@@ -391,6 +424,7 @@ extension AIResultItemCard where Accessory == EmptyView {
         showsMapButton: Bool = true,
         isMapLoading: Bool = false,
         showsPhotoPlaceholder: Bool = false,
+        showsUnverifiedLocation: Bool = false,
         onMapTap: (() -> Void)? = nil
     ) {
         self.init(
@@ -401,6 +435,7 @@ extension AIResultItemCard where Accessory == EmptyView {
             showsMapButton: showsMapButton,
             isMapLoading: isMapLoading,
             showsPhotoPlaceholder: showsPhotoPlaceholder,
+            showsUnverifiedLocation: showsUnverifiedLocation,
             onMapTap: onMapTap,
             accessory: { EmptyView() }
         )
@@ -527,16 +562,17 @@ enum AIResultMaps {
         longitude: Double? = nil,
         selectedMapItem: Binding<MKMapItem?>
     ) async {
-        let query = [title, location]
+        let queryBits = [title, location]
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-            .joined(separator: ", ")
-        guard !query.isEmpty || (latitude != nil && longitude != nil) else { return }
+        guard !queryBits.isEmpty || (latitude != nil && longitude != nil) else { return }
         
-        if let mapItem = await searchMapItem(
-            query: query,
+        if let mapItem = await ApplePlaceLookup.mapItem(
+            name: title,
+            location: location,
             latitude: latitude,
-            longitude: longitude
+            longitude: longitude,
+            destinationHint: location
         ) {
             selectedMapItem.wrappedValue = mapItem
             return
@@ -549,34 +585,6 @@ enum AIResultMaps {
             longitude: longitude
         ) {
             selectedMapItem.wrappedValue = fallback
-        }
-    }
-    
-    @MainActor
-    private static func searchMapItem(
-        query: String,
-        latitude: Double?,
-        longitude: Double?
-    ) async -> MKMapItem? {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = trimmed
-        request.resultTypes = [.pointOfInterest, .address]
-        if let latitude, let longitude {
-            request.region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                latitudinalMeters: 8_000,
-                longitudinalMeters: 8_000
-            )
-        }
-        
-        do {
-            let response = try await MKLocalSearch(request: request).start()
-            return response.mapItems.first
-        } catch {
-            return nil
         }
     }
     
@@ -602,16 +610,54 @@ enum AIResultMaps {
         guard items.wrappedValue[idx].canSaveToPlaces else { return }
         
         let current = items.wrappedValue[idx]
-        let data = await PlaceAppleImagery.coverJPEG(
+        let mapItem = await ApplePlaceLookup.mapItem(
             name: current.title,
             location: current.location,
             latitude: current.latitude,
-            longitude: current.longitude
+            longitude: current.longitude,
+            destinationHint: current.location
         )
+        
+        // Keep list pins / later covers aligned with the Maps preview place.
+        if let mapItem,
+           let latestIdx = items.wrappedValue.firstIndex(where: { $0.id == id }) {
+            if let coordinate = mapItemCoordinate(mapItem) {
+                items.wrappedValue[latestIdx].latitude = coordinate.latitude
+                items.wrappedValue[latestIdx].longitude = coordinate.longitude
+            }
+            if let refined = refinedLocation(from: mapItem, fallbackTitle: current.title) {
+                items.wrappedValue[latestIdx].location = refined
+            }
+        }
+        
+        let data: Data?
+        if let mapItem {
+            data = await PlaceAppleImagery.coverJPEG(for: mapItem)
+        } else {
+            data = await PlaceAppleImagery.coverJPEG(
+                name: current.title,
+                location: current.location,
+                latitude: current.latitude,
+                longitude: current.longitude
+            )
+        }
+        
         guard let data,
               let latestIdx = items.wrappedValue.firstIndex(where: { $0.id == id }),
               items.wrappedValue[latestIdx].photoData == nil else { return }
-        items.wrappedValue[latestIdx].photoData = data
+        items.wrappedValue[latestIdx].photoData = PlaceImageResolver.compressedCoverData(data)
+    }
+    
+    private static func refinedLocation(from mapItem: MKMapItem, fallbackTitle: String) -> String? {
+        let address = mapItemAddressString(mapItem)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = (mapItem.name ?? fallbackTitle).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !address.isEmpty {
+            if !name.isEmpty, !address.localizedCaseInsensitiveContains(name) {
+                return "\(name), \(address)"
+            }
+            return address
+        }
+        return name.isEmpty ? nil : name
     }
 }
 
@@ -862,6 +908,7 @@ struct AICreateTripReviewView: View {
             showsMapButton: item.wrappedValue.canOpenInMaps,
             isMapLoading: loadingMapsID == item.wrappedValue.id,
             showsPhotoPlaceholder: item.wrappedValue.canSaveToPlaces,
+            showsUnverifiedLocation: item.wrappedValue.isLocationUnresolved,
             onMapTap: {
                 Task {
                     loadingMapsID = item.wrappedValue.id
@@ -885,6 +932,8 @@ struct AICreateTripReviewView: View {
     
     private func itemSubtitle(for item: PlanDayItem) -> String {
         let base = item.aiResultSubtitle
+            .replacingOccurrences(of: #"\s*·\s*Unverified location"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         let day = item.dayLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         if day.isEmpty || day == base { return base }
         if base.isEmpty { return day }

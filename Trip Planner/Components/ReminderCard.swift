@@ -16,12 +16,10 @@ struct ReminderCard: View {
     
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: "pin.fill")
-                .font(.app(15, weight: .semibold))
-                .foregroundStyle(textPrimary)
+            AppIcon(systemName: "pin.fill", size: 15, strokeWidth: 2, color: textPrimary)
             
             Text(text)
-                .font(.app(12, weight: .regular))
+                .font(.app(13, weight: .regular))
                 .foregroundStyle(textPrimary)
                 .lineLimit(1)
             

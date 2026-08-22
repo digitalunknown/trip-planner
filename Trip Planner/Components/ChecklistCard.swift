@@ -11,7 +11,6 @@ struct ChecklistCard: View {
     var body: some View {
         let headerColor = Color(hex: 0xF9C842)
         let listBgColor = Color(hex: 0xFAE78B)
-        let lineColor = Color(hex: 0xF9D767)
         let textColor = Color(hex: 0x523E0E)
         
         let previewItems = Array(checklist.items.prefix(3))
@@ -33,63 +32,62 @@ struct ChecklistCard: View {
                     )
                 }
                 
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .center, spacing: 6) {
+                    AppIcon(systemName: "checklist", size: 15, strokeWidth: 2, color: textColor)
+                    
                     Text(checklist.title)
-                        .font(.app(12, weight: .semibold))
+                        .font(.app(13, weight: .semibold))
                         .foregroundStyle(textColor)
                         .lineLimit(1)
                     
-                    Spacer()
+                    Spacer(minLength: 0)
                     
                     Text(completedText)
-                        .font(.app(12, weight: .semibold))
+                        .font(.app(13, weight: .semibold))
                         .foregroundStyle(textColor)
                 }
-                .padding(.horizontal, 16)
+                .padding(.leading, 12)
+                .padding(.trailing, 16)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 44)
+            
+            let stitchColor = Color(hex: 0xC9A239)
             
             VStack(spacing: 0) {
                 ForEach(0..<3, id: \.self) { idx in
                     let text = idx < previewItems.count ? previewItems[idx].text : ""
                     let isDone = idx < previewItems.count ? previewItems[idx].isDone : false
+                    let hasItem = idx < previewItems.count
                     
-                    ZStack {
-                        Rectangle()
-                            .fill(listBgColor)
+                    HStack(spacing: 12) {
+                        AppIcon(
+                            lucide: hasItem ? (isDone ? "circle-check-big" : "circle") : "circle",
+                            size: 16,
+                            color: textColor.opacity(hasItem ? (isDone ? 0.85 : 0.55) : 0.0)
+                        )
                         
-                        HStack(spacing: 6) {
-                            if idx < previewItems.count {
-                                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(textColor.opacity(isDone ? 0.85 : 0.55))
-                            } else {
-                                Image(systemName: "circle")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(textColor.opacity(0.0))
-                            }
-                            
-                            Text(text)
-                                .font(.appCaption)
-                                .foregroundStyle(textColor)
-                                .lineLimit(1)
-                                .strikethrough(isDone, color: textColor.opacity(0.6))
-                            
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 16)
+                        Text(text)
+                            .font(.app(13, weight: .regular))
+                            .foregroundStyle(textColor)
+                            .lineLimit(1)
+                            .strikethrough(isDone, color: textColor.opacity(0.6))
+                        
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .background(listBgColor)
                     
                     if idx < 2 {
                         Rectangle()
-                            .fill(lineColor)
+                            .fill(stitchColor.opacity(0.35))
                             .frame(height: 1)
                     }
                 }
             }
+            .background(listBgColor)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
@@ -98,4 +96,3 @@ struct ChecklistCard: View {
         )
     }
 }
-

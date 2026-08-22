@@ -1,4 +1,5 @@
 import UIKit
+import CoreText
 
 extension Notification.Name {
     static let quickActionCreateNewTrip = Notification.Name("quickActionCreateNewTrip")
@@ -13,11 +14,20 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         Self.applyAppFonts()
+        Task { @MainActor in
+            AppLucide.applySearchBarChrome()
+        }
         application.shortcutItems = []
         return true
     }
     
     private static func applyAppFonts() {
+        // Ensure the bundled variable font is registered even if Info.plist path drifts.
+        if let url = Bundle.main.url(forResource: "Manrope-VariableFont_wght", withExtension: "ttf")
+            ?? Bundle.main.url(forResource: "Manrope-VariableFont_wght", withExtension: "ttf", subdirectory: "Fonts") {
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+        
         let nav = UINavigationBarAppearance()
         nav.configureWithDefaultBackground()
         nav.titleTextAttributes = [

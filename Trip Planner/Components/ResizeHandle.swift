@@ -1,27 +1,23 @@
 import SwiftUI
 
+/// Matches the system bottom-sheet drag indicator (`presentationDragIndicator`).
 struct ResizeHandle: View {
     @Environment(\.colorScheme) private var colorScheme
     
-    private var backgroundColor: Color { colorScheme == .dark ? Color(hex: 0x0A0A0A) : Color(hex: 0xE0E0E0) }
+    private var backgroundColor: Color {
+        colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0)
+    }
+    
+    private var grabberColor: Color {
+        Color.primary.opacity(colorScheme == .dark ? 0.35 : 0.2)
+    }
     
     var body: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(backgroundColor)
-                .frame(height: 12)
-            
-            HStack {
-                Spacer()
-                Capsule()
-                    .fill(Color(.systemGray3))
-                    .frame(width: 40, height: 5)
-                Spacer()
-            }
-            .frame(height: 12)
+        Capsule(style: .continuous)
+            .fill(grabberColor)
+            .frame(width: 36, height: 5)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(backgroundColor)
-        }
-        .contentShape(Rectangle())
+            .contentShape(Rectangle())
     }
 }
-

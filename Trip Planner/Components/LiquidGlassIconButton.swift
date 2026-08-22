@@ -37,13 +37,13 @@ struct LiquidGlassToolbarIconLabel: View {
     let systemName: String
     
     var body: some View {
-        Image(systemName: systemName)
-            .font(.app(14, weight: .semibold))
-            .symbolRenderingMode(.monochrome)
-            .foregroundStyle(.primary)
-            .tint(.primary)
-            .frame(width: LiquidGlassToolbarMetrics.iconSide, height: LiquidGlassToolbarMetrics.iconSide)
-            .contentShape(Rectangle())
+        AppIcon(
+            systemName: systemName,
+            size: AppLucide.toolbarSize,
+            color: AppLucide.labelColor
+        )
+        .frame(width: LiquidGlassToolbarMetrics.iconSide, height: LiquidGlassToolbarMetrics.iconSide)
+        .contentShape(Rectangle())
     }
 }
 

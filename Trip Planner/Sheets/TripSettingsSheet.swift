@@ -77,33 +77,24 @@ struct TripSettingsSheet: View {
         return parts.joined(separator: " • ")
     }
     
-    private struct ToolbarIcon: View {
-        let systemName: String
-        
-        var body: some View {
-            Image(systemName: systemName)
-                .font(.app(14, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 36, height: 36)
-                .contentShape(Circle())
-        }
-    }
-
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    HStack {
-                        TextField("Trip Name", text: $draftName)
-                        if !draftName.isEmpty {
-                            Button {
-                                draftName = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
+                    Label {
+                        HStack {
+                            TextField("Trip Name", text: $draftName)
+                            if !draftName.isEmpty {
+                                Button {
+                                    draftName = ""
+                                } label: {
+                                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                    } icon: {
+                        AppIcon(lucide: "type", size: AppLucide.chromeSize, color: .primary)
                     }
                     LocationSearchField(
                         text: $draftLocation,
@@ -115,27 +106,31 @@ struct TripSettingsSheet: View {
                 }
 
                 Section {
-                    Toggle("Set Dates", isOn: $draftIsDatesSet)
-                        .tint(appAccentColor)
+                    Toggle(isOn: $draftIsDatesSet) {
+                        Label("Set Dates", appIcon: "calendar-range")
+                    }
+                    .tint(appAccentColor)
                     
                     if draftIsDatesSet {
                         DatePicker(
-                            "Start date",
                             selection: $draftStartDate,
                             in: Date.distantPast...Date.distantFuture,
                             displayedComponents: .date
-                        )
+                        ) {
+                            Label("Start date", appIcon: "calendar")
+                        }
                         
                         DatePicker(
-                            "End date",
                             selection: $draftEndDate,
                             in: draftStartDate...Date.distantFuture,
                             displayedComponents: .date
-                        )
+                        ) {
+                            Label("End date", appIcon: "calendar-days")
+                        }
                     } else {
                         Stepper(value: $draftUnscheduledDaysCount, in: 1...30) {
                             HStack {
-                                Text("Number of Days")
+                                Label("Number of Days", appIcon: "hash")
                                 Spacer()
                                 Text("\(draftUnscheduledDaysCount)")
                                     .foregroundStyle(.secondary)
@@ -148,7 +143,7 @@ struct TripSettingsSheet: View {
                             showTotalCostsSheet = true
                         } label: {
                             HStack {
-                                Text("Total Cost")
+                                Label("Total Cost", appIcon: "wallet")
                                 Spacer()
                                 Text(totalCostSummaryText)
                                     .foregroundStyle(.primary)
@@ -162,7 +157,7 @@ struct TripSettingsSheet: View {
                             showActivityDocumentsSheet = true
                         } label: {
                             HStack {
-                                Text("Documents")
+                                Label("Documents", appIcon: "files")
                                 Spacer()
                                 Text("\(documentItems.count)")
                                     .foregroundStyle(.primary)
@@ -186,13 +181,13 @@ struct TripSettingsSheet: View {
                                         Button {
                                             showUnsplashPicker = true
                                         } label: {
-                                            Label("Choose from Unsplash", systemImage: "sparkles")
+                                            Label("Choose from Unsplash", appIcon: "sparkles")
                                         }
                                         
                                         Button {
                                             showImagePicker = true
                                         } label: {
-                                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                            Label("Choose from Photos", appIcon: "photo.on.rectangle")
                                         }
                                     } label: {
                                         Color.clear
@@ -213,13 +208,13 @@ struct TripSettingsSheet: View {
                             Button {
                                 showUnsplashPicker = true
                             } label: {
-                                Label("Choose from Unsplash", systemImage: "sparkles")
+                                Label("Choose from Unsplash", appIcon: "sparkles")
                             }
                             
                             Button {
                                 showImagePicker = true
                             } label: {
-                                Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                Label("Choose from Photos", appIcon: "photo.on.rectangle")
                             }
                         } label: {
                             HStack {
@@ -233,8 +228,10 @@ struct TripSettingsSheet: View {
                 }
                 
                 Section {
-                    Toggle("Show Ideas", isOn: $draftShowParkedIdeas)
-                        .tint(appAccentColor)
+                    Toggle(isOn: $draftShowParkedIdeas) {
+                        Label("Show Ideas", appIcon: "lightbulb")
+                    }
+                    .tint(appAccentColor)
                 } footer: {
                     Text("Include an extra column for ideation not tied to a day")
                 }
@@ -246,16 +243,16 @@ struct TripSettingsSheet: View {
                     LiquidGlassIconButton(systemName: "xmark") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 8) {
+                    LiquidGlassToolbarIconPair {
                         Menu {
                             Button {
                                 UIPasteboard.general.string = itineraryText
                                 Haptics.bump()
                             } label: {
-                                Text("Copy Itinerary")
+                                Label("Copy Itinerary", appIcon: "doc.on.doc")
                             }
                         } label: {
-                            ToolbarIcon(systemName: "square.and.arrow.up")
+                            LiquidGlassToolbarIconLabel(systemName: "square.and.arrow.up")
                         }
                         .buttonStyle(.plain)
                         

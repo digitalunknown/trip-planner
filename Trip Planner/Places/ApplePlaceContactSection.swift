@@ -1,7 +1,7 @@
 import SwiftUI
 import MapKit
 
-/// Inline Address / Phone / Website rows plus “View More Details” (Apple Place Card).
+/// Inline Address / Phone / Website rows plus “View more details” (Apple Place Card).
 struct ApplePlaceContactSection: View {
     let mapItem: MKMapItem
     var fallbackTitle: String = "Place"
@@ -72,7 +72,7 @@ struct ApplePlaceContactSection: View {
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(hasContactRows ? "View More Details" : (mapItem.name ?? fallbackTitle))
+                        Text(hasContactRows ? "View more details" : (mapItem.name ?? fallbackTitle))
                             .foregroundStyle(.primary)
                         Text("Photos, hours, ratings & more")
                             .font(.appCaption)
@@ -120,43 +120,8 @@ struct ApplePlaceContactSection: View {
 }
 
 /// Looks up an `MKMapItem` from a location query / coordinates for place contact UI.
-enum ApplePlaceLookup {
-    static func mapItem(
-        name: String,
-        location: String,
-        latitude: Double?,
-        longitude: Double?,
-        regionHint: MKCoordinateRegion?
-    ) async -> MKMapItem? {
-        let query = [name, location]
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .joined(separator: ", ")
-        let locationOnly = location.trimmingCharacters(in: .whitespacesAndNewlines)
-        let searchQuery = locationOnly.isEmpty ? query : locationOnly
-        guard !searchQuery.isEmpty else { return nil }
-        
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = searchQuery
-        request.resultTypes = [.pointOfInterest, .address]
-        if let latitude, let longitude {
-            request.region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                latitudinalMeters: 4_000,
-                longitudinalMeters: 4_000
-            )
-        } else if let regionHint {
-            request.region = regionHint
-        }
-        
-        do {
-            let response = try await MKLocalSearch(request: request).start()
-            return response.mapItems.first
-        } catch {
-            return nil
-        }
-    }
-}
+/// Implementation lives in `ApplePlaceLookup.swift` (shared with AI covers + Maps preview).
+
 
 private struct ApplePlaceCardSheetModifier: ViewModifier {
     @Binding var item: MKMapItem?

@@ -119,9 +119,11 @@ struct PassportStampView: View {
         }
         
         let iconLayer =
-            Image(systemName: iconSystemName)
-                .font(.app(size * 0.34, weight: .semibold))
-                .foregroundStyle(foregroundOnSticker)
+            AppIcon(
+                systemName: iconSystemName,
+                size: size * 0.34,
+                color: foregroundOnSticker
+            )
         
         // Use a neutral base so the Sticker shader's holographic colors read evenly across the whole circle.
         // (Using a rainbow base tends to look "localized" to one side once blended + shaded.)

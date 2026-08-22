@@ -55,7 +55,7 @@ struct TrackersHomeView: View {
     private var displayName: String {
         let name = (auth.displayName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if !name.isEmpty { return name }
-        return TripLevelProgress.title(forLevel: tripLevel) ?? "Getting started"
+        return "Profile"
     }
     
     private var initials: String {
@@ -128,7 +128,12 @@ struct TrackersHomeView: View {
     var body: some View {
         SwiftUI.ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(alignment: .leading, spacing: 32) {
-                profileIdentityRow
+                // Dynamic names don’t always pick up UIKit large-title fonts; draw the
+                // page title in Manrope so it matches Trips / Places / Explore.
+                VStack(alignment: .leading, spacing: 12) {
+                    PageWrappingTitle(title: displayName)
+                    profileIdentityRow
+                }
                 
                 statsGrid
                 
@@ -142,11 +147,11 @@ struct TrackersHomeView: View {
             .padding(.top, RootHomeMetrics.topInset)
             .padding(.bottom, RootHomeMetrics.bottomInset)
         }
-        .background(Color(.systemBackground))
+        .background(Color(.systemGroupedBackground))
         .tint(.primary)
         .environment(\.appAccentColor, textPrimary)
         .navigationTitle(displayName)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $presentedGlobeTripID) { tripID in
             tripDetail(for: tripID)
         }
@@ -155,8 +160,7 @@ struct TrackersHomeView: View {
                 Button {
                     showSettings = true
                 } label: {
-                    Image(systemName: "gearshape")
-                        .fontWeight(.medium)
+                    AppIcon(systemName: "gearshape", size: 16, strokeWidth: 2)
                 }
             }
         }
@@ -386,10 +390,15 @@ struct TrackersHomeView: View {
         store.visitedIDs(in: .nationalParks)
     }
     
+    private var loggedCities: [String] {
+        AchievementsCatalog.loggedCities(from: tripStore.trips)
+    }
+    
     private var visibleAchievements: [AchievementDefinition] {
         AchievementsCatalog.visibleAchievements(
             progress: achievementProgress,
-            visitedParkIDs: visitedNationalParkIDs
+            visitedParkIDs: visitedNationalParkIDs,
+            loggedCities: loggedCities
         )
     }
     
@@ -400,7 +409,8 @@ struct TrackersHomeView: View {
     private var unlockedAchievementsCount: Int {
         AchievementsCatalog.unlockedCount(
             progress: achievementProgress,
-            visitedParkIDs: visitedNationalParkIDs
+            visitedParkIDs: visitedNationalParkIDs,
+            loggedCities: loggedCities
         )
     }
     
@@ -583,12 +593,12 @@ struct TrackersHomeView: View {
                             Button {
                                 presentedTracker = type
                             } label: {
-                                Label("View", systemImage: "arrow.right.circle")
+                                Label("View", appIcon: "arrow.right.circle")
                             }
                             Button {
                                 setStatHidden(statID(for: type), true)
                             } label: {
-                                Label("Hide", systemImage: "eye.slash")
+                                Label("Hide", appIcon: "eye.slash")
                             }
                         }
                     }
@@ -754,9 +764,11 @@ private struct AchievementBadgeCell: View {
                         .fill(textPrimary.opacity(colorScheme == .dark ? 0.18 : 0.10))
                     Circle()
                         .strokeBorder(textPrimary.opacity(0.18), lineWidth: 1)
-                    Image(systemName: definition.systemImage)
-                        .font(.system(size: badgeSize * 0.36, weight: .semibold))
-                        .foregroundStyle(textPrimary.opacity(0.92))
+                    AppIcon(
+                        systemName: definition.systemImage,
+                        size: badgeSize * 0.36,
+                        color: textPrimary.opacity(0.92)
+                    )
                 }
             }
         } else {

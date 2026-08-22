@@ -285,7 +285,7 @@ class PlaceStore {
             if place.longitude == nil { place.longitude = coordinate.longitude }
         }
         
-        await assignCoverIfNeeded(to: &place)
+        await assignCoverIfNeeded(to: &place, mapItem: mapItem)
     }
     
     @MainActor
@@ -305,21 +305,26 @@ class PlaceStore {
     }
     
     @MainActor
-    private func assignCoverIfNeeded(to place: inout Place) async {
+    private func assignCoverIfNeeded(to place: inout Place, mapItem: MKMapItem? = nil) async {
         guard place.photoData == nil else { return }
-        guard let lat = place.latitude, let lon = place.longitude else { return }
-        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-        guard CLLocationCoordinate2DIsValid(coordinate) else { return }
         
         let placeID = place.id
-        let jpeg = await PlaceAppleImagery.coverJPEG(at: coordinate)
+        let jpeg: Data?
+        if let mapItem {
+            jpeg = await PlaceAppleImagery.coverJPEG(for: mapItem)
+        } else {
+            guard let lat = place.latitude, let lon = place.longitude else { return }
+            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            guard CLLocationCoordinate2DIsValid(coordinate) else { return }
+            jpeg = await PlaceAppleImagery.coverJPEG(at: coordinate)
+        }
         guard placeStoreStillContains(placeID) else { return }
         // Re-read in case the user set a photo while we were fetching.
         if let current = self.place(id: placeID), current.photoData != nil {
             place.photoData = current.photoData
             return
         }
-        place.photoData = jpeg
+        place.photoData = PlaceImageResolver.compressedCoverData(jpeg) ?? jpeg
     }
     
     private func placeStoreStillContains(_ placeID: UUID) -> Bool {

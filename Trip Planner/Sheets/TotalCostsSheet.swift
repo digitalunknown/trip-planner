@@ -58,7 +58,7 @@ struct TotalCostsSheet: View {
                             Button {
                                 UIPasteboard.general.string = "\(CurrencyFormatting.string(for: entry.total, currencyCode: entry.currencyCode)) \(entry.currencyCode)"
                             } label: {
-                                Label("Copy", systemImage: "doc.on.doc")
+                                Label("Copy", appIcon: "doc.on.doc")
                             }
                         }
                     }

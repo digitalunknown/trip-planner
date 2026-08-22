@@ -41,9 +41,11 @@ struct NewChecklistSheet: View {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                                         .fill(Color(hex: 0xF9C842).opacity(0.18))
-                                    Image(systemName: "checklist")
-                                        .foregroundStyle(Color(hex: 0xF9C842))
-                                        .font(.app(52, weight: .semibold))
+                                    AppIcon(
+                                        lucide: "list-checks",
+                                        size: 52,
+                                        color: Color(hex: 0xF9C842)
+                                    )
                                 }
                                 .frame(width: 112, height: 112)
                                 
@@ -71,15 +73,17 @@ struct NewChecklistSheet: View {
                         .listRowBackground(Color.clear)
                         
                         Section {
-                            Picker("Day", selection: $selectedDayID) {
+                            Picker(selection: $selectedDayID) {
                                 ForEach(dayOptions) { option in
                                     Text(option.title)
                                         .tag(Optional(option.id))
                                 }
+                            } label: {
+                                Label("Day", appIcon: "calendar", color: .primary)
                             }
                         }
                         
-                        Group {
+                        Section {
                             ForEach(items) { item in
                                 let itemID = item.id
                                 let isDone = items.first(where: { $0.id == itemID })?.isDone ?? false
@@ -92,9 +96,11 @@ struct NewChecklistSheet: View {
                                     if !wasDone, items[idx].isDone { Haptics.bump() }
                                 } label: {
                                     HStack(spacing: 12) {
-                                        Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                                            .font(.system(size: 20))
-                                            .foregroundStyle(textPrimary)
+                                        AppIcon(
+                                            lucide: isDone ? "circle-check-big" : "circle",
+                                            size: 20,
+                                            color: textPrimary
+                                        )
                                         
                                         HStack(spacing: 0) {
                                             TextField(
@@ -136,7 +142,6 @@ struct NewChecklistSheet: View {
                                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
-                                .padding(.vertical, 0.5)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button {
                                         guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
@@ -147,9 +152,11 @@ struct NewChecklistSheet: View {
                                         ZStack {
                                             Circle()
                                                 .fill(Color.orange)
-                                            Image(systemName: isDone ? "arrow.uturn.left" : "checkmark")
-                                                .font(.system(size: 18, weight: .semibold))
-                                                .foregroundStyle(.white)
+                                            AppIcon(
+                                                lucide: isDone ? "undo-2" : "check",
+                                                size: 18,
+                                                color: .white
+                                            )
                                         }
                                         .frame(width: 44, height: 44)
                                     }
@@ -161,9 +168,7 @@ struct NewChecklistSheet: View {
                                         ZStack {
                                             Circle()
                                                 .fill(Color.red)
-                                            Image(systemName: "trash")
-                                                .font(.system(size: 18, weight: .semibold))
-                                                .foregroundStyle(.white)
+                                            AppIcon(lucide: "trash-2", size: 18, color: .white)
                                         }
                                         .frame(width: 44, height: 44)
                                     }
@@ -177,12 +182,14 @@ struct NewChecklistSheet: View {
                             }
                             
                             Button {
-                                // No-op, tapping the row does nothing, only tapping text field focuses it
+                                // No-op — only the text field / Add control focus & commit.
                             } label: {
                                 HStack(spacing: 12) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundStyle(textPrimary)
+                                    AppIcon(
+                                        lucide: "circle-plus",
+                                        size: 20,
+                                        color: textPrimary
+                                    )
                                     
                                     HStack(spacing: 0) {
                                         ReturnKeyTextField(
@@ -222,10 +229,9 @@ struct NewChecklistSheet: View {
                             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
-                            .padding(.vertical, 0.5)
                             .id(addRowID)
                         }
-                        .modifier(ChecklistItemsSectionHeader(isEditing: isEditing))
+                        .listRowSpacing(1)
                         
                         DetailActionButtonStack {
                             Button {
@@ -251,7 +257,7 @@ struct NewChecklistSheet: View {
                             } label: {
                                 Label(
                                     didCopyItems ? "Copied" : "Copy Items",
-                                    systemImage: didCopyItems ? "checkmark" : "doc.on.doc"
+                                    appIcon: didCopyItems ? "checkmark" : "doc.on.doc"
                                 )
                             }
                             .buttonStyle(.secondaryCapsuleBlock)
@@ -263,7 +269,7 @@ struct NewChecklistSheet: View {
                                     onDelete?()
                                     dismiss()
                                 } label: {
-                                    Label("Delete Checklist", systemImage: "trash")
+                                    Label("Delete Checklist", appIcon: "trash")
                                 }
                                 .buttonStyle(.destructiveCapsuleBlock)
                                 .detailActionRow()
@@ -271,6 +277,8 @@ struct NewChecklistSheet: View {
                         }
                     }
                     .scrollContentBackground(.hidden)
+                    .listRowSpacing(1)
+                    .environment(\.defaultMinListRowHeight, 1)
                     .onChange(of: isAddFieldFocused) { _, newValue in
                         guard newValue else { return }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -320,14 +328,6 @@ struct NewChecklistSheet: View {
     private static func clampedChecklistItemText(_ text: String, maxLength: Int) -> String {
         guard text.count > maxLength else { return text }
         return String(text.prefix(maxLength))
-    }
-}
-
-private struct ChecklistItemsSectionHeader: ViewModifier {
-    let isEditing: Bool
-    
-    func body(content: Content) -> some View {
-        Section { content }
     }
 }
 

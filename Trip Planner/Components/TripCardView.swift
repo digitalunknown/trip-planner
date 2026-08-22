@@ -212,7 +212,7 @@ struct TripCardView: View {
                 Text("  ·  ")
             }
             if let coverAttributionName {
-                Image(systemName: "camera.fill")
+                AppIcon(systemName: "camera.fill", size: 14, strokeWidth: 1.75)
                 Text(" \(coverAttributionName)")
             }
         }

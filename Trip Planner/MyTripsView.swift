@@ -350,13 +350,35 @@ struct MyTripsView: View {
     
     private func parseISODate(_ raw: String?) -> Date? {
         guard let raw, !raw.isEmpty else { return nil }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withFullDate]
-        if let d = f.date(from: raw) { return d }
-        let df = DateFormatter()
-        df.locale = Locale(identifier: "en_US_POSIX")
-        df.dateFormat = "yyyy-MM-dd"
-        return df.date(from: raw)
+        let parts = raw.split(separator: "-")
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else { return nil }
+        var comps = DateComponents()
+        comps.year = year
+        comps.month = month
+        comps.day = day
+        return Calendar.current.date(from: comps)
+    }
+    
+    /// Roll AI dates forward when the model emits a past year (e.g. Dec 2025 for a Dec–Jan ask in 2026).
+    private func normalizeUpcomingAIDates(start: Date, end: Date) -> (start: Date, end: Date) {
+        let calendar = Calendar(identifier: .gregorian)
+        var startDay = calendar.startOfDay(for: start)
+        var endDay = calendar.startOfDay(for: end)
+        let today = calendar.startOfDay(for: Date())
+        
+        while endDay < startDay {
+            endDay = calendar.date(byAdding: .year, value: 1, to: endDay) ?? endDay
+        }
+        var guardCount = 0
+        while endDay < today, guardCount < 10 {
+            startDay = calendar.date(byAdding: .year, value: 1, to: startDay) ?? startDay
+            endDay = calendar.date(byAdding: .year, value: 1, to: endDay) ?? endDay
+            guardCount += 1
+        }
+        return (startDay, max(startDay, endDay))
     }
     
     private func commitAITrip(_ draft: AITripDraft, seedItems: [PlanDayItem], placeItems: [PlanDayItem]) {
@@ -366,8 +388,13 @@ struct MyTripsView: View {
         let resolvedDestination = destination.isEmpty ? resolvedName : destination
         
         let isDatesSet = draft.isDatesSet
-        let start = parseISODate(draft.startDate) ?? Date()
-        let end = parseISODate(draft.endDate) ?? start.addingTimeInterval(86400 * 3)
+        let parsedStart = parseISODate(draft.startDate) ?? Date()
+        let parsedEnd = parseISODate(draft.endDate) ?? parsedStart.addingTimeInterval(86400 * 3)
+        let normalized = isDatesSet
+            ? normalizeUpcomingAIDates(start: parsedStart, end: parsedEnd)
+            : (start: parsedStart, end: max(parsedStart, parsedEnd))
+        let start = normalized.start
+        let end = normalized.end
         let unscheduledCount = max(1, draft.unscheduledDaysCount)
         
         var days: [TripDay] = []
@@ -437,8 +464,8 @@ struct MyTripsView: View {
                     latitude: item.latitude,
                     longitude: item.longitude,
                     icon: "mappin.and.ellipse",
-                    accent: .neutral,
-                    photoData: item.photoData
+                    accent: .cream,
+                    photoData: PlaceImageResolver.compressedCoverData(item.photoData)
                 )
             }
         }
@@ -479,7 +506,9 @@ struct MyTripsView: View {
     private func applySeedItems(_ items: [PlanDayItem], to days: inout [TripDay]) {
         guard !days.isEmpty else { return }
         let now = Date()
-        for item in items where item.include {
+        var scheduled = items
+        PlanDayTiming.fillMissingActivityTimes(&scheduled)
+        for item in scheduled where item.include {
             let idx: Int = {
                 if let dayIndex = item.dayIndex, dayIndex >= 0, dayIndex < days.count {
                     return dayIndex
@@ -496,13 +525,13 @@ struct MyTripsView: View {
                 days[idx].events.append(EventItem(
                     title: item.title,
                     description: item.notes,
-                    time: "",
+                    time: PlanDayTiming.timeText(start: item.startTime, end: item.endTime),
                     location: item.location,
                     latitude: item.latitude,
                     longitude: item.longitude,
                     icon: "mappin.and.ellipse",
-                    accent: .neutral,
-                    photoData: item.photoData
+                    accent: .cream,
+                    photoData: PlaceImageResolver.compressedCoverData(item.photoData)
                 ))
             case .reminder:
                 days[idx].reminders.append(ReminderItem(id: UUID(), text: item.title, createdAt: now))
@@ -538,7 +567,7 @@ struct MyTripsView: View {
                     travelMode: .flight,
                     flightNumber: item.flightNumber,
                     notes: item.notes,
-                    accent: .neutral,
+                    accent: .cream,
                     startTime: start,
                     endTime: item.endTime ?? start
                 ))
@@ -745,9 +774,13 @@ struct MyTripsView: View {
         .contextMenu {
             tripCardContextMenu(trip)
         } preview: {
+            // Don’t clipShape the full card — corner radius would eat the
+            // bottom text line. System preview chrome already rounds the container.
             TripCardView(trip: trip)
-                .frame(width: 280)
-                .clipShape(shape)
+                .padding(16)
+                .frame(width: 300)
+                .fixedSize(horizontal: true, vertical: true)
+                .background(Color(.systemBackground))
         }
     }
     
@@ -756,7 +789,7 @@ struct MyTripsView: View {
         Button {
             navigationPath.append(trip.id)
         } label: {
-            Label("View Trip", systemImage: "arrow.right.circle")
+            Label("View Trip", appIcon: "arrow.right.circle")
         }
         
         Divider()
@@ -765,27 +798,27 @@ struct MyTripsView: View {
             Button {
                 tripForUnsplashCoverPicker = trip
             } label: {
-                Label("Choose from Unsplash", systemImage: "sparkles")
+                Label("Choose from Unsplash", appIcon: "sparkles")
             }
             
             Button {
                 tripForImagePicker = trip
                 showImagePicker = true
             } label: {
-                Label("Upload from Photos", systemImage: "photo.on.rectangle")
+                Label("Upload from Photos", appIcon: "photo.on.rectangle")
             }
         } label: {
             let hasCover = trip.coverImageData != nil
             Label(
                 hasCover ? "Update Cover Image" : "Add Cover Image",
-                systemImage: hasCover ? "photo" : "photo.badge.plus"
+                appIcon: hasCover ? "photo" : "photo.badge.plus"
             )
         }
         
         Button {
             editingTrip = trip
         } label: {
-            Label("Edit Trip", systemImage: "pencil")
+            Label("Edit Trip", appIcon: "square.and.pencil")
         }
         
         if auth.isSignedIn {
@@ -794,7 +827,7 @@ struct MyTripsView: View {
                     tripStore.addTrip(trip.duplicatedTrip())
                 }
             } label: {
-                Label("Duplicate Trip", systemImage: "doc.on.doc")
+                Label("Duplicate Trip", appIcon: "doc.on.doc")
             }
             
             Divider()
@@ -802,7 +835,7 @@ struct MyTripsView: View {
             Button(role: .destructive) {
                 tripPendingDelete = trip
             } label: {
-                Label("Delete Trip", systemImage: "trash")
+                Label("Delete Trip", appIcon: "trash")
             }
             .tint(.red)
         }
@@ -869,7 +902,11 @@ struct EditTripView: View {
     @State private var showParkedIdeas: Bool = false
     @State private var originalIsDatesSet: Bool = true
     @State private var originalDaysSnapshot: [TripDay] = []
+    @State private var originalStartDate: Date = Date()
+    @State private var originalEndDate: Date = Date()
     @State private var showConvertDatesDropAlert: Bool = false
+    @State private var showDateRemapAlert: Bool = false
+    @State private var pendingDateRemapDropsTrailing: Bool = false
     @State private var pendingDroppedCounts: (activities: Int, reminders: Int, checklists: Int, flights: Int) = (0, 0, 0, 0)
     @State private var showTotalCostsSheet: Bool = false
     
@@ -1049,13 +1086,13 @@ struct EditTripView: View {
                                         Button {
                                             showUnsplashPicker = true
                                         } label: {
-                                            Label("Choose from Unsplash", systemImage: "sparkles")
+                                            Label("Choose from Unsplash", appIcon: "sparkles")
                                         }
                                         
                                         Button {
                                             showImagePicker = true
                                         } label: {
-                                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                            Label("Choose from Photos", appIcon: "photo.on.rectangle")
                                         }
                                     } label: {
                                         Color.clear
@@ -1083,13 +1120,13 @@ struct EditTripView: View {
                             Button {
                                 showUnsplashPicker = true
                             } label: {
-                                Label("Choose from Unsplash", systemImage: "sparkles")
+                                Label("Choose from Unsplash", appIcon: "sparkles")
                             }
                             
                             Button {
                                 showImagePicker = true
                             } label: {
-                                Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                Label("Choose from Photos", appIcon: "photo.on.rectangle")
                             }
                         } label: {
                             HStack {
@@ -1182,6 +1219,8 @@ struct EditTripView: View {
                 showParkedIdeas = trip.showParkedIdeas
                 originalIsDatesSet = trip.isDatesSet
                 originalDaysSnapshot = trip.days
+                originalStartDate = trip.startDate
+                originalEndDate = trip.endDate
                 if let imageData = trip.coverImageData {
                     coverImage = UIImage(data: imageData)
                     pendingCoverImageData = imageData
@@ -1199,12 +1238,35 @@ struct EditTripView: View {
         .alert("Shorter date range", isPresented: $showConvertDatesDropAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Remove & Convert", role: .destructive) {
-                saveTrip(applyDropOnConvert: true)
+                saveTrip(dayRemap: .byIndex(dropTrailing: true))
                 dismiss()
             }
         } message: {
             Text("This date range is shorter and will remove items from days that no longer fit.\n\n\(pendingDroppedCounts.activities) activities, \(pendingDroppedCounts.reminders) reminders, \(pendingDroppedCounts.checklists) checklists, \(pendingDroppedCounts.flights) flights.")
         }
+        .alert("Update trip dates", isPresented: $showDateRemapAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Keep day order") {
+                saveTrip(dayRemap: .byIndex(dropTrailing: true))
+                dismiss()
+            }
+            Button("Match calendar dates", role: pendingDateRemapDropsTrailing ? .destructive : nil) {
+                saveTrip(dayRemap: .byCalendarDate)
+                dismiss()
+            }
+        } message: {
+            if pendingDateRemapDropsTrailing {
+                Text("Your dates changed. Keep day order moves Day 1, Day 2, … onto the new dates (trailing days that no longer fit will be removed). Match calendar dates only keeps activities on days that still share the same calendar date — shifting the year often clears the itinerary.")
+            } else {
+                Text("Your dates changed. Keep day order moves Day 1, Day 2, … onto the new dates so your itinerary stays intact. Match calendar dates only keeps activities on days that still share the same calendar date.")
+            }
+        }
+    }
+    
+    private enum DayRemapMode {
+        case none
+        case byIndex(dropTrailing: Bool)
+        case byCalendarDate
     }
     
     private func attemptSaveTrip() {
@@ -1222,13 +1284,38 @@ struct EditTripView: View {
                 showConvertDatesDropAlert = true
                 return
             }
+            
+            saveTrip(dayRemap: .byIndex(dropTrailing: false))
+            dismiss()
+            return
         }
         
-        saveTrip(applyDropOnConvert: false)
+        if originalIsDatesSet, isDatesSet {
+            let calendar = Calendar.current
+            let startChanged = !calendar.isDate(originalStartDate, inSameDayAs: startDate)
+            let endChanged = !calendar.isDate(originalEndDate, inSameDayAs: endDate)
+            if startChanged || endChanged {
+                let hasContent = originalDaysSnapshot.contains {
+                    !$0.events.isEmpty || !$0.reminders.isEmpty || !$0.checklists.isEmpty || !$0.flights.isEmpty
+                }
+                if hasContent {
+                    let newCount = max(1, (calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)
+                    pendingDateRemapDropsTrailing = originalDaysSnapshot.count > newCount
+                    showDateRemapAlert = true
+                    return
+                }
+                // Empty itinerary: keep day order onto the new range.
+                saveTrip(dayRemap: .byIndex(dropTrailing: true))
+                dismiss()
+                return
+            }
+        }
+        
+        saveTrip(dayRemap: .none)
         dismiss()
     }
     
-    private func saveTrip(applyDropOnConvert: Bool) {
+    private func saveTrip(dayRemap: DayRemapMode) {
         trip.name = name
         trip.destination = destination
         trip.latitude = latitude
@@ -1243,19 +1330,30 @@ struct EditTripView: View {
         trip.coverImageData = coverData
         trip.showParkedIdeas = showParkedIdeas
         
-        if originalIsDatesSet == false, isDatesSet {
-            let calendar = Calendar.current
-            let totalDays = max(1, (calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)
-            let oldDays = applyDropOnConvert ? Array(originalDaysSnapshot.prefix(totalDays)) : originalDaysSnapshot
-            
-            var newDays: [TripDay] = []
-            newDays.reserveCapacity(totalDays)
-            
-            for offset in 0..<totalDays {
-                let date = calendar.date(byAdding: .day, value: offset, to: startDate) ?? startDate
-                if offset < oldDays.count {
-                    let existing = oldDays[offset]
-                    let updated = TripDay(
+        switch dayRemap {
+        case .none:
+            break
+        case .byIndex(let dropTrailing):
+            remapDaysByIndex(dropTrailing: dropTrailing)
+        case .byCalendarDate:
+            remapDaysByCalendarDate()
+        }
+    }
+    
+    private func remapDaysByIndex(dropTrailing: Bool) {
+        let calendar = Calendar.current
+        let totalDays = max(1, (calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)
+        let oldDays = dropTrailing ? Array(originalDaysSnapshot.prefix(totalDays)) : originalDaysSnapshot
+        
+        var newDays: [TripDay] = []
+        newDays.reserveCapacity(totalDays)
+        
+        for offset in 0..<totalDays {
+            let date = calendar.date(byAdding: .day, value: offset, to: startDate) ?? startDate
+            if offset < oldDays.count {
+                let existing = oldDays[offset]
+                newDays.append(
+                    TripDay(
                         id: existing.id,
                         date: date,
                         events: existing.events,
@@ -1267,9 +1365,10 @@ struct EditTripView: View {
                         weatherIcon: existing.weatherIcon,
                         temperatureF: existing.temperatureF
                     )
-                    newDays.append(updated)
-                } else {
-                    let emptyDay = TripDay(
+                )
+            } else {
+                newDays.append(
+                    TripDay(
                         id: UUID(),
                         date: date,
                         events: [],
@@ -1281,12 +1380,55 @@ struct EditTripView: View {
                         weatherIcon: "cloud.sun.fill",
                         temperatureF: 72
                     )
-                    newDays.append(emptyDay)
-                }
+                )
             }
-            
-            trip.days = newDays
         }
+        
+        trip.days = newDays
+    }
+    
+    private func remapDaysByCalendarDate() {
+        let calendar = Calendar.current
+        let totalDays = max(1, (calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)
+        var newDays: [TripDay] = []
+        newDays.reserveCapacity(totalDays)
+        
+        for offset in 0..<totalDays {
+            let date = calendar.date(byAdding: .day, value: offset, to: startDate) ?? startDate
+            if let existing = originalDaysSnapshot.first(where: { calendar.isDate($0.date, inSameDayAs: date) }) {
+                newDays.append(
+                    TripDay(
+                        id: existing.id,
+                        date: date,
+                        events: existing.events,
+                        reminders: existing.reminders,
+                        checklists: existing.checklists,
+                        flights: existing.flights,
+                        label: "Day \(offset + 1)",
+                        order: offset + 1,
+                        weatherIcon: existing.weatherIcon,
+                        temperatureF: existing.temperatureF
+                    )
+                )
+            } else {
+                newDays.append(
+                    TripDay(
+                        id: UUID(),
+                        date: date,
+                        events: [],
+                        reminders: [],
+                        checklists: [],
+                        flights: [],
+                        label: "Day \(offset + 1)",
+                        order: offset + 1,
+                        weatherIcon: "cloud.sun.fill",
+                        temperatureF: 72
+                    )
+                )
+            }
+        }
+        
+        trip.days = newDays
     }
 }
 

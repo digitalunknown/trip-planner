@@ -45,7 +45,21 @@ struct AddEditPlaceSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Name", text: $name)
+                    Label {
+                        HStack {
+                            TextField("Name", text: $name)
+                            if !name.isEmpty {
+                                Button {
+                                    name = ""
+                                } label: {
+                                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    } icon: {
+                        AppIcon(lucide: "type", size: AppLucide.chromeSize, color: .primary)
+                    }
                     LocationSearchField(
                         text: $location,
                         latitude: $latitude,
@@ -53,32 +67,15 @@ struct AddEditPlaceSheet: View {
                         searchRegion: nil
                     )
                     
-                    Menu {
+                    Picker(selection: $placeType) {
                         ForEach(PlaceType.allCases) { type in
-                            Button {
-                                placeType = type
-                            } label: {
-                                if placeType == type {
-                                    Label(type.title, systemImage: "checkmark")
-                                } else {
-                                    Text(type.title)
-                                }
-                            }
+                            Text(type.title)
+                                .tag(type)
                         }
                     } label: {
-                        HStack {
-                            Text("Type")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text(placeType == .unspecified ? "Select type" : placeType.title)
-                                .foregroundStyle(.secondary)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.app(11, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .contentShape(Rectangle())
+                        Label("Type", appIcon: "tag", color: .primary, iconTitleSpacing: 4)
                     }
-                    .buttonStyle(.plain)
+                    .pickerStyle(.menu)
                     .tint(.primary)
                 }
                 
@@ -96,13 +93,13 @@ struct AddEditPlaceSheet: View {
                                         Button {
                                             showUnsplashPicker = true
                                         } label: {
-                                            Label("Choose from Unsplash", systemImage: "sparkles")
+                                            Label("Choose from Unsplash", appIcon: "sparkles", color: .primary)
                                         }
                                         
                                         Button {
                                             showImagePicker = true
                                         } label: {
-                                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                            Label("Choose from Photos", appIcon: "photo.on.rectangle", color: .primary)
                                         }
                                     } label: {
                                         Color.clear
@@ -121,21 +118,19 @@ struct AddEditPlaceSheet: View {
                             Button {
                                 showUnsplashPicker = true
                             } label: {
-                                Label("Choose from Unsplash", systemImage: "sparkles")
+                                Label("Choose from Unsplash", appIcon: "sparkles", color: .primary)
                             }
                             
                             Button {
                                 showImagePicker = true
                             } label: {
-                                Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                Label("Choose from Photos", appIcon: "photo.on.rectangle", color: .primary)
                             }
                         } label: {
                             HStack {
-                                Text("Add Photo")
-                                    .foregroundStyle(.primary)
+                                Label("Add Photo", appIcon: "image-plus", color: .primary)
                                 Spacer()
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundStyle(.secondary)
+                                AppIcon(systemName: "chevron.up.chevron.down", size: 14, color: .secondary)
                             }
                         }
                         .tint(.primary)
