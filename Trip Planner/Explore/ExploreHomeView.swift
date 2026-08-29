@@ -27,20 +27,21 @@ struct ExploreHomeView: View {
             ExploreDetailView(pick: pick)
         }
         .task {
-            await refreshFeed()
+            // Always hit the network on appear so new Vercel picks aren't stuck behind a stale cache / fallback.
+            await refreshFeed(force: true)
         }
         .refreshable {
             await refreshFeed(force: true)
         }
     }
     
-    /// Loads Explore picks from `GET /api/explore`. Pull-to-refresh uses `force: true` to skip URL cache.
+    /// Loads Explore picks from `GET /api/explore`. Uses a cache-busting fetch so editorial updates show up without an app update.
     private func refreshFeed(force: Bool = false) async {
         if isLoadingRemote, !force { return }
         isLoadingRemote = true
         defer { isLoadingRemote = false }
         do {
-            let feed = try await ExploreFeedClient().fetchFeed(forceRefresh: force)
+            let feed = try await ExploreFeedClient().fetchFeed(forceRefresh: true)
             guard !Task.isCancelled else { return }
             picks = feed.picks
             if force {
@@ -48,6 +49,9 @@ struct ExploreHomeView: View {
             }
         } catch {
             // Keep whatever is already showing (bundled fallback or last successful fetch).
+            #if DEBUG
+            print("Explore feed refresh failed: \(error)")
+            #endif
         }
     }
 }

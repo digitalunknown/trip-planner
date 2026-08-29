@@ -6,6 +6,48 @@ struct ExploreFeedResponse: Codable, Hashable {
     var version: Int?
     var updatedAt: String?
     var picks: [ExploreStaffPick]
+    
+    enum CodingKeys: String, CodingKey {
+        case version, updatedAt, picks
+    }
+    
+    init(version: Int? = nil, updatedAt: String? = nil, picks: [ExploreStaffPick]) {
+        self.version = version
+        self.updatedAt = updatedAt
+        self.picks = picks
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decodeIfPresent(Int.self, forKey: .version)
+        updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt)
+        // Decode picks one-by-one so a single bad entry can't wipe the whole feed.
+        var picksOut: [ExploreStaffPick] = []
+        if var unkeyed = try? c.nestedUnkeyedContainer(forKey: .picks) {
+            while !unkeyed.isAtEnd {
+                if let pick = try? unkeyed.decode(ExploreStaffPick.self) {
+                    picksOut.append(pick)
+                } else {
+                    _ = try? unkeyed.decode(DiscardedJSONValue.self)
+                }
+            }
+        }
+        picks = picksOut
+    }
+}
+
+/// Skips one JSON value when an Explore pick fails to decode.
+private struct DiscardedJSONValue: Decodable {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() { return }
+        if (try? container.decode(Bool.self)) != nil { return }
+        if (try? container.decode(Int.self)) != nil { return }
+        if (try? container.decode(Double.self)) != nil { return }
+        if (try? container.decode(String.self)) != nil { return }
+        if (try? container.decode([DiscardedJSONValue].self)) != nil { return }
+        if (try? container.decode([String: DiscardedJSONValue].self)) != nil { return }
+    }
 }
 
 struct ExploreStaffPick: Identifiable, Hashable, Codable {
