@@ -18,4 +18,6 @@ Vercel project → `https://trip-planner-ai-proxy.vercel.app`
 2. Push to `main`
 3. Wait for Vercel deploy — no App Store update
 
-Prefer `coverImageURL` for new picks. Secrets (`GEMINI_API_KEY`, etc.) stay in Vercel env settings only.
+**Covers must use `coverImageURL` only.** The iOS app does not ship Explore images; `coverImageName` is ignored. A ready-to-copy feed lives at `proxy-sync/explore.json` in this repo when agents prepare backend updates.
+
+Secrets (`GEMINI_API_KEY`, etc.) stay in Vercel env settings only.

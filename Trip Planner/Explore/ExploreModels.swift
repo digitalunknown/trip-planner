@@ -56,9 +56,7 @@ struct ExploreStaffPick: Identifiable, Hashable, Codable {
     let destination: String
     let publisher: String
     let badge: String
-    /// Bundled asset name (e.g. `explore-content/paris-museums`) — only works for assets already in the app.
-    let coverImageName: String?
-    /// Remote cover URL — preferred for content published without an app update.
+    /// Remote cover URL from the Vercel Explore feed. No bundled Explore images in the app.
     let coverImageURL: String?
     let latitude: Double
     let longitude: Double
@@ -75,7 +73,7 @@ struct ExploreStaffPick: Identifiable, Hashable, Codable {
     
     enum CodingKeys: String, CodingKey {
         case id, title, destination, publisher, badge
-        case coverImageName, coverImageURL
+        case coverImageURL
         case latitude, longitude, mapSpan, paragraphs, activities
     }
     
@@ -85,7 +83,6 @@ struct ExploreStaffPick: Identifiable, Hashable, Codable {
         destination: String,
         publisher: String,
         badge: String,
-        coverImageName: String? = nil,
         coverImageURL: String? = nil,
         latitude: Double,
         longitude: Double,
@@ -98,7 +95,6 @@ struct ExploreStaffPick: Identifiable, Hashable, Codable {
         self.destination = destination
         self.publisher = publisher
         self.badge = badge
-        self.coverImageName = coverImageName
         self.coverImageURL = coverImageURL
         self.latitude = latitude
         self.longitude = longitude
@@ -114,7 +110,6 @@ struct ExploreStaffPick: Identifiable, Hashable, Codable {
         destination = try c.decode(String.self, forKey: .destination)
         publisher = try c.decode(String.self, forKey: .publisher)
         badge = try c.decodeIfPresent(String.self, forKey: .badge) ?? "Staff Pick"
-        coverImageName = try c.decodeIfPresent(String.self, forKey: .coverImageName)
         coverImageURL = try c.decodeIfPresent(String.self, forKey: .coverImageURL)
         latitude = try c.decode(Double.self, forKey: .latitude)
         longitude = try c.decode(Double.self, forKey: .longitude)
@@ -131,7 +126,6 @@ struct ExploreStaffPick: Identifiable, Hashable, Codable {
         try c.encode(destination, forKey: .destination)
         try c.encode(publisher, forKey: .publisher)
         try c.encode(badge, forKey: .badge)
-        try c.encodeIfPresent(coverImageName, forKey: .coverImageName)
         try c.encodeIfPresent(coverImageURL, forKey: .coverImageURL)
         try c.encode(latitude, forKey: .latitude)
         try c.encode(longitude, forKey: .longitude)
