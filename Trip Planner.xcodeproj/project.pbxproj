@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		FFB2C3D62FA1234500ABCDEF /* Sticker in Frameworks */ = {isa = PBXBuildFile; productRef = FFB2C3D52FA1234500ABCDEF /* Sticker */; };
+		FFC0DE012FA8000100ABCD03 /* Lucide in Frameworks */ = {isa = PBXBuildFile; productRef = FFC0DE012FA8000100ABCD02 /* Lucide */; };
 		FFDF4C762F1FD9B80038C817 /* Glur in Frameworks */ = {isa = PBXBuildFile; productRef = FF6A1C3B2F6A1C3B2F6A1C3C /* Glur */; };
 		FFDF51B72F2571EF0038C817 /* Manrope-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FFDF51B12F2571EF0038C817 /* Manrope-VariableFont_wght.ttf */; };
 /* End PBXBuildFile section */
@@ -80,6 +81,7 @@
 			files = (
 				FFDF4C762F1FD9B80038C817 /* Glur in Frameworks */,
 				FFB2C3D62FA1234500ABCDEF /* Sticker in Frameworks */,
+				FFC0DE012FA8000100ABCD03 /* Lucide in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -153,6 +155,7 @@
 			packageProductDependencies = (
 				FF6A1C3B2F6A1C3B2F6A1C3C /* Glur */,
 				FFB2C3D52FA1234500ABCDEF /* Sticker */,
+				FFC0DE012FA8000100ABCD02 /* Lucide */,
 			);
 			productName = "Trip Planner";
 			productReference = FF997AEA2EF216E400B3A68E /* TripStacks.app */;
@@ -239,6 +242,7 @@
 			packageReferences = (
 				FF6A1C3B2F6A1C3B2F6A1C3B /* XCRemoteSwiftPackageReference "Glur" */,
 				FFB2C3D42FA1234500ABCDEF /* XCRemoteSwiftPackageReference "sticker" */,
+				FFC0DE012FA8000100ABCD01 /* XCRemoteSwiftPackageReference "lucide-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FF997AEB2EF216E400B3A68E /* Products */;
@@ -666,6 +670,14 @@
 				minimumVersion = 1.4.0;
 			};
 		};
+		FFC0DE012FA8000100ABCD01 /* XCRemoteSwiftPackageReference "lucide-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/bring-shrubbery/lucide-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.25.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -678,6 +690,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FFB2C3D42FA1234500ABCDEF /* XCRemoteSwiftPackageReference "sticker" */;
 			productName = Sticker;
+		};
+		FFC0DE012FA8000100ABCD02 /* Lucide */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFC0DE012FA8000100ABCD01 /* XCRemoteSwiftPackageReference "lucide-swift" */;
+			productName = Lucide;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

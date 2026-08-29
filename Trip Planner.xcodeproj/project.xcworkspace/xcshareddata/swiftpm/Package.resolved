@@ -11,6 +11,15 @@
       }
     },
     {
+      "identity" : "lucide-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/bring-shrubbery/lucide-swift",
+      "state" : {
+        "revision" : "515a7209549afec3b8bb58cb9a782365e952c0c3",
+        "version" : "1.25.0"
+      }
+    },
+    {
       "identity" : "sticker",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/bpisano/sticker",

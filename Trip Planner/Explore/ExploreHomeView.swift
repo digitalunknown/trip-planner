@@ -23,28 +23,22 @@ struct ExploreHomeView: View {
             } else {
                 // `List` + `.refreshable` is more reliable inside TabView than ScrollView alone.
                 List {
-                    Section {
-                        ForEach(picks) { pick in
-                            NavigationLink(value: pick) {
-                                ExploreFeedCard(pick: pick)
-                            }
-                            .buttonStyle(.plain)
-                            .listRowInsets(
-                                EdgeInsets(
-                                    top: RootHomeMetrics.chromeToContent / 2,
-                                    leading: RootHomeMetrics.horizontalInset,
-                                    bottom: RootHomeMetrics.chromeToContent / 2,
-                                    trailing: RootHomeMetrics.horizontalInset
-                                )
-                            )
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
+                    ForEach(picks) { pick in
+                        NavigationLink(value: pick) {
+                            ExploreFeedCard(pick: pick)
                         }
-                    } header: {
-                        Text("Live feed · \(picks.count) \(picks.count == 1 ? "pick" : "picks")")
-                            .font(.appCaption)
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+                        .buttonStyle(.plain)
+                        .navigationLinkIndicatorVisibility(.hidden)
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: RootHomeMetrics.chromeToContent / 2,
+                                leading: RootHomeMetrics.horizontalInset,
+                                bottom: RootHomeMetrics.chromeToContent / 2,
+                                trailing: RootHomeMetrics.horizontalInset
+                            )
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 }
                 .listStyle(.plain)
@@ -57,21 +51,6 @@ struct ExploreHomeView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Explore")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await refreshFeed(hapticOnSuccess: true) }
-                } label: {
-                    if isLoadingRemote {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
-                .accessibilityLabel("Refresh Explore")
-                .disabled(isLoadingRemote)
-            }
-        }
         .navigationDestination(for: ExploreStaffPick.self) { pick in
             ExploreDetailView(pick: pick)
         }
@@ -103,7 +82,7 @@ struct ExploreHomeView: View {
             ContentUnavailableView(
                 "Nothing to explore yet",
                 systemImage: "compass",
-                description: Text("Pull to refresh or tap the reload button when new staff picks are published.")
+                description: Text("Pull to refresh when new staff picks are published.")
             )
         }
     }
