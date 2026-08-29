@@ -1,22 +1,21 @@
-# API handlers — not deployed from this repo
+# Backend API — not in this repo
 
-Production Vercel is connected to:
+Production is deployed from:
 
 **https://github.com/digitalunknown/trip-planner-ai-proxy**
 
-That repo is the source of truth for `/api/ai`, `/api/explore`, Unsplash, etc.
-`GEMINI_API_KEY` and other secrets live in that Vercel project’s env settings (never in git).
+Vercel project → `https://trip-planner-ai-proxy.vercel.app`
 
-## Syncing changes to production
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/ai` | TripStacks AI |
+| `GET /api/explore` | Explore staff-pick feed (`api/content/explore.json`) |
+| Unsplash routes | Cover photo search / download tracking |
 
-From this iOS repo:
+## Editing Explore content
 
-```bash
-./scripts/sync-api-to-proxy.sh /path/to/trip-planner-ai-proxy
-cd /path/to/trip-planner-ai-proxy
-git add -A && git commit -m "Sync API" && git push origin main
-```
+1. Edit `api/content/explore.json` in **trip-planner-ai-proxy**
+2. Push to `main`
+3. Wait for Vercel deploy — no App Store update
 
-## Explore content
-
-Edit `api/content/explore.json` here only if you are about to sync; otherwise edit it directly in `trip-planner-ai-proxy` and push.
+Prefer `coverImageURL` for new picks. Secrets (`GEMINI_API_KEY`, etc.) stay in Vercel env settings only.
