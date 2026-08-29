@@ -34,14 +34,19 @@ struct ExploreHomeView: View {
         }
     }
     
+    /// Loads Explore picks from `GET /api/explore`. Pull-to-refresh uses `force: true` to skip URL cache.
     private func refreshFeed(force: Bool = false) async {
         if isLoadingRemote, !force { return }
         isLoadingRemote = true
         defer { isLoadingRemote = false }
         do {
-            let feed = try await ExploreFeedClient().fetchFeed()
+            let feed = try await ExploreFeedClient().fetchFeed(forceRefresh: force)
             guard !Task.isCancelled else { return }
+            let previousIDs = picks.map(\.id)
             picks = feed.picks
+            if force, picks.map(\.id) != previousIDs || !picks.isEmpty {
+                Haptics.bump()
+            }
         } catch {
             // Keep whatever is already showing (bundled fallback or last successful fetch).
         }

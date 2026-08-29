@@ -32,11 +32,12 @@ struct ExploreFeedClient {
         }
     }
     
-    func fetchFeed() async throws -> ExploreFeedResponse {
+    /// - Parameter forceRefresh: When true (pull-to-refresh), bypass URL cache so edits on Vercel show up immediately.
+    func fetchFeed(forceRefresh: Bool = false) async throws -> ExploreFeedResponse {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.cachePolicy = .reloadRevalidatingCacheData
+        request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .reloadRevalidatingCacheData
         request.timeoutInterval = 20
         
         let (data, response) = try await session.data(for: request)
