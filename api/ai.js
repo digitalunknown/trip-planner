@@ -43,7 +43,6 @@ const PLACE_FINDER_INTENTS = ["place_discovery", "clarification_needed"];
 const CREATE_TRIP_INTENTS = [
   "get_started",
   "full_itinerary",
-  "create_trip",
   "clarification_needed",
 ];
 
@@ -88,48 +87,69 @@ const BASE_REQUIRED = [
   "category",
 ];
 
-const PLAN_DAY_SCHEMA = {
-  type: "object",
-  properties: {
-    intent: { type: "string", enum: PLAN_DAY_INTENTS },
-    clarificationNeeded: { type: "boolean" },
-    clarificationPrompt: { type: "string" },
-    items: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          kind: { type: "string", enum: PLAN_DAY_KINDS },
-          ...baseItemProperties(),
-        },
-        required: ["kind", ...BASE_REQUIRED],
-      },
-    },
-  },
-  required: ["intent", "clarificationNeeded", "clarificationPrompt", "items"],
-};
+/** Static schema kept for reference; prefer buildPlanDaySchema(minItems). */
+const PLAN_DAY_SCHEMA = buildPlanDaySchema(0);
 
-const PLACE_FINDER_SCHEMA = {
-  type: "object",
-  properties: {
-    intent: { type: "string", enum: PLACE_FINDER_INTENTS },
-    clarificationNeeded: { type: "boolean" },
-    clarificationPrompt: { type: "string" },
+/** Static schema kept for reference; prefer buildPlaceFinderSchema(minItems). */
+const PLACE_FINDER_SCHEMA = buildPlaceFinderSchema(0);
+
+function buildPlanDaySchema(minItems = 0) {
+  const floor = Math.max(0, Math.min(Number(minItems) || 0, 12));
+  const itemsSchema = {
+    type: "array",
     items: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          kind: { type: "string", enum: ["place"] },
-          ...baseItemProperties(),
-          category: { type: "string", enum: PLACE_FINDER_CATEGORIES },
-        },
-        required: ["kind", "category", ...BASE_REQUIRED.filter((k) => k !== "category")],
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: PLAN_DAY_KINDS },
+        ...baseItemProperties(),
       },
+      required: ["kind", ...BASE_REQUIRED],
     },
-  },
-  required: ["intent", "clarificationNeeded", "clarificationPrompt", "items"],
-};
+  };
+  // Structural floor — Gemini cannot return fewer items when floor > 0.
+  if (floor > 0) {
+    itemsSchema.minItems = floor;
+  }
+  return {
+    type: "object",
+    properties: {
+      intent: { type: "string", enum: PLAN_DAY_INTENTS },
+      clarificationNeeded: { type: "boolean" },
+      clarificationPrompt: { type: "string" },
+      items: itemsSchema,
+    },
+    required: ["intent", "clarificationNeeded", "clarificationPrompt", "items"],
+  };
+}
+
+function buildPlaceFinderSchema(minItems = 0) {
+  const floor = Math.max(0, Math.min(Number(minItems) || 0, 12));
+  const itemsSchema = {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["place"] },
+        ...baseItemProperties(),
+        category: { type: "string", enum: PLACE_FINDER_CATEGORIES },
+      },
+      required: ["kind", "category", ...BASE_REQUIRED.filter((k) => k !== "category")],
+    },
+  };
+  if (floor > 0) {
+    itemsSchema.minItems = floor;
+  }
+  return {
+    type: "object",
+    properties: {
+      intent: { type: "string", enum: PLACE_FINDER_INTENTS },
+      clarificationNeeded: { type: "boolean" },
+      clarificationPrompt: { type: "string" },
+      items: itemsSchema,
+    },
+    required: ["intent", "clarificationNeeded", "clarificationPrompt", "items"],
+  };
+}
 
 const TRIP_DRAFT_PROPERTIES = {
   name: { type: "string" },
@@ -376,14 +396,13 @@ function buildCreateTripPrompt() {
 You draft a NEW trip for the Trips tab — not filling an existing day board, not Places cards.
 
 ## Intent (pick ONE — read the ask carefully)
-- get_started: user wants a draft / kickoff / "help me start" / light suggestions — NOT a packed schedule
+- get_started: user wants a draft / kickoff / "help me start" / light suggestions — NOT a packed schedule; also use when the ask is vague between a light start and a full plan
 - full_itinerary: user wants a full trip planned / "plan my trip" / "pack the itinerary" / day-by-day / complete stay
-- create_trip: only if unclear between get_started and full_itinerary — prefer get_started when vague, full_itinerary when they imply a whole stay ("week in Tokyo", "5 days in Rome", "plan everything")
 - clarification_needed: missing destination AND dates/duration with nothing inferable
 
 CRITICAL: Always draft ONE concrete trip. Never offer multiple destination/trip choices.
 CRITICAL: If the user states a day count ("3 days", "weekend", "week in X"), intent MUST be full_itinerary — not get_started.
-CRITICAL: "Create a trip to X" with duration/dates often means full_itinerary. "Rough idea for X" / "start a trip" → get_started.
+CRITICAL: "Create a trip to X" with duration/dates often means full_itinerary. "Rough idea for X" / "start a trip" / vague "create a trip" → get_started.
 CRITICAL: Never write a multi-day / "packed itinerary" summary while returning only a hotel or 1–3 filler items. The items array IS the itinerary.
 
 ## trip fields
@@ -456,7 +475,7 @@ function hasExplicitPlaceCount(text) {
   return explicitPlaceCountValue(text) != null;
 }
 
-/** Parsed N from "top 5" / "exactly 8" style asks, else null. */
+/** Parsed N from "top 5" / "exactly 8" / "5 dinner options" style asks, else null. */
 function explicitPlaceCountValue(text) {
   const raw = safeString(text);
   if (!raw) return null;
@@ -471,8 +490,9 @@ function explicitPlaceCountValue(text) {
     m = raw.match(/\b(?:top|best)\s*([1-9]|1[0-2])\b/i);
     if (m) return parseInt(m[1], 10);
   }
+  // "10 hotels", "5 dinner options", "3 great hiking trails"
   m = raw.match(
-    /\b([1-9]|1[0-2])\s+(?:places?|restaurants?|cafes?|hotels?|stays?|bars?|hikes?|trails?|spots?|venues?|options?|ideas?|recommendations?|activities|museums?|parks?)\b/i
+    /\b([1-9]|1[0-2])\s+(?:[A-Za-z]+\s+){0,2}(?:places?|restaurants?|cafes?|hotels?|stays?|bars?|hikes?|trails?|spots?|venues?|options?|ideas?|recommendations?|activities|museums?|parks?)\b/i
   );
   if (m) return parseInt(m[1], 10);
   m = raw.match(
@@ -480,6 +500,35 @@ function explicitPlaceCountValue(text) {
   );
   if (m) return parseInt(m[1], 10);
   return null;
+}
+
+/** True when the ask is clearly a single checklist / reminder / flight (not a list). */
+function isPlanDaySingleKindAsk(text) {
+  const raw = safeString(text);
+  if (!raw) return false;
+  return (
+    /\b(checklist|packing list|remind me|reminder|flight|train|add a flight)\b/i.test(raw) &&
+    !/\b(day|sightseeing|food|restaurants?|options?|ideas?|activities|itinerary)\b/i.test(raw)
+  );
+}
+
+/**
+ * Structural item floor for plan_day — mirrors minCreateTripItemCount.
+ * Explicit typed N wins; single-kind asks get 0 (no schema floor);
+ * list-style defaults to 6 (same as the old under-delivery recount).
+ */
+function minPlanDayItemCount(text) {
+  const explicit = explicitPlaceCountValue(text);
+  if (explicit != null) return Math.max(1, Math.min(explicit, 12));
+  if (isPlanDaySingleKindAsk(text)) return 0;
+  return 6;
+}
+
+/** Structural item floor for place_finder (explicit N or default 10). */
+function minPlaceFinderItemCount(text) {
+  const explicit = explicitPlaceCountValue(text);
+  if (explicit != null) return Math.max(1, Math.min(explicit, 12));
+  return 10;
 }
 
 /** Append an explicit multi-item count for place_finder / plan_day when the user didn't ask for N. */
@@ -496,10 +545,7 @@ function enforceItemCount(text, mode) {
   if (mode === "plan_day") {
     if (/return\s+\d+\s+distinct/i.test(raw)) return raw;
     // Single-kind asks should stay single (or small).
-    if (
-      /\b(checklist|packing list|remind me|reminder|flight|train|add a flight)\b/i.test(raw) &&
-      !/\b(day|sightseeing|food|restaurants?|options?|ideas?|activities|itinerary)\b/i.test(raw)
-    ) {
+    if (isPlanDaySingleKindAsk(raw)) {
       return raw;
     }
     return (
@@ -518,6 +564,14 @@ function isPlanDaySingleKindIntent(intent) {
   return ["checklist", "reminder", "flight", "clarification_needed"].includes(
     String(intent || "")
   );
+}
+
+/** Drop the obsolete create_trip intent label (collapsed into get_started). */
+function normalizeCreateTripIntent(intent) {
+  const i = safeString(intent);
+  if (i === "create_trip") return "get_started";
+  if (CREATE_TRIP_INTENTS.includes(i)) return i;
+  return i || "get_started";
 }
 
 function cryptoRandomId() {
@@ -1279,7 +1333,7 @@ export default async function handler(req, res) {
     const existingTrips = Array.isArray(body?.existingTrips) ? body.existingTrips : [];
     const scopeHint = body?.scopeHint ?? "";
 
-    // Structural item floor for create_trip (schema minItems), not just prose.
+    // Structural item floors (schema minItems), not just prose.
     const createTripMinItems =
       mode === "create_trip"
         ? minCreateTripItemCount(
@@ -1293,6 +1347,10 @@ export default async function handler(req, res) {
             text
           )
         : 0;
+    const planDayMinItems =
+      mode === "plan_day" ? minPlanDayItemCount(rawUserText) : 0;
+    const placeFinderMinItems =
+      mode === "place_finder" ? minPlaceFinderItemCount(rawUserText) : 0;
 
     const systemInstruction =
       mode === "place_finder"
@@ -1303,16 +1361,26 @@ export default async function handler(req, res) {
 
     const responseSchema =
       mode === "place_finder"
-        ? PLACE_FINDER_SCHEMA
+        ? buildPlaceFinderSchema(placeFinderMinItems)
         : mode === "create_trip"
           ? buildCreateTripSchema(createTripMinItems)
-          : PLAN_DAY_SCHEMA;
+          : buildPlanDaySchema(planDayMinItems);
 
     const outputRequirements =
       mode === "place_finder"
-        ? "Unless clarificationNeeded, items MUST contain exactly 10 distinct kind=place venues (or the user's explicit N). Never return a single recommendation for list-style asks like best hikes, restaurants, or stays. Coordinates/addresses with digits are not a count."
+        ? `Unless clarificationNeeded, items MUST contain exactly ${placeFinderMinItems} distinct kind=place venues` +
+          (requestedPlaceCount != null
+            ? ` (user asked for ${requestedPlaceCount}; schema-enforced). `
+            : " (default 10; schema-enforced). ") +
+          "Never return a single recommendation for list-style asks like best hikes, restaurants, or stays. Coordinates/addresses with digits are not a count."
         : mode === "plan_day"
-          ? "Unless clarificationNeeded or a single checklist/reminder/flight ask: items MUST contain multiple distinct itinerary entries (6–8 activities for day_plan; 8 options for options_list). Keep notes to one short sentence. Never collapse a day into one summary item."
+          ? planDayMinItems > 0
+            ? `Unless clarificationNeeded: items MUST contain at least ${planDayMinItems} distinct itinerary entries` +
+              (requestedPlaceCount != null
+                ? ` (user asked for ${requestedPlaceCount}; schema-enforced). `
+                : " (schema-enforced default for day_plan / options_list). ") +
+              "Keep notes to one short sentence. Never collapse a day into one summary item."
+            : "Unless clarificationNeeded: return the items appropriate for this single checklist/reminder/flight ask. Keep notes short."
           : mode === "create_trip"
             ? "Unless clarificationNeeded: items MUST be a real itinerary (never just a hotel). " +
               `The items array MUST contain at least ${createTripMinItems} entries (schema-enforced). ` +
@@ -1352,6 +1420,24 @@ export default async function handler(req, res) {
           event: "create_trip_request",
           createTripMinItems,
           extractedDates,
+          rawPreview: rawUserText.slice(0, 180),
+        })
+      );
+    } else if (mode === "plan_day") {
+      console.log(
+        JSON.stringify({
+          event: "plan_day_request",
+          planDayMinItems,
+          requestedPlaceCount,
+          rawPreview: rawUserText.slice(0, 180),
+        })
+      );
+    } else if (mode === "place_finder") {
+      console.log(
+        JSON.stringify({
+          event: "place_finder_request",
+          placeFinderMinItems,
+          requestedPlaceCount,
           rawPreview: rawUserText.slice(0, 180),
         })
       );
@@ -1462,24 +1548,45 @@ export default async function handler(req, res) {
     let firstCall = await callGemini(userMessage);
     // Parse failure: retry once with a smaller, shorter payload (truncation / empty candidates).
     if (!firstCall.ok && firstCall.error === "Gemini returned no usable JSON") {
-      const compactMin =
+      const compactCreateMin =
         mode === "create_trip" ? Math.min(createTripMinItems, 10) : 0;
+      // Prefer the user's explicit N; otherwise a compact but still useful floor (skip single-kind = 0).
+      const compactPlanDayMin =
+        mode === "plan_day"
+          ? requestedPlaceCount != null
+            ? planDayMinItems
+            : planDayMinItems > 0
+              ? 6
+              : 0
+          : 0;
+      const compactPlaceMin =
+        mode === "place_finder"
+          ? requestedPlaceCount != null
+            ? placeFinderMinItems
+            : Math.min(placeFinderMinItems, 6)
+          : 0;
       const compactMessage = {
         ...userMessage,
         outputRequirements:
           mode === "place_finder"
-            ? "Return exactly 6 distinct kind=place venues. Keep notes under 12 words. Valid complete JSON only."
+            ? `Return exactly ${compactPlaceMin || 6} distinct kind=place venues. Keep notes under 12 words. Valid complete JSON only.`
             : mode === "plan_day"
-              ? "Return exactly 6 distinct activity items for this ask. Keep notes under 12 words. One venue per item. Valid complete JSON only."
+              ? compactPlanDayMin > 0
+                ? `Return exactly ${compactPlanDayMin} distinct activity items for this ask. Keep notes under 12 words. One venue per item. Valid complete JSON only.`
+                : "Return the checklist/reminder/flight item(s) for this ask. Keep notes under 12 words. Valid complete JSON only."
               : mode === "create_trip"
-                ? `Return a COMPLETE trip JSON with at least ${compactMin || 10} seed items: 1 hotel, 3 restaurants, 4 activities across the days, 1 checklist, 1 reminder. Notes under 10 words. Valid complete JSON only — never only a hotel.`
+                ? `Return a COMPLETE trip JSON with at least ${compactCreateMin || 10} seed items: 1 hotel, 3 restaurants, 4 activities across the days, 1 checklist, 1 reminder. Notes under 10 words. Valid complete JSON only — never only a hotel.`
                 : userMessage.outputRequirements,
       };
       const compactRetry = await callGemini(compactMessage, {
         responseSchema:
           mode === "create_trip"
-            ? buildCreateTripSchema(compactMin || 10)
-            : responseSchema,
+            ? buildCreateTripSchema(compactCreateMin || 10)
+            : mode === "place_finder"
+              ? buildPlaceFinderSchema(compactPlaceMin || 6)
+              : mode === "plan_day"
+                ? buildPlanDaySchema(compactPlanDayMin)
+                : responseSchema,
       });
       if (compactRetry.ok) {
         firstCall = compactRetry;
@@ -1503,20 +1610,12 @@ export default async function handler(req, res) {
       !result.clarificationNeeded &&
       (finishReason === "MAX_TOKENS" || finishReason === "LENGTH");
 
-    // place_finder / plan_day often under-deliver (1–3 items). Retry once with a hard recount.
-    // Use the *original* user text for count checks — enforceItemCount appends "exactly 10"
-    // which would falsely suppress retries.
-    const underDeliveredList =
-      !result.clarificationNeeded &&
-      Array.isArray(result.items) &&
-      result.items.length > 0 &&
-      result.items.length < 5 &&
-      requestedPlaceCount == null;
-
+    // place_finder / plan_day under-delivery: explicit N raises the retry bar (never suppresses it).
+    // Use the *original* user text for counts — enforceItemCount appends default prose.
     if (mode === "place_finder" && !result.clarificationNeeded) {
       const priorCount = Array.isArray(result.items) ? result.items.length : 0;
-      const targetCount = requestedPlaceCount ?? 10;
-      const minAcceptable = requestedPlaceCount ?? 8;
+      const targetCount = placeFinderMinItems;
+      const minAcceptable = requestedPlaceCount != null ? requestedPlaceCount : 8;
       if (priorCount > 0 && priorCount < minAcceptable) {
         const retryCall = await callGemini(
           {
@@ -1527,7 +1626,10 @@ export default async function handler(req, res) {
               `Return a COMPLETE new JSON response with exactly ${targetCount} distinct kind=place venues for the same ask. ` +
               "Each item MUST use kind=\"place\" (never activity). Notes under 10 words. Do not apologize; do not return fewer than requested.",
           },
-          { temperature: 0.4 }
+          {
+            temperature: 0.4,
+            responseSchema: buildPlaceFinderSchema(targetCount),
+          }
         );
         if (
           retryCall.ok &&
@@ -1540,26 +1642,37 @@ export default async function handler(req, res) {
       }
     } else if (
       mode === "plan_day" &&
-      underDeliveredList &&
+      !result.clarificationNeeded &&
       !isPlanDaySingleKindIntent(result.intent)
     ) {
-      const retryCall = await callGemini({
-        ...userMessage,
-        priorItemCount: result.items.length,
-        outputRequirements:
-          `Your previous answer only returned ${result.items.length} item(s). That is invalid for this ask. ` +
-          "Return a COMPLETE new JSON response with exactly 6 distinct activity items. " +
-          "One venue/stop per item, notes under 12 words — never a single combined day summary. Do not apologize.",
-      });
-      if (
-        retryCall.ok &&
-        Array.isArray(retryCall.result.items) &&
-        retryCall.result.items.length > result.items.length
-      ) {
-        result = retryCall.result;
-        finishReason = retryCall.finishReason ?? finishReason;
+      const priorCount = Array.isArray(result.items) ? result.items.length : 0;
+      const targetCount = Math.max(planDayMinItems, requestedPlaceCount ?? 6);
+      const minAcceptable =
+        requestedPlaceCount != null ? requestedPlaceCount : 5;
+      if (priorCount > 0 && priorCount < minAcceptable) {
+        const retryCall = await callGemini(
+          {
+            ...userMessage,
+            priorItemCount: priorCount,
+            outputRequirements:
+              `Your previous answer only returned ${priorCount} item(s). That is invalid for this ask. ` +
+              `Return a COMPLETE new JSON response with exactly ${targetCount} distinct activity items. ` +
+              "One venue/stop per item, notes under 12 words — never a single combined day summary. Do not apologize.",
+          },
+          {
+            responseSchema: buildPlanDaySchema(targetCount),
+          }
+        );
+        if (
+          retryCall.ok &&
+          Array.isArray(retryCall.result.items) &&
+          retryCall.result.items.length > priorCount
+        ) {
+          result = retryCall.result;
+          finishReason = retryCall.finishReason ?? finishReason;
+        }
+        // Keep the short first answer if the recount retry failed to parse.
       }
-      // Keep the short first answer if the recount retry failed to parse.
     } else if (mode === "create_trip" && !result.clarificationNeeded) {
       // Thin drafts (especially Toronto) sometimes return only a hotel — refill with explicit slots.
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -1624,7 +1737,9 @@ export default async function handler(req, res) {
             ...retryCall.result,
             trip: mergedTrip,
             clarificationNeeded: false,
-            intent: retryCall.result.intent || "full_itinerary",
+            intent: normalizeCreateTripIntent(
+              retryCall.result.intent || "full_itinerary"
+            ),
           };
           finishReason = retryCall.finishReason ?? finishReason;
         } else if (!retryCall.ok) {
@@ -1661,7 +1776,7 @@ export default async function handler(req, res) {
         : [];
       cleanedItems = applyNamedStayToItems(cleanedItems, extractNamedStay(rawUserText), trip);
       return res.status(200).json({
-        intent: result.intent ?? "unknown",
+        intent: normalizeCreateTripIntent(result.intent),
         clarificationNeeded: Boolean(result.clarificationNeeded),
         clarificationPrompt: result.clarificationPrompt ?? "",
         trip,
