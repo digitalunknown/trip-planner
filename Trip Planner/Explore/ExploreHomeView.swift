@@ -2,9 +2,9 @@ import MapKit
 import SwiftUI
 import UIKit
 
-/// Hardcoded staff-picks feed — stand-in until a real public Explore feed exists.
 struct ExploreHomeView: View {
-    private let picks: [ExploreStaffPick] = ExploreStaffPick.staffPicks
+    @State private var picks: [ExploreStaffPick] = ExploreStaffPick.bundledFallback
+    @State private var isLoadingRemote = false
     
     var body: some View {
         ScrollView {
@@ -26,247 +26,26 @@ struct ExploreHomeView: View {
         .navigationDestination(for: ExploreStaffPick.self) { pick in
             ExploreDetailView(pick: pick)
         }
-    }
-}
-
-struct ExploreStaffPick: Identifiable, Hashable {
-    let id: String
-    let title: String
-    let destination: String
-    let publisher: String
-    let badge: String
-    let coverImageName: String?
-    let latitude: Double
-    let longitude: Double
-    let mapSpan: Double
-    let paragraphs: [String]
-    let activities: [EventItem]
-    
-    var mapRegion: MKCoordinateRegion {
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-            span: MKCoordinateSpan(latitudeDelta: mapSpan, longitudeDelta: mapSpan)
-        )
+        .task {
+            await refreshFeed()
+        }
+        .refreshable {
+            await refreshFeed(force: true)
+        }
     }
     
-    static let staffPicks: [ExploreStaffPick] = [
-        ExploreStaffPick(
-            id: "paris-museums-kids",
-            title: "The best Paris museums to visit with kids",
-            destination: "Paris, France",
-            publisher: "Cara Willenbrock",
-            badge: "Staff Pick",
-            coverImageName: "explore-content/paris-museums",
-            latitude: 48.8606,
-            longitude: 2.3376,
-            mapSpan: 0.08,
-            paragraphs: [
-                "Parisian art museums are very welcoming to kids — but what does one actually think of these world-class cultural institutions when you’re touring with a little one in tow?",
-                "This shortlist mixes headline collections with spaces that invite sketching, wandering, and hands-on moments. Use it as a flexible route: pair Orsay with Rodin on a dual ticket, leave room for a garden break, and treat fog sculptures and medieval moats as the real souvenirs.",
-            ],
-            activities: [
-                EventItem(
-                    title: "Bourse de Commerce",
-                    description: "A former government building turned private art collection — ornate interiors colliding with contemporary work. Don’t miss Fujiko Nakaya’s Fog Sculpture when it’s on view.",
-                    time: "10:00 AM",
-                    location: "2 Rue de Viarmes, Paris",
-                    latitude: 48.8628,
-                    longitude: 2.3426,
-                    icon: "building.columns.fill",
-                    accent: .forest,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Musée d'Orsay",
-                    description: "A former train station turned Impressionist temple, crowned by the famous gold clock. Book a dual Orsay + Rodin ticket to skip lines and keep the day flexible.",
-                    time: "11:30 AM",
-                    location: "1 Rue de la Légion d'Honneur, Paris",
-                    latitude: 48.8600,
-                    longitude: 2.3266,
-                    icon: "clock.fill",
-                    accent: .tangerine,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Musée Rodin",
-                    description: "Hit The Atelier first — interactive, air-conditioned, and packed with activities — then wander the sculpture garden before and after.",
-                    time: "1:30 PM",
-                    location: "77 Rue de Varenne, Paris",
-                    latitude: 48.8553,
-                    longitude: 2.3158,
-                    icon: "leaf.fill",
-                    accent: .lime,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Grand Palais — Matisse",
-                    description: "A Matisse exhibit where the artist’s sketchbook can spark kids to open their own. Worth the stop if the current show is running.",
-                    time: "3:30 PM",
-                    location: "3 Avenue du Général Eisenhower, Paris",
-                    latitude: 48.8660,
-                    longitude: 2.3126,
-                    icon: "paintpalette.fill",
-                    accent: .blush,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Musée du Louvre",
-                    description: "Start at Le Studio for model sand, sketching, and books, then walk the Medieval Louvre — the empty former moat of the fortress, surprisingly peaceful with kids.",
-                    time: "5:00 PM",
-                    location: "Rue de Rivoli, Paris",
-                    latitude: 48.8606,
-                    longitude: 2.3376,
-                    icon: "building.2.fill",
-                    accent: .mustard,
-                    photoData: nil
-                ),
-            ]
-        ),
-        ExploreStaffPick(
-            id: "toronto-designer",
-            title: "A designer's curated Toronto itinerary",
-            destination: "Toronto, Canada",
-            publisher: "Peter Osmenda",
-            badge: "Staff Pick",
-            coverImageName: "explore-content/toronto",
-            latitude: 43.6532,
-            longitude: -79.3832,
-            mapSpan: 0.12,
-            paragraphs: [
-                "This is a design-forward day through Toronto — the kind of route a creative director would sketch for a short visit. Expect sharp architecture, thoughtful retail, and neighborhood texture instead of a checklist of tourist checkboxes.",
-                "Walk between stops when you can. The point is noticing materials, storefronts, and street rhythm as much as the destinations themselves. Keep the afternoon flexible so coffee can turn into a longer linger.",
-            ],
-            activities: [
-                EventItem(
-                    title: "Art Gallery of Ontario",
-                    description: "Gehry’s light-filled galleries and Canadian collections.",
-                    time: "10:00 AM",
-                    location: "317 Dundas St W, Toronto",
-                    latitude: 43.6536,
-                    longitude: -79.3925,
-                    icon: "building.columns.fill",
-                    accent: .forest,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Grainge",
-                    description: "Curated design objects and quiet browsing energy.",
-                    time: "12:00 PM",
-                    location: "Ossington Avenue, Toronto",
-                    latitude: 43.6475,
-                    longitude: -79.4200,
-                    icon: "bag.fill",
-                    accent: .lime,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Lunch at Quetzal",
-                    description: "Wood-fired Mexican with a refined room.",
-                    time: "1:00 PM",
-                    location: "419 College St, Toronto",
-                    latitude: 43.6560,
-                    longitude: -79.4075,
-                    icon: "fork.knife",
-                    accent: .tangerine,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Distillery District walk",
-                    description: "Brick lanes, galleries, and slow window-shopping.",
-                    time: "3:00 PM",
-                    location: "Distillery District, Toronto",
-                    latitude: 43.6503,
-                    longitude: -79.3595,
-                    icon: "figure.walk",
-                    accent: .mustard,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Evergreen Brick Works",
-                    description: "Adaptive reuse, trails, and golden-hour light.",
-                    time: "5:00 PM",
-                    location: "550 Bayview Ave, Toronto",
-                    latitude: 43.6846,
-                    longitude: -79.3656,
-                    icon: "leaf.fill",
-                    accent: .blush,
-                    photoData: nil
-                ),
-            ]
-        ),
-        ExploreStaffPick(
-            id: "nyc-foodies",
-            title: "New York foodies",
-            destination: "New York, USA",
-            publisher: "Peter Osmenda",
-            badge: "Staff Pick",
-            coverImageName: "explore-content/new-york",
-            latitude: 40.7128,
-            longitude: -74.0060,
-            mapSpan: 0.12,
-            paragraphs: [
-                "New York eats are endless, so this list stays opinionated: a tight set of places that reward appetite, patience, and a little neighborhood hopping. Think classics with staying power alongside rooms that still feel current.",
-                "Don’t try to do every meal back-to-back. Pick two anchors for the day, leave space to wander into a bakery or market, and let the city’s pace decide whether dessert happens at the table or on the sidewalk.",
-            ],
-            activities: [
-                EventItem(
-                    title: "Russ & Daughters Cafe",
-                    description: "Appetizing-counter legends with a sit-down ritual.",
-                    time: "9:30 AM",
-                    location: "127 Orchard St, New York",
-                    latitude: 40.7195,
-                    longitude: -73.9885,
-                    icon: "cup.and.saucer.fill",
-                    accent: .tangerine,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Xi'an Famous Foods",
-                    description: "Hand-pulled noodles and cumin heat.",
-                    time: "12:30 PM",
-                    location: "81 St Marks Pl, New York",
-                    latitude: 40.7282,
-                    longitude: -73.9857,
-                    icon: "fork.knife",
-                    accent: .plum,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Chelsea Market graze",
-                    description: "A walkable circuit of stalls and small bites.",
-                    time: "2:30 PM",
-                    location: "75 9th Ave, New York",
-                    latitude: 40.7424,
-                    longitude: -74.0061,
-                    icon: "cart.fill",
-                    accent: .lime,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Lucali",
-                    description: "Cash-only pizza worth the Brooklyn pilgrimage.",
-                    time: "6:30 PM",
-                    location: "575 Henry St, Brooklyn",
-                    latitude: 40.6818,
-                    longitude: -74.0003,
-                    icon: "flame.fill",
-                    accent: .mustard,
-                    photoData: nil
-                ),
-                EventItem(
-                    title: "Uncle Boons Sister",
-                    description: "Thai flavors in a lively late-night room.",
-                    time: "9:00 PM",
-                    location: "231 Eldridge St, New York",
-                    latitude: 40.7214,
-                    longitude: -73.9908,
-                    icon: "wineglass.fill",
-                    accent: .blush,
-                    photoData: nil
-                ),
-            ]
-        ),
-    ]
+    private func refreshFeed(force: Bool = false) async {
+        if isLoadingRemote, !force { return }
+        isLoadingRemote = true
+        defer { isLoadingRemote = false }
+        do {
+            let feed = try await ExploreFeedClient().fetchFeed()
+            guard !Task.isCancelled else { return }
+            picks = feed.picks
+        } catch {
+            // Keep whatever is already showing (bundled fallback or last successful fetch).
+        }
+    }
 }
 
 /// Trip-card-shaped unit for Explore staff picks (visual + details below).
@@ -275,9 +54,19 @@ struct ExploreFeedCard: View {
     
     private let mapInsetSize: CGFloat = 88
     
+    private var remoteCoverURL: URL? {
+        guard let raw = pick.coverImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else { return nil }
+        return URL(string: raw)
+    }
+    
+    private var localCoverImage: UIImage? {
+        guard let name = pick.coverImageName else { return nil }
+        return UIImage(named: name)
+    }
+    
     private var hasCoverImage: Bool {
-        guard let name = pick.coverImageName else { return false }
-        return UIImage(named: name) != nil
+        remoteCoverURL != nil || localCoverImage != nil
     }
     
     private var imageShape: RoundedRectangle {
@@ -346,7 +135,40 @@ struct ExploreFeedCard: View {
     
     @ViewBuilder
     private var coverOrMapBackground: some View {
-        if let name = pick.coverImageName, let uiImage = UIImage(named: name) {
+        if let url = remoteCoverURL {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    GeometryReader { geo in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .allowsHitTesting(false)
+                case .failure:
+                    localOrMapFallback
+                case .empty:
+                    ZStack {
+                        localOrMapFallback
+                        ProgressView()
+                            .tint(.white)
+                    }
+                @unknown default:
+                    localOrMapFallback
+                }
+            }
+        } else {
+            localOrMapFallback
+        }
+    }
+    
+    @ViewBuilder
+    private var localOrMapFallback: some View {
+        if let uiImage = localCoverImage {
             FillCroppedImage(image: uiImage)
         } else {
             MapSnapshotView(region: pick.mapRegion)
@@ -470,8 +292,12 @@ struct ExploreDetailView: View {
                     seedItems: createTripSeedItems,
                     replyText: AIReplyCopy.createTrip(trip: createTripDraft, itemCount: createTripSeedItems.count)
                 ) { draft, tripItems, placeItems in
-                    commitExploreTrip(draft, seedItems: tripItems, placeItems: placeItems)
-                    showCreateTripReview = false
+                    Task {
+                        await commitExploreTrip(draft, seedItems: tripItems, placeItems: placeItems)
+                        await MainActor.run {
+                            showCreateTripReview = false
+                        }
+                    }
                 }
             }
             .tint(.primary)
@@ -641,7 +467,7 @@ struct ExploreDetailView: View {
         _ draft: AITripDraft,
         seedItems: [PlanDayItem],
         placeItems: [PlanDayItem]
-    ) {
+    ) async {
         let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let destination = draft.destination.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = name.isEmpty ? (destination.isEmpty ? "New Trip" : destination) : name
@@ -691,11 +517,7 @@ struct ExploreDetailView: View {
             days[idx].events.sort { $0.startTimeMinutes < $1.startTimeMinutes }
         }
         
-        let coverData: Data? = {
-            guard let name = pick.coverImageName,
-                  let image = UIImage(named: name) else { return nil }
-            return image.jpegData(compressionQuality: 0.85)
-        }()
+        let coverData = await ExploreCoverImage.jpegData(for: pick)
         
         let trip = Trip(
             name: resolvedName,
@@ -713,29 +535,65 @@ struct ExploreDetailView: View {
             parkedIdeas: []
         )
         
-        tripStore.addTrip(trip)
-        
-        AchievementCounters.recordAIDaysPlanned(dayCount)
-        
-        for item in placeItems where item.canSaveToPlaces {
-            let placeName = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !placeName.isEmpty else { continue }
-            let place = Place(
-                name: placeName,
-                location: item.location,
-                note: item.notes,
-                photoData: item.photoData,
-                latitude: item.latitude,
-                longitude: item.longitude,
-                placeType: PlaceType.fromAICategory(item.category),
-                sourceTripID: trip.id,
-                sourceTripName: trip.name
-            )
-            placeStore.add(place)
+        await MainActor.run {
+            tripStore.addTrip(trip)
+            
+            AchievementCounters.recordAIDaysPlanned(dayCount)
+            
+            for item in placeItems where item.canSaveToPlaces {
+                let placeName = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !placeName.isEmpty else { continue }
+                let place = Place(
+                    name: placeName,
+                    location: item.location,
+                    note: item.notes,
+                    photoData: item.photoData,
+                    latitude: item.latitude,
+                    longitude: item.longitude,
+                    placeType: PlaceType.fromAICategory(item.category),
+                    sourceTripID: trip.id,
+                    sourceTripName: trip.name
+                )
+                placeStore.add(place)
+            }
+            
+            Haptics.bump()
+            openedTripID = trip.id
         }
-        
-        Haptics.bump()
-        openedTripID = trip.id
+    }
+}
+
+/// Resolves Explore cover images for trip creation (local asset preferred).
+enum ExploreCoverImage {
+    static func localJPEGData(for pick: ExploreStaffPick) -> Data? {
+        if let name = pick.coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !name.isEmpty,
+           let image = UIImage(named: name) {
+            return image.jpegData(compressionQuality: 0.85)
+        }
+        return nil
+    }
+    
+    /// Prefers bundled assets; otherwise downloads `coverImageURL` when present.
+    static func jpegData(for pick: ExploreStaffPick) async -> Data? {
+        if let local = localJPEGData(for: pick) { return local }
+        guard
+            let raw = pick.coverImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !raw.isEmpty,
+            let url = URL(string: raw)
+        else { return nil }
+        do {
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 12
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                return nil
+            }
+            guard UIImage(data: data) != nil else { return nil }
+            return PlaceImageResolver.compressedCoverData(data) ?? data
+        } catch {
+            return nil
+        }
     }
 }
 

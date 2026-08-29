@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-29",
+  "picks": [
+    {
+      "id": "paris-museums-kids",
+      "title": "The best Paris museums to visit with kids",
+      "destination": "Paris, France",
+      "publisher": "Cara Willenbrock",
+      "badge": "Staff Pick",
+      "coverImageName": "explore-content/paris-museums",
+      "coverImageURL": null,
+      "latitude": 48.8606,
+      "longitude": 2.3376,
+      "mapSpan": 0.08,
+      "paragraphs": [
+        "Parisian art museums are very welcoming to kids — but what does one actually think of these world-class cultural institutions when you’re touring with a little one in tow?",
+        "This shortlist mixes headline collections with spaces that invite sketching, wandering, and hands-on moments. Use it as a flexible route: pair Orsay with Rodin on a dual ticket, leave room for a garden break, and treat fog sculptures and medieval moats as the real souvenirs."
+      ],
+      "activities": [
+        {
+          "title": "Bourse de Commerce",
+          "description": "A former government building turned private art collection — ornate interiors colliding with contemporary work. Don’t miss Fujiko Nakaya’s Fog Sculpture when it’s on view.",
+          "time": "10:00 AM",
+          "location": "2 Rue de Viarmes, Paris",
+          "latitude": 48.8628,
+          "longitude": 2.3426,
+          "icon": "building.columns.fill",
+          "accent": "forest"
+        },
+        {
+          "title": "Musée d'Orsay",
+          "description": "A former train station turned Impressionist temple, crowned by the famous gold clock. Book a dual Orsay + Rodin ticket to skip lines and keep the day flexible.",
+          "time": "11:30 AM",
+          "location": "1 Rue de la Légion d'Honneur, Paris",
+          "latitude": 48.86,
+          "longitude": 2.3266,
+          "icon": "clock.fill",
+          "accent": "tangerine"
+        },
+        {
+          "title": "Musée Rodin",
+          "description": "Hit The Atelier first — interactive, air-conditioned, and packed with activities — then wander the sculpture garden before and after.",
+          "time": "1:30 PM",
+          "location": "77 Rue de Varenne, Paris",
+          "latitude": 48.8553,
+          "longitude": 2.3158,
+          "icon": "leaf.fill",
+          "accent": "lime"
+        },
+        {
+          "title": "Grand Palais — Matisse",
+          "description": "A Matisse exhibit where the artist’s sketchbook can spark kids to open their own. Worth the stop if the current show is running.",
+          "time": "3:30 PM",
+          "location": "3 Avenue du Général Eisenhower, Paris",
+          "latitude": 48.866,
+          "longitude": 2.3126,
+          "icon": "paintpalette.fill",
+          "accent": "blush"
+        },
+        {
+          "title": "Musée du Louvre",
+          "description": "Start at Le Studio for model sand, sketching, and books, then walk the Medieval Louvre — the empty former moat of the fortress, surprisingly peaceful with kids.",
+          "time": "5:00 PM",
+          "location": "Rue de Rivoli, Paris",
+          "latitude": 48.8606,
+          "longitude": 2.3376,
+          "icon": "building.2.fill",
+          "accent": "mustard"
+        }
+      ]
+    },
+    {
+      "id": "toronto-designer",
+      "title": "A designer's curated Toronto itinerary",
+      "destination": "Toronto, Canada",
+      "publisher": "Peter Osmenda",
+      "badge": "Staff Pick",
+      "coverImageName": "explore-content/toronto",
+      "coverImageURL": null,
+      "latitude": 43.6532,
+      "longitude": -79.3832,
+      "mapSpan": 0.12,
+      "paragraphs": [
+        "This is a design-forward day through Toronto — the kind of route a creative director would sketch for a short visit. Expect sharp architecture, thoughtful retail, and neighborhood texture instead of a checklist of tourist checkboxes.",
+        "Walk between stops when you can. The point is noticing materials, storefronts, and street rhythm as much as the destinations themselves. Keep the afternoon flexible so coffee can turn into a longer linger."
+      ],
+      "activities": [
+        {
+          "title": "Art Gallery of Ontario",
+          "description": "Gehry’s light-filled galleries and Canadian collections.",
+          "time": "10:00 AM",
+          "location": "317 Dundas St W, Toronto",
+          "latitude": 43.6536,
+          "longitude": -79.3925,
+          "icon": "building.columns.fill",
+          "accent": "forest"
+        },
+        {
+          "title": "Grainge",
+          "description": "Curated design objects and quiet browsing energy.",
+          "time": "12:00 PM",
+          "location": "Ossington Avenue, Toronto",
+          "latitude": 43.6475,
+          "longitude": -79.42,
+          "icon": "bag.fill",
+          "accent": "lime"
+        },
+        {
+          "title": "Lunch at Quetzal",
+          "description": "Wood-fired Mexican with a refined room.",
+          "time": "1:00 PM",
+          "location": "419 College St, Toronto",
+          "latitude": 43.656,
+          "longitude": -79.4075,
+          "icon": "fork.knife",
+          "accent": "tangerine"
+        },
+        {
+          "title": "Distillery District walk",
+          "description": "Brick lanes, galleries, and slow window-shopping.",
+          "time": "3:00 PM",
+          "location": "Distillery District, Toronto",
+          "latitude": 43.6503,
+          "longitude": -79.3595,
+          "icon": "figure.walk",
+          "accent": "mustard"
+        },
+        {
+          "title": "Evergreen Brick Works",
+          "description": "Adaptive reuse, trails, and golden-hour light.",
+          "time": "5:00 PM",
+          "location": "550 Bayview Ave, Toronto",
+          "latitude": 43.6846,
+          "longitude": -79.3656,
+          "icon": "leaf.fill",
+          "accent": "blush"
+        }
+      ]
+    },
+    {
+      "id": "nyc-foodies",
+      "title": "New York foodies",
+      "destination": "New York, USA",
+      "publisher": "Peter Osmenda",
+      "badge": "Staff Pick",
+      "coverImageName": "explore-content/new-york",
+      "coverImageURL": null,
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "mapSpan": 0.12,
+      "paragraphs": [
+        "New York eats are endless, so this list stays opinionated: a tight set of places that reward appetite, patience, and a little neighborhood hopping. Think classics with staying power alongside rooms that still feel current.",
+        "Don’t try to do every meal back-to-back. Pick two anchors for the day, leave space to wander into a bakery or market, and let the city’s pace decide whether dessert happens at the table or on the sidewalk."
+      ],
+      "activities": [
+        {
+          "title": "Russ & Daughters Cafe",
+          "description": "Appetizing-counter legends with a sit-down ritual.",
+          "time": "9:30 AM",
+          "location": "127 Orchard St, New York",
+          "latitude": 40.7195,
+          "longitude": -73.9885,
+          "icon": "cup.and.saucer.fill",
+          "accent": "tangerine"
+        },
+        {
+          "title": "Xi'an Famous Foods",
+          "description": "Hand-pulled noodles and cumin heat.",
+          "time": "12:30 PM",
+          "location": "81 St Marks Pl, New York",
+          "latitude": 40.7282,
+          "longitude": -73.9857,
+          "icon": "fork.knife",
+          "accent": "plum"
+        },
+        {
+          "title": "Chelsea Market graze",
+          "description": "A walkable circuit of stalls and small bites.",
+          "time": "2:30 PM",
+          "location": "75 9th Ave, New York",
+          "latitude": 40.7424,
+          "longitude": -74.0061,
+          "icon": "cart.fill",
+          "accent": "lime"
+        },
+        {
+          "title": "Lucali",
+          "description": "Cash-only pizza worth the Brooklyn pilgrimage.",
+          "time": "6:30 PM",
+          "location": "575 Henry St, Brooklyn",
+          "latitude": 40.6818,
+          "longitude": -74.0003,
+          "icon": "flame.fill",
+          "accent": "mustard"
+        },
+        {
+          "title": "Uncle Boons Sister",
+          "description": "Thai flavors in a lively late-night room.",
+          "time": "9:00 PM",
+          "location": "231 Eldridge St, New York",
+          "latitude": 40.7214,
+          "longitude": -73.9908,
+          "icon": "wineglass.fill",
+          "accent": "blush"
+        }
+      ]
+    }
+  ]
+}
