@@ -9,39 +9,74 @@ struct ExploreHomeView: View {
     @State private var loadError: String?
     
     var body: some View {
-        ScrollView {
-            Group {
-                if picks.isEmpty {
+        Group {
+            if picks.isEmpty {
+                ScrollView {
                     emptyOrStatus
                         .frame(maxWidth: .infinity)
                         .padding(.top, 48)
                         .padding(.horizontal, RootHomeMetrics.horizontalInset)
-                } else {
-                    LazyVStack(spacing: RootHomeMetrics.chromeToContent) {
+                }
+                .refreshable {
+                    await refreshFeed(hapticOnSuccess: true)
+                }
+            } else {
+                // `List` + `.refreshable` is more reliable inside TabView than ScrollView alone.
+                List {
+                    Section {
                         ForEach(picks) { pick in
                             NavigationLink(value: pick) {
                                 ExploreFeedCard(pick: pick)
                             }
                             .buttonStyle(.plain)
+                            .listRowInsets(
+                                EdgeInsets(
+                                    top: RootHomeMetrics.chromeToContent / 2,
+                                    leading: RootHomeMetrics.horizontalInset,
+                                    bottom: RootHomeMetrics.chromeToContent / 2,
+                                    trailing: RootHomeMetrics.horizontalInset
+                                )
+                            )
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                         }
+                    } header: {
+                        Text("Live feed · \(picks.count) \(picks.count == 1 ? "pick" : "picks")")
+                            .font(.appCaption)
+                            .foregroundStyle(.secondary)
+                            .textCase(nil)
                     }
-                    .padding(.horizontal, RootHomeMetrics.horizontalInset)
-                    .padding(.top, RootHomeMetrics.topInset)
-                    .padding(.bottom, 28)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .refreshable {
+                    await refreshFeed(hapticOnSuccess: true)
                 }
             }
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Explore")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await refreshFeed(hapticOnSuccess: true) }
+                } label: {
+                    if isLoadingRemote {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .accessibilityLabel("Refresh Explore")
+                .disabled(isLoadingRemote)
+            }
+        }
         .navigationDestination(for: ExploreStaffPick.self) { pick in
             ExploreDetailView(pick: pick)
         }
         .task {
             await refreshFeed()
-        }
-        .refreshable {
-            await refreshFeed(hapticOnSuccess: true)
         }
     }
     
@@ -68,12 +103,12 @@ struct ExploreHomeView: View {
             ContentUnavailableView(
                 "Nothing to explore yet",
                 systemImage: "compass",
-                description: Text("Pull to refresh when new staff picks are published.")
+                description: Text("Pull to refresh or tap the reload button when new staff picks are published.")
             )
         }
     }
     
-    /// Always loads from `GET /api/explore` — no bundled/offline editorial content.
+    /// Always loads from the Vercel Explore API (backed by trip-planner-ai-proxy). No bundled content.
     private func refreshFeed(hapticOnSuccess: Bool = false) async {
         if isLoadingRemote { return }
         isLoadingRemote = true
