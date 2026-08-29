@@ -56,9 +56,9 @@ struct ExploreStaffPick: Identifiable, Hashable, Codable {
     let destination: String
     let publisher: String
     let badge: String
-    /// Bundled asset name (e.g. `explore-content/paris-museums`) — only works for assets already in the app.
+    /// Unused legacy field. Covers come from `coverImageURL`.
     let coverImageName: String?
-    /// Remote cover URL — preferred for content published without an app update.
+    /// Remote cover URL (Unsplash for now).
     let coverImageURL: String?
     let latitude: Double
     let longitude: Double

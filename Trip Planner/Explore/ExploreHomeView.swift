@@ -126,13 +126,8 @@ struct ExploreFeedCard: View {
         return URL(string: raw)
     }
     
-    private var localCoverImage: UIImage? {
-        guard let name = pick.coverImageName else { return nil }
-        return UIImage(named: name)
-    }
-    
     private var hasCoverImage: Bool {
-        remoteCoverURL != nil || localCoverImage != nil
+        remoteCoverURL != nil
     }
     
     private var imageShape: RoundedRectangle {
@@ -216,26 +211,17 @@ struct ExploreFeedCard: View {
                     .clipped()
                     .allowsHitTesting(false)
                 case .failure:
-                    localOrMapFallback
+                    MapSnapshotView(region: pick.mapRegion)
                 case .empty:
                     ZStack {
-                        localOrMapFallback
+                        MapSnapshotView(region: pick.mapRegion)
                         ProgressView()
                             .tint(.white)
                     }
                 @unknown default:
-                    localOrMapFallback
+                    MapSnapshotView(region: pick.mapRegion)
                 }
             }
-        } else {
-            localOrMapFallback
-        }
-    }
-    
-    @ViewBuilder
-    private var localOrMapFallback: some View {
-        if let uiImage = localCoverImage {
-            FillCroppedImage(image: uiImage)
         } else {
             MapSnapshotView(region: pick.mapRegion)
         }
@@ -629,20 +615,10 @@ struct ExploreDetailView: View {
     }
 }
 
-/// Resolves Explore cover images for trip creation (local asset preferred).
+/// Resolves Explore cover images for trip creation from `coverImageURL`.
 enum ExploreCoverImage {
-    static func localJPEGData(for pick: ExploreStaffPick) -> Data? {
-        if let name = pick.coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !name.isEmpty,
-           let image = UIImage(named: name) {
-            return image.jpegData(compressionQuality: 0.85)
-        }
-        return nil
-    }
-    
-    /// Prefers bundled assets; otherwise downloads `coverImageURL` when present.
+    /// Downloads `coverImageURL` when present. Explore covers are not bundled.
     static func jpegData(for pick: ExploreStaffPick) async -> Data? {
-        if let local = localJPEGData(for: pick) { return local }
         guard
             let raw = pick.coverImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
             !raw.isEmpty,
