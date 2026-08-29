@@ -28,23 +28,23 @@ struct ExploreHomeView: View {
         }
         .task {
             // Always hit the network on appear so new Vercel picks aren't stuck behind a stale cache / fallback.
-            await refreshFeed(force: true)
+            await refreshFeed()
         }
         .refreshable {
-            await refreshFeed(force: true)
+            await refreshFeed(hapticOnSuccess: true)
         }
     }
     
-    /// Loads Explore picks from `GET /api/explore`. Uses a cache-busting fetch so editorial updates show up without an app update.
-    private func refreshFeed(force: Bool = false) async {
-        if isLoadingRemote, !force { return }
+    /// Loads Explore picks from `GET /api/explore`. Always bypasses URL cache so editorial updates show up without an app update.
+    private func refreshFeed(hapticOnSuccess: Bool = false) async {
+        if isLoadingRemote { return }
         isLoadingRemote = true
         defer { isLoadingRemote = false }
         do {
             let feed = try await ExploreFeedClient().fetchFeed(forceRefresh: true)
             guard !Task.isCancelled else { return }
             picks = feed.picks
-            if force {
+            if hapticOnSuccess {
                 Haptics.bump()
             }
         } catch {
