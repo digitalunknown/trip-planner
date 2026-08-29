@@ -95,6 +95,7 @@ struct ExploreHomeView: View {
             isLoadingRemote = false
             hasLoadedOnce = true
         }
+        let started = ContinuousClock.now
         do {
             let feed = try await ExploreFeedClient().fetchFeed(forceRefresh: true)
             guard !Task.isCancelled else { return }
@@ -110,6 +111,15 @@ struct ExploreHomeView: View {
             #if DEBUG
             print("Explore feed refresh failed: \(error)")
             #endif
+        }
+        
+        // Keep the pull-to-refresh spinner visible briefly even when the feed is unchanged.
+        if hapticOnSuccess {
+            let minimum: Duration = .milliseconds(1000)
+            let elapsed = ContinuousClock.now - started
+            if elapsed < minimum {
+                try? await Task.sleep(for: minimum - elapsed)
+            }
         }
     }
 }
