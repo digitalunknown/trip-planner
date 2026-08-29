@@ -42,9 +42,8 @@ struct ExploreHomeView: View {
         do {
             let feed = try await ExploreFeedClient().fetchFeed(forceRefresh: force)
             guard !Task.isCancelled else { return }
-            let previousIDs = picks.map(\.id)
             picks = feed.picks
-            if force, picks.map(\.id) != previousIDs || !picks.isEmpty {
+            if force {
                 Haptics.bump()
             }
         } catch {
