@@ -3,22 +3,33 @@ import SwiftUI
 import UIKit
 
 struct ExploreHomeView: View {
-    @State private var picks: [ExploreStaffPick] = ExploreStaffPick.bundledFallback
+    @State private var picks: [ExploreStaffPick] = []
     @State private var isLoadingRemote = false
+    @State private var hasLoadedOnce = false
+    @State private var loadError: String?
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: RootHomeMetrics.chromeToContent) {
-                ForEach(picks) { pick in
-                    NavigationLink(value: pick) {
-                        ExploreFeedCard(pick: pick)
+            Group {
+                if picks.isEmpty {
+                    emptyOrStatus
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 48)
+                        .padding(.horizontal, RootHomeMetrics.horizontalInset)
+                } else {
+                    LazyVStack(spacing: RootHomeMetrics.chromeToContent) {
+                        ForEach(picks) { pick in
+                            NavigationLink(value: pick) {
+                                ExploreFeedCard(pick: pick)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, RootHomeMetrics.horizontalInset)
+                    .padding(.top, RootHomeMetrics.topInset)
+                    .padding(.bottom, 28)
                 }
             }
-            .padding(.horizontal, RootHomeMetrics.horizontalInset)
-            .padding(.top, RootHomeMetrics.topInset)
-            .padding(.bottom, 28)
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Explore")
@@ -27,7 +38,6 @@ struct ExploreHomeView: View {
             ExploreDetailView(pick: pick)
         }
         .task {
-            // Always hit the network on appear so new Vercel picks aren't stuck behind a stale cache / fallback.
             await refreshFeed()
         }
         .refreshable {
@@ -35,20 +45,54 @@ struct ExploreHomeView: View {
         }
     }
     
-    /// Loads Explore picks from `GET /api/explore`. Always bypasses URL cache so editorial updates show up without an app update.
+    @ViewBuilder
+    private var emptyOrStatus: some View {
+        if isLoadingRemote, !hasLoadedOnce {
+            ProgressView("Loading Explore…")
+                .font(.appBody)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+        } else if let loadError {
+            ContentUnavailableView {
+                Label("Couldn't load Explore", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text(loadError)
+            } actions: {
+                Button("Try Again") {
+                    Task { await refreshFeed(hapticOnSuccess: true) }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } else {
+            ContentUnavailableView(
+                "Nothing to explore yet",
+                systemImage: "compass",
+                description: Text("Pull to refresh when new staff picks are published.")
+            )
+        }
+    }
+    
+    /// Always loads from `GET /api/explore` — no bundled/offline editorial content.
     private func refreshFeed(hapticOnSuccess: Bool = false) async {
         if isLoadingRemote { return }
         isLoadingRemote = true
-        defer { isLoadingRemote = false }
+        defer {
+            isLoadingRemote = false
+            hasLoadedOnce = true
+        }
         do {
             let feed = try await ExploreFeedClient().fetchFeed(forceRefresh: true)
             guard !Task.isCancelled else { return }
             picks = feed.picks
+            loadError = nil
             if hapticOnSuccess {
                 Haptics.bump()
             }
         } catch {
-            // Keep whatever is already showing (bundled fallback or last successful fetch).
+            if picks.isEmpty {
+                loadError = "Check your connection and try again."
+            }
             #if DEBUG
             print("Explore feed refresh failed: \(error)")
             #endif
