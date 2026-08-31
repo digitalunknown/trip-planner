@@ -753,8 +753,18 @@ private struct AchievementBadgeCell: View {
     @ViewBuilder
     private var badgeArtwork: some View {
         if unlocked {
-            if let name = definition.illustrationName {
-                Image(name)
+            let resolvedName: String? = {
+                if let name = definition.illustrationName, UIImage(named: name) != nil {
+                    return name
+                }
+                if definition.category == .cities,
+                   UIImage(named: AchievementsCatalog.cityStampAsset) != nil {
+                    return AchievementsCatalog.cityStampAsset
+                }
+                return nil
+            }()
+            if let resolvedName {
+                Image(resolvedName)
                     .resizable()
                     .interpolation(.high)
                     .scaledToFit()

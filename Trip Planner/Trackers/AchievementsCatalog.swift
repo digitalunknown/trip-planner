@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 /// Persistent counters that aren't derived from trip/place/tracker data.
 enum AchievementCounters {
@@ -190,11 +191,26 @@ enum AchievementsCatalog {
         }()
         let key = head.lowercased()
         if let asset = cityStampAssetsByName[key] {
-            return asset
+            return resolvedImageName(preferred: asset, alternates: ["stamps-toronto"])
         }
         // Fallback: destination string contains a known city name (e.g. "Downtown Toronto").
         for (city, asset) in cityStampAssetsByName where key.contains(city) {
-            return asset
+            let alt = city == "toronto" ? ["stamps-toronto"] : [String]()
+            return resolvedImageName(preferred: asset, alternates: alt)
+        }
+        return cityStampAsset
+    }
+    
+    /// Picks the first asset catalog name that actually exists; never returns a missing name.
+    private static func resolvedImageName(preferred: String, alternates: [String] = []) -> String {
+        var candidates: [String] = [preferred]
+        candidates.append(contentsOf: alternates)
+        candidates.append(cityStampAsset)
+        var seen = Set<String>()
+        for name in candidates where seen.insert(name).inserted {
+            if UIImage(named: name) != nil {
+                return name
+            }
         }
         return cityStampAsset
     }
