@@ -677,6 +677,7 @@ struct AIPlacesReviewView: View {
     var onSavePlaces: ([PlanDayItem]) -> Void
     var onDone: () -> Void
     
+    @Environment(ExpertTipsStore.self) private var expertTips
     @State private var selectedAppleMapItem: MKMapItem?
     @State private var loadingMapsID: UUID?
     
@@ -747,6 +748,12 @@ struct AIPlacesReviewView: View {
     @ViewBuilder
     private func placeCard(at index: Int) -> some View {
         let itemID = items[index].id
+        let matchedTips = expertTips.tips(
+            title: items[index].title,
+            location: items[index].location,
+            latitude: items[index].latitude,
+            longitude: items[index].longitude
+        )
         AIResultItemCard(
             title: items[index].title,
             subtitle: items[index].aiResultSubtitle,
@@ -778,9 +785,14 @@ struct AIPlacesReviewView: View {
                     )
                 }
             }
-        )
+        ) {
+            if let tip = matchedTips.first {
+                ExpertTipInlineCallout(tip: tip)
+            }
+        }
         .aiResultItemRowBackground(isIncluded: true)
         .task(id: itemID) {
+            await expertTips.refresh()
             await AIResultMaps.loadCoverIfNeeded(into: $items, id: itemID)
         }
     }
@@ -808,6 +820,7 @@ struct AICreateTripReviewView: View {
     
     var onConfirm: (AITripDraft, [PlanDayItem], [PlanDayItem]) -> Void
     
+    @Environment(ExpertTipsStore.self) private var expertTips
     @State private var selectedAppleMapItem: MKMapItem?
     @State private var loadingMapsID: UUID?
     
@@ -900,6 +913,12 @@ struct AICreateTripReviewView: View {
     
     @ViewBuilder
     private func tripItemCard(for item: Binding<PlanDayItem>) -> some View {
+        let matchedTips = expertTips.tips(
+            title: item.wrappedValue.title,
+            location: item.wrappedValue.location,
+            latitude: item.wrappedValue.latitude,
+            longitude: item.wrappedValue.longitude
+        )
         AIResultItemCard(
             title: item.wrappedValue.title,
             subtitle: itemSubtitle(for: item.wrappedValue),
@@ -919,9 +938,14 @@ struct AICreateTripReviewView: View {
                     )
                 }
             }
-        )
+        ) {
+            if let tip = matchedTips.first {
+                ExpertTipInlineCallout(tip: tip)
+            }
+        }
         .aiResultItemRowBackground(isIncluded: item.wrappedValue.include)
         .task(id: item.wrappedValue.id) {
+            await expertTips.refresh()
             await AIResultMaps.loadCoverIfNeeded(into: $items, id: item.wrappedValue.id)
         }
     }

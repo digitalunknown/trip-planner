@@ -10,6 +10,7 @@ struct PlanDayPreviewView: View {
     let onCancel: () -> Void
     let onConfirm: ([PlanDayItem]) -> Void
     
+    @Environment(ExpertTipsStore.self) private var expertTips
     @State private var selectedAppleMapItem: MKMapItem?
     @State private var loadingMapsID: UUID?
     
@@ -78,6 +79,12 @@ struct PlanDayPreviewView: View {
             
             ForEach($draft.items) { $item in
                 Section {
+                    let matchedTips = expertTips.tips(
+                        title: item.title,
+                        location: item.location,
+                        latitude: item.latitude,
+                        longitude: item.longitude
+                    )
                     AIResultItemCard(
                         title: item.title,
                         subtitle: item.aiResultSubtitle,
@@ -97,12 +104,18 @@ struct PlanDayPreviewView: View {
                             }
                         }
                     ) {
-                        if dayOptions.count > 1 {
-                            dayPicker(for: $item)
+                        VStack(alignment: .leading, spacing: 10) {
+                            if dayOptions.count > 1 {
+                                dayPicker(for: $item)
+                            }
+                            if let tip = matchedTips.first {
+                                ExpertTipInlineCallout(tip: tip)
+                            }
                         }
                     }
                     .aiResultItemRowBackground(isIncluded: item.include)
                     .task(id: item.id) {
+                        await expertTips.refresh()
                         await AIResultMaps.loadCoverIfNeeded(into: $draft.items, id: item.id)
                     }
                 }
