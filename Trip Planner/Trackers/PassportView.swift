@@ -43,7 +43,7 @@ struct PassportView: View {
                     } else {
                         ForEach(loggedCities, id: \.self) { city in
                             VStack(spacing: 10) {
-                                Image(AchievementsCatalog.cityStampAsset)
+                                Image(AchievementsCatalog.stampAsset(forCityName: city))
                                     .resizable()
                                     .interpolation(.high)
                                     .scaledToFit()

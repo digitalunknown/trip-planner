@@ -170,8 +170,33 @@ enum AchievementsCatalog {
         "nps-joshua": "illustrations/badge-joshua-tree-np"
     ]
     
+    /// City-specific stamp art keyed by lowercase city name (first segment of destination).
+    private static let cityStampAssetsByName: [String: String] = [
+        "toronto": "illustrations/stamps-toronto"
+    ]
+    
     private static func badgeAsset(forParkID id: String) -> String {
         nationalParkBadgeAssetsByID[id] ?? nationalParkBadgeAsset
+    }
+    
+    /// Prefer a city-specific stamp when we have art; otherwise the shared city stamp.
+    static func stampAsset(forCityName name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let head: String = {
+            if let comma = trimmed.firstIndex(of: ",") {
+                return String(trimmed[..<comma]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            return trimmed
+        }()
+        let key = head.lowercased()
+        if let asset = cityStampAssetsByName[key] {
+            return asset
+        }
+        // Fallback: destination string contains a known city name (e.g. "Downtown Toronto").
+        for (city, asset) in cityStampAssetsByName where key.contains(city) {
+            return asset
+        }
+        return cityStampAsset
     }
     
     private static func cityBadgeID(forName name: String) -> String {
@@ -271,7 +296,7 @@ enum AchievementsCatalog {
                 threshold: 1,
                 title: name,
                 description: name,
-                customIllustrationName: cityStampAsset,
+                customIllustrationName: stampAsset(forCityName: name),
                 hidesWhenLocked: true
             )
         }
