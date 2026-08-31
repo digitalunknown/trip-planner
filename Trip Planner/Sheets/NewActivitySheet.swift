@@ -663,6 +663,15 @@ struct NewActivitySheet: View {
             
             applePlaceInfoSection
             
+            ExpertTipsMatchingSection(
+                query: ExpertTipQuery(
+                    title: title,
+                    location: location,
+                    latitude: latitude,
+                    longitude: longitude
+                )
+            )
+            
             timingSection
             
             Section {

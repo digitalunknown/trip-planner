@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-31T00:00:00Z",
+  "tips": [
+    {
+      "id": "musee-orsay-kids-timing",
+      "placeName": "Musée d'Orsay",
+      "aliases": [
+        "Musée d'Orsay",
+        "Musee d'Orsay",
+        "Musée d'Orsay, Paris",
+        "1 Rue de la Légion d'Honneur, Paris"
+      ],
+      "latitude": 48.86,
+      "longitude": 2.3266,
+      "mapKitIdentifier": null,
+      "tip": "Go right when you enter and ride the escalators up to the Impressionist galleries first — kids burn out fast if you start with the ground floor sculpture hall. The café behind the clock face is worth the detour for the view alone.",
+      "author": "Piotr",
+      "updatedAt": "2026-08-31T00:00:00Z"
+    },
+    {
+      "id": "ago-toronto-wednesday",
+      "placeName": "Art Gallery of Ontario",
+      "aliases": [
+        "Art Gallery of Ontario",
+        "AGO",
+        "AGO Toronto",
+        "317 Dundas St W, Toronto"
+      ],
+      "latitude": 43.6536,
+      "longitude": -79.3925,
+      "mapKitIdentifier": null,
+      "tip": "Wednesday evenings are quieter and often free for locals — check the AGO site before you go. Start in the contemporary wing upstairs; the Walker Court is a great reset spot between galleries.",
+      "author": "Piotr",
+      "updatedAt": "2026-08-31T00:00:00Z"
+    },
+    {
+      "id": "russ-daughters-line",
+      "placeName": "Russ & Daughters Cafe",
+      "aliases": [
+        "Russ & Daughters Cafe",
+        "Russ and Daughters Cafe",
+        "Russ & Daughters",
+        "127 Orchard St, New York"
+      ],
+      "latitude": 40.7195,
+      "longitude": -73.9885,
+      "mapKitIdentifier": null,
+      "tip": "Skip the classic counter line if you can — the cafe a block away takes walks-ins and has the same smoked fish, plus coffee. Order the super heebster and a chocolate egg cream; share plates so you can try more.",
+      "author": "Piotr",
+      "updatedAt": "2026-08-31T00:00:00Z"
+    }
+  ]
+}

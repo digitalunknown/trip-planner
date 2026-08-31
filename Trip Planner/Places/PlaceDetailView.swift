@@ -98,6 +98,8 @@ struct PlaceDetailView: View {
                     
                     appleMapsFormSection(for: place)
                     
+                    ExpertTipsMatchingSection(query: .place(place))
+                    
                     tripsSection
                     
                     imageSection(for: place)

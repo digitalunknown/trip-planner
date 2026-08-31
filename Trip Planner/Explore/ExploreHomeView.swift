@@ -250,6 +250,7 @@ struct ExploreDetailView: View {
     
     @Environment(TripStore.self) private var tripStore
     @Environment(PlaceStore.self) private var placeStore
+    @Environment(ExpertTipsStore.self) private var expertTips
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var openedTripID: UUID?
@@ -381,6 +382,12 @@ struct ExploreDetailView: View {
             if !notes.isEmpty { return notes }
             return activity.location.trimmingCharacters(in: .whitespacesAndNewlines)
         }()
+        let matchedTips = expertTips.tips(
+            title: activity.title,
+            location: activity.location,
+            latitude: activity.latitude,
+            longitude: activity.longitude
+        )
         
         return AIResultItemCard(
             title: activity.title,
@@ -402,11 +409,16 @@ struct ExploreDetailView: View {
             onMapTap: {
                 Task { await openAppleMapsListing(for: activity) }
             }
-        )
+        ) {
+            if let tip = matchedTips.first {
+                ExpertTipInlineCallout(tip: tip)
+            }
+        }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(ExploreDetailCardGlassBackground(fallback: placeCardFill))
         .task(id: activity.id) {
+            await expertTips.refresh()
             await loadAppleMapsCoverIfNeeded(for: activity)
         }
     }
@@ -711,4 +723,5 @@ private struct ExploreDetailCardGlassBackground: ViewModifier {
     }
     .environment(TripStore())
     .environment(PlaceStore())
+    .environment(ExpertTipsStore())
 }

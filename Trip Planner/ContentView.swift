@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var isSearchPresented: Bool = false
     @State private var tripStore = TripStore()
     @State private var placeStore = PlaceStore()
+    @State private var expertTipsStore = ExpertTipsStore()
     @State private var tabChrome = RootTabChrome()
     @StateObject private var auth = AppleSignInManager()
     @State private var isPresentingSignInGate: Bool = false
@@ -35,6 +36,7 @@ struct ContentView: View {
         }
         .environment(tripStore)
         .environment(placeStore)
+        .environment(expertTipsStore)
         .environment(tabChrome)
         .environmentObject(auth)
         // Tab bar stays monochrome; orange is only for in-app accents via environment.
@@ -45,6 +47,7 @@ struct ContentView: View {
             CloudSyncPaths.primeICloudContainerIfNeeded()
             CoverAttributionSync.shared.start()
             Task { await auth.refreshCredentialState() }
+            Task { await expertTipsStore.refresh() }
             updateSignInGatePresentation()
             injectSampleTripIfNeeded()
         }
