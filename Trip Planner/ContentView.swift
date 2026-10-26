@@ -233,33 +233,9 @@ struct ContentView: View {
     }
     
     private func seedOnboardingSampleTripIfNeeded() {
-        guard auth.isSignedIn else { return }
-        guard !tripStore.isLoadingTrips else { return }
-        
-        if tripStore.trips.contains(where: { $0.id == Self.sampleTripID }) {
-            markOnboardingSampleSeeded()
-            applyCachedSampleCoverIfNeeded()
-            Task { await fetchSampleCoverIfNeeded() }
-            return
-        }
-        
-        if !tripStore.trips.isEmpty {
-            markOnboardingSampleSeeded()
-            return
-        }
-        
-        if hasSeededOnboardingSample, !didSeedOnboardingSampleThisSession {
-            return
-        }
-        
-        var sample = makeSampleTripTokyoJuly2026()
-        if !sampleTripCoverImageData.isEmpty {
-            sample.coverImageData = sampleTripCoverImageData
-        }
-        tripStore.addTrip(sample)
-        didSeedOnboardingSampleThisSession = true
-        markOnboardingSampleSeeded()
-        Task { await fetchSampleCoverIfNeeded() }
+        // Removed: Do not seed or persist a sample trip for signed-in users.
+        // If a sample exists from earlier versions, it remains in-memory only.
+        return
     }
     
     private func applyCachedSampleCoverIfNeeded() {
