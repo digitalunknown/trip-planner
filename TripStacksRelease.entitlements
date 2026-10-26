@@ -22,6 +22,8 @@
 	<string>$(TeamIdentifierPrefix)digitalunknown.Trip-Planner</string>
 	<key>com.apple.developer.weatherkit</key>
 	<true/>
+	<key>com.apple.developer.devicecheck.appattest-environment</key>
+	<string>production</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.digitalunknown.Trip-Planner</string>

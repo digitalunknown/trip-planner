@@ -1254,6 +1254,20 @@ struct TripStacksAISheet: View {
         } catch {
             await MainActor.run {
                 guard generation == runGeneration else { return }
+                // Surface paywall/out-of-credits immediately on server 402.
+                if case let .http(status, body) = (error as? TripStacksAIError) {
+                    if status == 402 {
+                        showPaywall = true
+                        // Optional: mark local meter as capped so UI reflects limit reached.
+                        aiUsage.usedThisWeek = max(aiUsage.usedThisWeek, AIUsageStore.weeklyLimit)
+                        errorText = nil
+                        isProcessing = false
+                        return
+                    }
+                    if status == 429 {
+                        // Keep existing banner handling for 429.
+                    }
+                }
                 withAnimation(.easeOut(duration: 0.22)) {
                     errorText = userFriendlyError(error)
                 }

@@ -1,4 +1,5 @@
 import Foundation
+import StoreKit
 
 struct TripStacksAIClient {
     static let defaultEndpoint = URL(string: "https://trip-planner-ai-proxy.vercel.app/api/ai")!
@@ -10,23 +11,41 @@ struct TripStacksAIClient {
     }
     
     func generate(_ request: AIRequest) async throws -> AIResponse {
-        var urlRequest = URLRequest(url: endpoint)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.timeoutInterval = 120
-        
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        urlRequest.httpBody = try encoder.encode(request)
-        
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-        guard let http = response as? HTTPURLResponse else {
-            throw TripStacksAIError.invalidResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw TripStacksAIError.http(status: http.statusCode, body: body)
-        }
+        // One retry on 401 after refreshing the token.
+        var attempt = 0
+        while true {
+            var urlRequest = URLRequest(url: endpoint)
+            urlRequest.httpMethod = "POST"
+            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            urlRequest.timeoutInterval = 120
+            
+            // Attach App Attest token and current StoreKit JWS when available.
+            let jws = await StoreKitJWSSource.currentPremiumTransactionJWS()
+            if let token = try? await AppAttestClient.shared.validToken(appleTransactionJws: jws) {
+                urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            if let jws, !jws.isEmpty {
+                urlRequest.setValue(jws, forHTTPHeaderField: "X-Apple-Transaction-JWS")
+            }
+            
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            urlRequest.httpBody = try encoder.encode(request)
+            
+            let (data, response) = try await URLSession.shared.data(for: urlRequest)
+            guard let http = response as? HTTPURLResponse else {
+                throw TripStacksAIError.invalidResponse
+            }
+            if http.statusCode == 401, attempt == 0 {
+                // Token missing/expired — refresh once.
+                await AppAttestClient.shared.invalidateToken()
+                attempt += 1
+                continue
+            }
+            guard (200..<300).contains(http.statusCode) else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                throw TripStacksAIError.http(status: http.statusCode, body: body)
+            }
         
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -44,6 +63,7 @@ struct TripStacksAIClient {
         }
         
         throw TripStacksAIError.invalidResponse
+        }
     }
 }
 
