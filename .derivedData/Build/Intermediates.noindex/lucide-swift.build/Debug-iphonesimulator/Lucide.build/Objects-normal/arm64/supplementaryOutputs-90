@@ -1,0 +1,177 @@
+{
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/LineDotRightHorizontal.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineDotRightHorizontal.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineDotRightHorizontal.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineDotRightHorizontal.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineDotRightHorizontal.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineDotRightHorizontal.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/LineSquiggle.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineSquiggle.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineSquiggle.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineSquiggle.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineSquiggle.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineSquiggle.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/LineStyle.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineStyle.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineStyle.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineStyle.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineStyle.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/LineStyle.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/Link.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/Link2.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/Link2Off.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2Off.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2Off.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2Off.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2Off.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/Link2Off.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/List.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/List.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/List.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/List.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/List.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/List.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListCheck.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCheck.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCheck.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCheck.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCheck.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCheck.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListChecks.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChecks.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChecks.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChecks.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChecks.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChecks.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListChevronsDownUp.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsDownUp.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsDownUp.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsDownUp.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsDownUp.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsDownUp.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListChevronsUpDown.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsUpDown.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsUpDown.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsUpDown.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsUpDown.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListChevronsUpDown.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListCollapse.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCollapse.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCollapse.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCollapse.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCollapse.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListCollapse.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListEnd.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListEnd.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListEnd.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListEnd.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListEnd.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListEnd.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListFilter.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilter.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilter.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilter.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilter.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilter.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListFilterPlus.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilterPlus.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilterPlus.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilterPlus.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilterPlus.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListFilterPlus.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListIndentDecrease.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentDecrease.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentDecrease.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentDecrease.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentDecrease.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentDecrease.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListIndentIncrease.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentIncrease.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentIncrease.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentIncrease.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentIncrease.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListIndentIncrease.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListMinus.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMinus.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMinus.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMinus.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMinus.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMinus.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListMusic.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMusic.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMusic.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMusic.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMusic.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListMusic.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListOrdered.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListOrdered.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListOrdered.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListOrdered.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListOrdered.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListOrdered.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListPlus.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListPlus.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListPlus.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListPlus.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListPlus.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListPlus.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListRestart.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListRestart.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListRestart.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListRestart.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListRestart.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListRestart.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListSortAscending.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortAscending.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortAscending.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortAscending.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortAscending.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortAscending.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListSortDescending.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortDescending.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortDescending.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortDescending.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortDescending.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListSortDescending.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/lucide-swift/Sources/Lucide/Icons/ListStart.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListStart.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListStart.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListStart.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListStart.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/lucide-swift.build/Debug-iphonesimulator/Lucide.build/Objects-normal/arm64/ListStart.swiftdeps"
+  }
+}

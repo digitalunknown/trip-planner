@@ -1,0 +1,24 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/DayColumn.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Day %lld of %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "Total active",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 188
+        }
+      }
+    ]
+  },
+  "version": 1
+}

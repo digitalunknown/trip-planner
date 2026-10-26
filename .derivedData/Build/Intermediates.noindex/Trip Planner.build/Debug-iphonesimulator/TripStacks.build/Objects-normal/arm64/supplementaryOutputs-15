@@ -1,0 +1,44 @@
+{
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/ApplePlaceContactSection.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceContactSection.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceContactSection.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceContactSection.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceContactSection.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceContactSection.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/ApplePlaceLookup.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceLookup.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceLookup.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceLookup.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceLookup.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/ApplePlaceLookup.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/PlaceAppleImagery.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceAppleImagery.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceAppleImagery.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceAppleImagery.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceAppleImagery.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceAppleImagery.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/PlaceCardView.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceCardView.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceCardView.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceCardView.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceCardView.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceCardView.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/PlaceDetailView.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceDetailView.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceDetailView.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceDetailView.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceDetailView.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceDetailView.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/PlaceHelpers.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceHelpers.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceHelpers.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceHelpers.dia",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceHelpers.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Trip Planner.build/Debug-iphonesimulator/TripStacks.build/Objects-normal/arm64/PlaceHelpers.swiftdeps"
+  }
+}

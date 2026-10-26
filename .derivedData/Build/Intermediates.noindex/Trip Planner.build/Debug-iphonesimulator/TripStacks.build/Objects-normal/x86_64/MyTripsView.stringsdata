@@ -1,0 +1,320 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/MyTripsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading trips",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 223
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 229
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete this trip? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 233
+        }
+      },
+      {
+        "comment": "",
+        "key": "You haven’t created any trips yet",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 643
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Trip",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 653
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Past Trips",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 726
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Unscheduled Trips",
+        "location": {
+          "startingColumn": 109,
+          "startingLine": 726
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Upcoming Trips",
+        "location": {
+          "startingColumn": 134,
+          "startingLine": 726
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trips you’ve completed will show up here.",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 728
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trips without dates will show up here.",
+        "location": {
+          "startingColumn": 157,
+          "startingLine": 728
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trips that are coming up (or in progress) will show up here.",
+        "location": {
+          "startingColumn": 200,
+          "startingLine": 728
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shorter date range",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 1300
+        }
+      },
+      {
+        "comment": "",
+        "key": "Update trip dates",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 1309
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1223
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trip name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 1056
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 1086
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start date",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 1092
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 1099
+        }
+      },
+      {
+        "comment": "",
+        "key": "End date",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 1105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Number of days",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 1110
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 1112
+        }
+      },
+      {
+        "comment": "",
+        "key": "Total cost",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 1124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add cover photo",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 1192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add extra ideas column",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1201
+        }
+      },
+      {
+        "comment": "",
+        "key": "The ideas column is not tied to a day and can be used to store activities on the side.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1204
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Trip",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 1224
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 1228
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete this trip? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1230
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1301
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove & Convert",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1302
+        }
+      },
+      {
+        "comment": "",
+        "key": "This date range is shorter and will remove items from days that no longer fit.\n\n%lld activities, %lld reminders, %lld checklists, %lld flights.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1307
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1310
+        }
+      },
+      {
+        "comment": "",
+        "key": "Keep Day Order",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1311
+        }
+      },
+      {
+        "comment": "",
+        "key": "Match Calendar Dates",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1315
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates (trailing days that no longer fit will be removed). Match Calendar Dates only keeps activities on days that still share the same calendar date — shifting the year often clears the itinerary.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1321
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates so your itinerary stays intact. Match Calendar Dates only keeps activities on days that still share the same calendar date.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1323
+        }
+      }
+    ]
+  },
+  "version": 1
+}

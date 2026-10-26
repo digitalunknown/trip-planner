@@ -1,0 +1,32 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/CoreStatCard.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld visited",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 134
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,48 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Components/TrackerCardView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "Visited %lld/%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Visited",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 198
+        }
+      },
+      {
+        "comment": "",
+        "key": "Not visited",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 198
+        }
+      }
+    ]
+  },
+  "version": 1
+}

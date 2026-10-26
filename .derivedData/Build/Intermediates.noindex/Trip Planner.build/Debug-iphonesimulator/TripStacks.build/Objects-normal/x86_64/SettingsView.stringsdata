@@ -1,0 +1,64 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 278
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your account is only used to store your trips in iCloud.",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign in to sync your trips and stats to iCloud. Your account is only used to store your trips in iCloud.",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Active",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Unlimited AI and local insights are included with your subscription.",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "Unlock unlimited AI and local insights.",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 145
+        }
+      },
+      {
+        "comment": "",
+        "key": "Display name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 153
+        }
+      }
+    ]
+  },
+  "version": 1
+}

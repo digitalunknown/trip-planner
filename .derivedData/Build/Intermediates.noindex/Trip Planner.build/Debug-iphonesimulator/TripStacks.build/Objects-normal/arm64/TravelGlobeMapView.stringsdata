@@ -1,0 +1,16 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Trackers/TravelGlobeMapView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Your World",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 26
+        }
+      }
+    ]
+  },
+  "version": 1
+}

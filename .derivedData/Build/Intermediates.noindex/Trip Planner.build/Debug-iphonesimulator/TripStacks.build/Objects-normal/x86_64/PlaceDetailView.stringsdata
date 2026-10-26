@@ -1,0 +1,136 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/PlaceDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Place unavailable",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Place",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 195
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trip unavailable",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 607
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Place",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete this place? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Photo",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 288
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 331
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 364
+        }
+      },
+      {
+        "comment": "",
+        "key": "Local insights",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 389
+        }
+      },
+      {
+        "comment": "",
+        "key": "Looking up place info…",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 423
+        }
+      },
+      {
+        "comment": "",
+        "key": "Look Up Place Info",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 437
+        }
+      },
+      {
+        "comment": "",
+        "key": "Address, phone, website & more",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 440
+        }
+      },
+      {
+        "comment": "",
+        "key": "Photos, hours, ratings & more",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 508
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 618
+        }
+      }
+    ]
+  },
+  "version": 1
+}

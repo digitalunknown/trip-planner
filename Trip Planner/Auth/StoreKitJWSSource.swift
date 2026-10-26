@@ -5,13 +5,12 @@ import StoreKit
 enum StoreKitJWSSource {
     static func currentPremiumTransactionJWS() async -> String? {
         for await result in Transaction.currentEntitlements {
-            guard let tx = try? PremiumStore.checked(result) else { continue }
+            guard case .verified(let tx) = result else { continue }
             if PremiumProductID.all.contains(tx.productID) {
                 // Prefer the most recent matching entitlement.
-                return tx.jwsRepresentation
+                return result.jwsRepresentation
             }
         }
         return nil
     }
 }
-

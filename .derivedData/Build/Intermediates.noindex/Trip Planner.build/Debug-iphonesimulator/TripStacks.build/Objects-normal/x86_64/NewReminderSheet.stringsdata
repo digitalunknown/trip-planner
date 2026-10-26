@@ -1,0 +1,64 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/NewReminderSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Reminder",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Reminder",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete this reminder? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 125
+        }
+      }
+    ]
+  },
+  "version": 1
+}

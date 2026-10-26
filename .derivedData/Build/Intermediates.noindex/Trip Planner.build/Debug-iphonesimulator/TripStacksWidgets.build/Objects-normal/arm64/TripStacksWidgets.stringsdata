@@ -1,0 +1,24 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/TripStacksWidgets/TripStacksWidgets.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "TripStacks",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "See the trip that matters now — today’s stack or what’s next.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 93
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -102,12 +102,11 @@ class TripStore {
                 if iCloudExists {
                     let keys: Set<URLResourceKey> = [
                         .ubiquitousItemDownloadingStatusKey,
-                        .ubiquitousItemIsDownloadedKey,
                         .isUbiquitousItemKey,
                         .ubiquitousItemIsDownloadingKey
                     ]
                     if let vals = try? iCloudURL.resourceValues(forKeys: keys) {
-                        if vals.ubiquitousItemIsDownloaded == true {
+                        if vals.ubiquitousItemDownloadingStatus == .current {
                             iCloudIsDownloaded = true
                         } else if let status = vals.ubiquitousItemDownloadingStatus,
                                   status == .downloaded {
@@ -121,8 +120,8 @@ class TripStore {
                     _ = try? fm.startDownloadingUbiquitousItem(at: iCloudURL)
                     var attempts = 0
                     while attempts < 20 && !iCloudIsDownloaded {
-                        if let vals = try? iCloudURL.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsDownloadedKey]) {
-                            if vals.ubiquitousItemIsDownloaded == true ||
+                        if let vals = try? iCloudURL.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]) {
+                            if vals.ubiquitousItemDownloadingStatus == .current ||
                                 vals.ubiquitousItemDownloadingStatus == .downloaded {
                                 iCloudIsDownloaded = true
                                 break

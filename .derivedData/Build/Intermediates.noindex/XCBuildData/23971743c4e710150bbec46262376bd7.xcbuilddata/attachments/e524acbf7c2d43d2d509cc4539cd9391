@@ -1,0 +1,179 @@
+{
+  "" : {
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/Sticker-primary.dia",
+    "emit-module-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/Sticker-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/Sticker-primary-emit-module.dia",
+    "pch" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/Sticker-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/Sticker-primary.swiftdeps"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/DerivedSources/resource_bundle_accessor.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/resource_bundle_accessor~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerEffect/StickerEffect.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffect~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerEffectParameter/StickerEffectParameter.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerEffectParameter~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerMotion/StickerMotion.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotion~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerMotionEffect/Effects/AccelerometerStickerMotionEffect.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerStickerMotionEffect~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerMotionEffect/Effects/DragStickerMotionEffect.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/DragStickerMotionEffect~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerMotionEffect/Effects/IdentityStickerMotionEffect.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/IdentityStickerMotionEffect~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerMotionEffect/Effects/PointerHoverStickerMotionEffect.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/PointerHoverStickerMotionEffect~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerMotionEffect/StickerMotionEffect.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerMotionEffect~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerPattern/StickerPatternType.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerPatternType~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerShaderUpdater/StickerShaderUpdater.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerShaderUpdater~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/StickerTransform/StickerTransform.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/StickerTransform~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/Utils/Extensions/ShaderLibraryExtension.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ShaderLibraryExtension~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/Utils/ViewModifiers/Accelerometer/AccelerometerAttitude.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/AccelerometerAttitude~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/Utils/ViewModifiers/Accelerometer/WithAccelerometerViewModifier.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithAccelerometerViewModifier~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/Utils/ViewSize/ViewSizePreferenceKey.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/ViewSizePreferenceKey~partial.swiftmodule"
+  },
+  "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/SourcePackages/checkouts/sticker/Sources/Sticker/Utils/ViewSize/WithViewSizeViewModifier.swift" : {
+    "const-values" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier.swiftconstvalues",
+    "dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier.d",
+    "diagnostics" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier.dia",
+    "index-unit-output-path" : "/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier.o",
+    "llvm-bc" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier.bc",
+    "object" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier.o",
+    "swift-dependencies" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier.swiftdeps",
+    "swiftmodule" : "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/.derivedData/Build/Intermediates.noindex/Sticker.build/Debug-iphonesimulator/Sticker.build/Objects-normal/arm64/WithViewSizeViewModifier~partial.swiftmodule"
+  }
+}

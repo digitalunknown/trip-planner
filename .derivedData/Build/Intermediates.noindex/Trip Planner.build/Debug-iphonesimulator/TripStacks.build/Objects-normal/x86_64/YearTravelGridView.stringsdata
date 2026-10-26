@@ -1,0 +1,24 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Trackers/YearTravelGridView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "Travel days in %lld",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 191
+        }
+      }
+    ]
+  },
+  "version": 1
+}

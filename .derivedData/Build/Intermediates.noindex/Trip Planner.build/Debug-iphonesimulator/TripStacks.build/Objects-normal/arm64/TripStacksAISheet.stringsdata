@@ -1,0 +1,72 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/AI/TripStacksAISheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Weekly AI Credits",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 360
+        }
+      },
+      {
+        "comment": "",
+        "key": "Try Again",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1424
+        }
+      },
+      {
+        "comment": "",
+        "key": "Upgrade to TripStacks+",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 362
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 366
+        }
+      },
+      {
+        "comment": "",
+        "key": "TripStacks+ is active",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shows how weekly AI credits work",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "Something went wrong.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1393
+        }
+      },
+      {
+        "comment": "",
+        "key": "Try Again",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1409
+        }
+      }
+    ]
+  },
+  "version": 1
+}

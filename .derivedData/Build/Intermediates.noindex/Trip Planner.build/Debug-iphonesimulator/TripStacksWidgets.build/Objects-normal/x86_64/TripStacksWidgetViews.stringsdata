@@ -1,0 +1,48 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/TripStacksWidgets/TripStacksWidgetViews.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "TripStacks",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open TripStacks to see your trip",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coming up",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "1 on the stack",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 250
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld on the stack",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 250
+        }
+      }
+    ]
+  },
+  "version": 1
+}

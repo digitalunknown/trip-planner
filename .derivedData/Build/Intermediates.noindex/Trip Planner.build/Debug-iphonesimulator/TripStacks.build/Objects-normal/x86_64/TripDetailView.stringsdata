@@ -1,0 +1,120 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/TripDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Trip settings",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 507
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add to Trip",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 585
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shorter date range",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 729
+        }
+      },
+      {
+        "comment": "",
+        "key": "Update trip dates",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 744
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 730
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove & Convert",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 737
+        }
+      },
+      {
+        "comment": "",
+        "key": "This date range is shorter and will remove items from days that no longer fit.\n\n%lld activities, %lld reminders, %lld checklists, %lld flights.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 742
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 745
+        }
+      },
+      {
+        "comment": "",
+        "key": "Keep Day Order",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 752
+        }
+      },
+      {
+        "comment": "",
+        "key": "Match Calendar Dates",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 756
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates (trailing days that no longer fit will be removed). Match Calendar Dates only keeps activities on days that still share the same calendar date — shifting the year often clears the itinerary.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 762
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates so your itinerary stays intact. Match Calendar Dates only keeps activities on days that still share the same calendar date.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 764
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1484
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld°F",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 2953
+        }
+      }
+    ]
+  },
+  "version": 1
+}

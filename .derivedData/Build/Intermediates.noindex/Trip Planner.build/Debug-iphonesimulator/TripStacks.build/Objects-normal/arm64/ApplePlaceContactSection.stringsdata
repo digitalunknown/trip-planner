@@ -1,0 +1,32 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Places/ApplePlaceContactSection.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Photos, hours, ratings & more",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "Map preview isn’t available for this place.",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 200
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,176 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Sheets/NewActivitySheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Open File",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 296
+        }
+      },
+      {
+        "comment": "",
+        "key": "Activity",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 568
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose icon and color",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 563
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 566
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duration: %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 665
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 623
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 635
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 652
+        }
+      },
+      {
+        "comment": "",
+        "key": "Looking up place info…",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 712
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cost",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 804
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 830
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preview",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 864
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Activity",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 992
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 972
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Activity",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 993
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 996
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to delete this activity? This action cannot be undone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 998
+        }
+      },
+      {
+        "comment": "",
+        "key": "Icon",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 1236
+        }
+      },
+      {
+        "comment": "",
+        "key": "Icon",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Color",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1247
+        }
+      },
+      {
+        "comment": "",
+        "key": "Color",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 1274
+        }
+      }
+    ]
+  },
+  "version": 1
+}

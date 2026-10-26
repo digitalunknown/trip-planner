@@ -1,0 +1,40 @@
+{
+  "source": "/Users/piotrosmenda/Documents/iOS Apps/Trip Planner/Trip Planner/Trackers/TrackerDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No items",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "No matches",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear search",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 80
+        }
+      }
+    ]
+  },
+  "version": 1
+}
