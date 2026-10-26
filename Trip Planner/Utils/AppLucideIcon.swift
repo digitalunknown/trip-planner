@@ -49,7 +49,7 @@ enum AppLucide {
             }
         
         let renderer = ImageRenderer(content: content)
-        renderer.scale = UIScreen.main.scale
+        renderer.scale = max(UITraitCollection.current.displayScale, 1)
         renderer.isOpaque = false
         guard let image = renderer.uiImage else { return nil }
         let templated = image.withRenderingMode(.alwaysTemplate)

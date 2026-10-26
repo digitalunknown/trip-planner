@@ -4,12 +4,13 @@ import AuthenticationServices
 struct SignInGateView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var auth: AppleSignInManager
     
     @State private var page = 0
     
     private var buttonMaxWidth: CGFloat {
-        UIDevice.current.userInterfaceIdiom == .pad ? 400 : .infinity
+        horizontalSizeClass == .regular ? 400 : .infinity
     }
     
     var body: some View {

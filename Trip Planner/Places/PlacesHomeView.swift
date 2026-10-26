@@ -6,6 +6,8 @@ struct PlacesHomeView: View {
     @Environment(PlaceStore.self) private var placeStore
     @Environment(TripStore.self) private var tripStore
     
+    /// Measured width of the Places scroll content (replaces UIScreen.main sizing for iPhone Duo).
+    @State private var contentWidth: CGFloat = 0
     @State private var showAddPlace = false
     @State private var showAIFindPlaces = false
     @State private var selectedPlaceID: UUID?
@@ -53,7 +55,7 @@ struct PlacesHomeView: View {
         
         // Match page inset + `itemSpacing` between columns in the grid below.
         let columnWidth = max(
-            (UIScreen.main.bounds.width - RootHomeMetrics.horizontalInset * 2 - PlaceCardMetrics.itemSpacing) / 2,
+            (contentWidth - RootHomeMetrics.horizontalInset * 2 - PlaceCardMetrics.itemSpacing) / 2,
             140
         )
         
@@ -116,6 +118,11 @@ struct PlacesHomeView: View {
                     }
                     .padding(.top, RootHomeMetrics.topInset)
                     .padding(.bottom, RootHomeMetrics.bottomInset)
+                }
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.width
+                } action: { newWidth in
+                    contentWidth = newWidth
                 }
             }
         }
