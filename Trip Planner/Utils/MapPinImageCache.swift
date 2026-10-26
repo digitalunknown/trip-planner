@@ -91,8 +91,15 @@ enum MapPinImageCache {
         return UIImage(cgImage: cgImage)
     }
     
+    /// Scale from the current trait collection instead of UIScreen.main (iPhone Duo / multi-display).
+    /// Falls back to 3x when called off the main thread where no trait collection is set.
+    private static var displayScale: CGFloat {
+        let scale = UITraitCollection.current.displayScale
+        return scale > 0 ? scale : 3
+    }
+
     private static func pixelSize(for pointSize: CGFloat) -> Int {
-        Int(ceil(max(pointSize, 1) * UIScreen.main.scale))
+        Int(ceil(max(pointSize, 1) * Self.displayScale))
     }
     
     private static func cacheKey(id: String, fingerprint: Int, maxPixels: Int) -> NSString {

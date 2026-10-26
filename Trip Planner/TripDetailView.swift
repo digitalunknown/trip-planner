@@ -45,6 +45,8 @@ struct DayOption: Identifiable, Hashable {
 struct TripDetailView: View {
     @Binding var trip: Trip
     @Environment(\.dismiss) private var dismiss
+    /// iPhone Duo: drive layout from size class / available width, never from device idiom.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(PlaceStore.self) private var placeStore
     @Environment(RootTabChrome.self) private var tabChrome
     @Environment(WidgetDeepLinkRouter.self) private var widgetDeepLink
@@ -792,7 +794,7 @@ struct TripDetailView: View {
                 )
                 .tint(.primary)
                 .presentationDetents(
-                    UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large],
+                    horizontalSizeClass == .regular ? [.large] : [.medium, .large],
                     selection: $activitySheetDetent
                 )
             }
@@ -812,7 +814,7 @@ struct TripDetailView: View {
                     }
                 )
                 .tint(.primary)
-                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium])
+                .presentationDetents(horizontalSizeClass == .regular ? [.large] : [.medium])
             }
             .sheet(isPresented: $isPresentingNewChecklist, onDismiss: {
                 editingChecklist = nil
@@ -831,7 +833,7 @@ struct TripDetailView: View {
                     }
                 )
                 .tint(.primary)
-                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
+                .presentationDetents(horizontalSizeClass == .regular ? [.large] : [.medium, .large])
             }
             .sheet(isPresented: $isPresentingNewFlight, onDismiss: {
                 editingFlight = nil
@@ -869,7 +871,7 @@ struct TripDetailView: View {
                     accent: editingFlight?.accent ?? .cream
                 )
                 .tint(.primary)
-                .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
+                .presentationDetents(horizontalSizeClass == .regular ? [.large] : [.medium, .large])
             }
             .sheet(isPresented: $isPresentingPlanDay) {
                 TripStacksAISheet(
@@ -1615,9 +1617,11 @@ private extension TripDetailView {
         GeometryReader { geo in
             let safeWidth = geo.size.width.isFinite ? max(geo.size.width, 0) : 0
             let safeHeight = geo.size.height.isFinite ? max(geo.size.height, 0) : 0
+            // Size day columns from the space we actually have (iPhone Duo inner display,
+            // iPad, Split View, iPhone Mirroring) instead of the device idiom.
             let columnWidth: CGFloat = {
-                if UIDevice.current.userInterfaceIdiom == .pad {
-                    return 400
+                if safeWidth >= 600 {
+                    return min(400, max((safeWidth - 16 * 3) / 2, 0))
                 } else {
                     return max(safeWidth * 0.8, 0)
                 }
