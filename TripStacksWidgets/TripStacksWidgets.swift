@@ -27,9 +27,47 @@ struct TripStacksTimelineProvider: TimelineProvider {
     }
     
     func getTimeline(in context: Context, completion: @escaping (Timeline<TripStacksWidgetEntry>) -> Void) {
-        let entry = currentEntry()
-        let reload = nextReloadDate(for: entry)
-        completion(Timeline(entries: [entry], policy: .after(reload)))
+        let base = currentEntry()
+        // If there is no snapshot yet, avoid 15s polling — the app will publish and reload timelines.
+        guard let snapshot = base.snapshot else {
+            completion(Timeline(entries: [base], policy: .never))
+            return
+        }
+        
+        // Produce entries at relevant boundaries so text (“in N days”, “Today”) and passed items
+        // advance without a new publish: now, each item start, the next midnight, and (for upcoming)
+        // the start of the selected day.
+        let now = Date()
+        let calendar = Calendar.current
+        var times: [Date] = [now]
+        
+        if let midnight = calendar.nextDate(
+            after: now,
+            matching: DateComponents(hour: 0, minute: 0),
+            matchingPolicy: .nextTime
+        ) {
+            times.append(midnight)
+        }
+        if snapshot.selection == .upcoming, let dayDate = snapshot.dayDate {
+            times.append(calendar.startOfDay(for: dayDate))
+        }
+        if let dayDate = snapshot.dayDate {
+            for item in snapshot.items {
+                guard let minutes = item.startMinutes else { continue }
+                if let date = calendar.date(byAdding: .minute, value: minutes, to: calendar.startOfDay(for: dayDate)),
+                   date > now {
+                    times.append(date)
+                }
+            }
+        }
+        
+        // Deduplicate and clamp to a reasonable horizon.
+        let uniqueSorted = Array(Set(times)).sorted()
+        let firstFew = Array(uniqueSorted.prefix(10))
+        let entries = firstFew.map { when in
+            TripStacksWidgetEntry(date: when, snapshot: snapshot, coverData: base.coverData)
+        }
+        completion(Timeline(entries: entries, policy: .atEnd))
     }
     
     private func currentEntry() -> TripStacksWidgetEntry {
@@ -44,47 +82,13 @@ struct TripStacksTimelineProvider: TimelineProvider {
             coverData: trip == nil ? nil : WidgetSnapshotStore.readCoverJPEG()
         )
     }
-    
-    private func nextReloadDate(for entry: TripStacksWidgetEntry) -> Date {
-        let calendar = Calendar.current
-        let now = Date()
-        var candidates: [Date] = []
-        
-        if let midnight = calendar.nextDate(
-            after: now,
-            matching: DateComponents(hour: 0, minute: 0),
-            matchingPolicy: .nextTime
-        ) {
-            candidates.append(midnight)
-        }
-        
-        if let snapshot = entry.snapshot {
-            if snapshot.selection == .upcoming, let dayDate = snapshot.dayDate {
-                candidates.append(calendar.startOfDay(for: dayDate))
-            }
-            if let dayDate = snapshot.dayDate {
-                for item in snapshot.items {
-                    guard let minutes = item.startMinutes else { continue }
-                    if let date = calendar.date(byAdding: .minute, value: minutes, to: calendar.startOfDay(for: dayDate)),
-                       date > now {
-                        candidates.append(date)
-                    }
-                }
-            }
-        }
-        
-        if entry.snapshot == nil {
-            return now.addingTimeInterval(15)
-        }
-        return candidates.min() ?? now.addingTimeInterval(15 * 60)
-    }
 }
 
 struct TripStacksWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: WidgetKindID.trip, provider: TripStacksTimelineProvider()) { entry in
             TripStacksWidgetView(entry: entry)
-                .unredacted()
+                .widgetAccentable() // adopt system-tinted/accented rendering where appropriate
                 .containerBackground(for: .widget) {
                     WidgetPalette.page
                 }

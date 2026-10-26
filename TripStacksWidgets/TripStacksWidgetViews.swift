@@ -2,6 +2,70 @@ import SwiftUI
 import UIKit
 import WidgetKit
 
+private func dynamicStatusLine(for snapshot: WidgetTripSnapshot, now: Date) -> String {
+    let calendar = Calendar.current
+    switch snapshot.selection {
+    case .unscheduled:
+        return "Unscheduled"
+    case .past:
+        return "Ended"
+    case .upcoming:
+        guard let dayDate = snapshot.dayDate else { return "" }
+        let days = max(0, calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: dayDate)).day ?? 0)
+        if days == 0 { return "Today" }
+        if days == 1 { return "Tomorrow" }
+        return "in \(days) days"
+    case .inProgress:
+        let order = snapshot.resolvedDayNumber
+        if let dayDate = snapshot.dayDate {
+            if calendar.isDateInToday(dayDate) { return "Today · Day \(order)" }
+            if calendar.isDateInTomorrow(dayDate) { return "Tomorrow" }
+        }
+        return "Day \(order)"
+    }
+}
+
+private func dynamicRichStatus(for snapshot: WidgetTripSnapshot, now: Date) -> String {
+    let status = dynamicStatusLine(for: snapshot, now: now)
+    let dayPart = "Day \(snapshot.resolvedDayNumber)"
+    switch snapshot.selection {
+    case .upcoming:
+        return [dayPart, snapshot.dayLabel, status]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+    case .inProgress:
+        if status.localizedCaseInsensitiveContains("day") {
+            if !snapshot.dayLabel.isEmpty, !status.localizedCaseInsensitiveContains(snapshot.dayLabel) {
+                return "\(status) · \(snapshot.dayLabel)"
+            }
+            return status
+        }
+        return [status, dayPart, snapshot.dayLabel]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+    case .unscheduled:
+        return [dayPart, status].filter { !$0.isEmpty }.joined(separator: " · ")
+    case .past:
+        return [snapshot.dayLabel, status].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+}
+
+private func visibleItems(for snapshot: WidgetTripSnapshot, now: Date) -> [WidgetTripItem] {
+    guard let dayDate = snapshot.dayDate else { return snapshot.items }
+    let calendar = Calendar.current
+    if !calendar.isDate(calendar.startOfDay(for: now), inSameDayAs: calendar.startOfDay(for: dayDate)) {
+        return snapshot.items
+    }
+    let minutesNow = calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
+    let filtered = snapshot.items.filter { item in
+        guard let mins = item.startMinutes else { return true }
+        return mins >= minutesNow
+    }
+    return filtered.isEmpty ? snapshot.items : filtered
+}
+
 enum WidgetPalette {
     static let page = Color(red: 10 / 255, green: 10 / 255, blue: 10 / 255)
     static let card = Color(red: 23 / 255, green: 23 / 255, blue: 23 / 255)
@@ -34,11 +98,11 @@ struct TripStacksWidgetView: View {
             if let snapshot = entry.snapshot {
                 switch family {
                 case .systemSmall:
-                    SmallTripWidget(snapshot: snapshot, coverData: entry.coverData)
+                    SmallTripWidget(snapshot: snapshot, coverData: entry.coverData, now: entry.date)
                 case .systemLarge:
-                    LargeTripWidget(snapshot: snapshot, coverData: entry.coverData)
+                    LargeTripWidget(snapshot: snapshot, coverData: entry.coverData, now: entry.date)
                 default:
-                    MediumTripWidget(snapshot: snapshot, coverData: entry.coverData)
+                    MediumTripWidget(snapshot: snapshot, coverData: entry.coverData, now: entry.date)
                 }
             } else {
                 EmptyTripWidget(compact: family == .systemSmall)
@@ -69,10 +133,19 @@ private struct EmptyTripWidget: View {
 private struct SmallTripWidget: View {
     let snapshot: WidgetTripSnapshot
     let coverData: Data?
+    let now: Date
     
     var body: some View {
-        let deepLink = snapshot.dayID.map { WidgetDeepLink.day(trip: snapshot.tripID, day: $0) }
-            ?? .trip(snapshot.tripID)
+        // In small, Links are ignored — route via widgetURL. For empty days, send Plan Day.
+        let deepLink: WidgetDeepLink = {
+            if snapshot.items.isEmpty {
+                return .planDay(trip: snapshot.tripID, day: snapshot.dayID)
+            }
+            return snapshot.dayID.map { WidgetDeepLink.day(trip: snapshot.tripID, day: $0) }
+                ?? .trip(snapshot.tripID)
+        }()
+        let status = dynamicStatusLine(for: snapshot, now: now)
+        let items = visibleItems(for: snapshot, now: now)
         
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
@@ -81,9 +154,9 @@ private struct SmallTripWidget: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(WidgetPalette.textSecondary)
                         .lineLimit(1)
-                    Text(snapshot.statusLine)
-                        .font(.system(size: snapshot.items.isEmpty ? 20 : 13, weight: .semibold))
-                        .foregroundStyle(snapshot.items.isEmpty ? WidgetPalette.textStrong : WidgetPalette.textSecondary)
+                    Text(status)
+                        .font(.system(size: items.isEmpty ? 20 : 13, weight: .semibold))
+                        .foregroundStyle(items.isEmpty ? WidgetPalette.textStrong : WidgetPalette.textSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 }
@@ -91,16 +164,16 @@ private struct SmallTripWidget: View {
                 CoverThumb(coverData: coverData, tintHex: snapshot.tintHex, size: 34, radius: 10)
             }
             
-            if snapshot.items.isEmpty {
+            if items.isEmpty {
                 WidgetEmptyStackCard(
                     title: snapshot.emptyDayPrompt,
                     planTitle: "Plan",
-                    planURL: WidgetDeepLink.planDay(trip: snapshot.tripID, day: snapshot.dayID).url,
+                    planURL: nil, // ignored in small — widgetURL handles it
                     compact: true
                 )
             } else {
                 VStack(spacing: 4) {
-                    ForEach(Array(snapshot.items.prefix(3))) { item in
+                    ForEach(Array(items.prefix(3))) { item in
                         SmallActivityRow(item: item)
                     }
                 }
@@ -115,6 +188,7 @@ private struct SmallTripWidget: View {
 private struct MediumTripWidget: View {
     let snapshot: WidgetTripSnapshot
     let coverData: Data?
+    let now: Date
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -124,7 +198,7 @@ private struct MediumTripWidget: View {
                         Text(snapshot.tripName)
                             .font(.system(size: 17, weight: .semibold))
                             .lineLimit(1)
-                        Text(snapshot.richStatus)
+                        Text(dynamicRichStatus(for: snapshot, now: now))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(WidgetPalette.textSecondary)
                             .lineLimit(2)
@@ -134,7 +208,8 @@ private struct MediumTripWidget: View {
                 }
             }
             
-            if snapshot.items.isEmpty {
+            let items = visibleItems(for: snapshot, now: now)
+            if items.isEmpty {
                 WidgetEmptyStackCard(
                     title: snapshot.emptyDayPrompt,
                     planTitle: "Plan this day",
@@ -142,7 +217,7 @@ private struct MediumTripWidget: View {
                     showsGhost: true
                 )
             } else {
-                WidgetItemStack(items: Array(snapshot.items.prefix(3)), tripID: snapshot.tripID, dayID: snapshot.dayID)
+                WidgetItemStack(items: Array(items.prefix(3)), tripID: snapshot.tripID, dayID: snapshot.dayID)
             }
             Spacer(minLength: 0)
         }
@@ -154,12 +229,14 @@ private struct MediumTripWidget: View {
 private struct LargeTripWidget: View {
     let snapshot: WidgetTripSnapshot
     let coverData: Data?
+    let now: Date
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             hero
             
-            if snapshot.items.isEmpty {
+            let items = visibleItems(for: snapshot, now: now)
+            if items.isEmpty {
                 WidgetEmptyStackCard(
                     title: snapshot.emptyDayPrompt,
                     planTitle: "Plan this day",
@@ -167,7 +244,7 @@ private struct LargeTripWidget: View {
                     showsGhost: true
                 )
             } else {
-                WidgetItemStack(items: Array(snapshot.items.prefix(3)), tripID: snapshot.tripID, dayID: snapshot.dayID)
+                WidgetItemStack(items: Array(items.prefix(3)), tripID: snapshot.tripID, dayID: snapshot.dayID)
             }
             
             if !snapshot.resolvedFollowingDays.isEmpty {
@@ -221,7 +298,7 @@ private struct LargeTripWidget: View {
                 Text(snapshot.tripName)
                     .font(.system(size: 20, weight: .semibold))
                     .lineLimit(1)
-                Text(snapshot.richStatus)
+                Text(dynamicRichStatus(for: snapshot, now: now))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(WidgetPalette.textSecondary)
                     .lineLimit(2)

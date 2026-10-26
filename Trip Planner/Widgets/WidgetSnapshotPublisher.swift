@@ -4,24 +4,28 @@ import UIKit
 import WidgetKit
 
 enum WidgetSnapshotPublisher {
+    private static var pendingWorkItem: DispatchWorkItem?
+    private static let queue = DispatchQueue(label: "WidgetSnapshotPublisher.queue", qos: .utility)
+    
     static func publish(trips: [Trip], lastTouchedID: UUID? = nil, now: Date = Date()) {
-        let envelope: WidgetSnapshotEnvelope
-        if let snapshot = WidgetSnapshotBuilder.build(trips: trips, lastTouchedID: lastTouchedID, now: now) {
-            envelope = WidgetSnapshotEnvelope(trip: snapshot, lastUpdated: now)
-        } else {
-            envelope = WidgetSnapshotEnvelope(trip: nil, lastUpdated: now)
-        }
-        
-        let cover = thumbnailJPEG(from: selectedCoverData(in: trips, snapshot: envelope.trip))
-        var written = envelope
-        written.trip?.coverFileName = cover == nil ? nil : WidgetAppGroup.coverFile
-        WidgetSnapshotStore.write(written, coverJPEG: cover)
-        WidgetCenter.shared.reloadTimelines(ofKind: WidgetKindID.trip)
-        WidgetCenter.shared.reloadAllTimelines()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+        // Debounce writes and reloads to avoid 4x cascades on each save.
+        pendingWorkItem?.cancel()
+        let work = DispatchWorkItem {
+            let envelope: WidgetSnapshotEnvelope
+            if let snapshot = WidgetSnapshotBuilder.build(trips: trips, lastTouchedID: lastTouchedID, now: now) {
+                envelope = WidgetSnapshotEnvelope(trip: snapshot, lastUpdated: now)
+            } else {
+                envelope = WidgetSnapshotEnvelope(trip: nil, lastUpdated: now)
+            }
+            
+            let cover = thumbnailJPEG(from: selectedCoverData(in: trips, snapshot: envelope.trip))
+            var written = envelope
+            written.trip?.coverFileName = cover == nil ? nil : WidgetAppGroup.coverFile
+            WidgetSnapshotStore.write(written, coverJPEG: cover)
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetKindID.trip)
-            WidgetCenter.shared.reloadAllTimelines()
         }
+        pendingWorkItem = work
+        queue.asyncAfter(deadline: .now() + 0.8, execute: work)
     }
     
     private static func selectedCoverData(in trips: [Trip], snapshot: WidgetTripSnapshot?) -> Data? {
@@ -49,7 +53,8 @@ enum WidgetSnapshotBuilder {
         guard let trip = selectTrip(in: trips, lastTouchedID: lastTouchedID, now: now) else { return nil }
         let calendar = Calendar.current
         let day = selectDay(in: trip, now: now, calendar: calendar)
-        let items = upcomingItems(on: day, now: now, calendar: calendar, limit: 3)
+        // Include a few more items so the widget can hide already-passed ones and still show what's next.
+        let items = upcomingItems(on: day, now: now, calendar: calendar, limit: 8)
         let selection = selectionKind(for: trip, now: now, calendar: calendar)
         let resolvedDayDate = day.map { calendar.startOfDay(for: $0.date) }
             ?? (trip.isDatesSet ? calendar.startOfDay(for: trip.startDate) : nil)
@@ -359,7 +364,14 @@ enum WidgetSnapshotBuilder {
     
     private static func tintHex(for trip: Trip) -> UInt32 {
         let tints: [UInt32] = [0xFF8B00, 0xB2A1FF, 0x7EE0B0, 0xFED130, 0xFF7701]
-        let idx = abs(trip.id.hashValue) % tints.count
+        // Stable index derived from UUID string bytes (avoid Swift's randomized hashValue).
+        let s = trip.id.uuidString.lowercased()
+        var acc: UInt64 = 1469598103934665603 // FNV-1a offset basis
+        for b in s.utf8 {
+            acc ^= UInt64(b)
+            acc &*= 1099511628211 // FNV prime
+        }
+        let idx = Int(acc % UInt64(tints.count))
         return tints[idx]
     }
 }

@@ -30,7 +30,13 @@ struct MyTripsView: View {
     
     private func openWidgetDeepLinkIfNeeded() {
         guard let destination = widgetDeepLink.destination else { return }
-        guard tripStore.trips.contains(where: { $0.id == destination.tripID }) else { return }
+        if !tripStore.trips.contains(where: { $0.id == destination.tripID }) {
+            // If the store finished loading and the trip isn't found, clear the stale link.
+            if !tripStore.isLoadingTrips {
+                widgetDeepLink.destination = nil
+            }
+            return
+        }
         var path = NavigationPath()
         path.append(destination.tripID)
         navigationPath = path
@@ -162,6 +168,12 @@ struct MyTripsView: View {
             }
             .onChange(of: widgetDeepLink.destination) { _, _ in
                 openWidgetDeepLinkIfNeeded()
+            }
+            .onOpenURL { url in
+                if let link = WidgetDeepLink.parse(url) {
+                    widgetDeepLink.destination = link
+                    openWidgetDeepLinkIfNeeded()
+                }
             }
             .onChange(of: tripStore.isLoadingTrips) { _, loading in
                 if !loading { openWidgetDeepLinkIfNeeded() }

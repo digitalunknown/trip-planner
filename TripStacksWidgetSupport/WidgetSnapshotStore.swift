@@ -33,11 +33,6 @@ enum WidgetSnapshotStore {
             status = "no trip selected"
         }
         
-        if envelope.trip == nil, read().envelope?.trip != nil {
-            writeStatus(status + " · kept last trip")
-            return
-        }
-        
         guard let container = containerURL else {
             print("Widget snapshot write failed: no App Group container")
             return
@@ -55,7 +50,8 @@ enum WidgetSnapshotStore {
             return
         }
         
-        writeFile(data, to: container.appendingPathComponent(WidgetAppGroup.snapshotFile))
+        let snapshotURL = container.appendingPathComponent(WidgetAppGroup.snapshotFile)
+        writeFile(data, to: snapshotURL)
         writeStatus(status)
         
         let coverURL = container.appendingPathComponent(WidgetAppGroup.coverFile)
@@ -65,13 +61,29 @@ enum WidgetSnapshotStore {
             try? FileManager.default.removeItem(at: coverURL)
         }
         
+        // Write or clear per-item icons. Also remove any stale icons from previous publishes.
+        let expectedIconNames: Set<String> = Set((envelope.trip?.items ?? []).map { "widget-icon-\($0.id.uuidString).png" })
+        let iconPrefix = "widget-icon-"
+        let iconSuffix = ".png"
+        
+        // Write current icons
         if let trip = envelope.trip {
             for item in trip.items {
-                let url = container.appendingPathComponent("widget-icon-\(item.id.uuidString).png")
+                let fileName = "widget-icon-\(item.id.uuidString).png"
+                let url = container.appendingPathComponent(fileName)
                 if let png = item.iconPNG, !png.isEmpty {
                     writeFile(png, to: url)
                 } else {
                     try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
+        
+        // Prune stale icons
+        if let names = try? FileManager.default.contentsOfDirectory(atPath: container.path) {
+            for name in names where name.hasPrefix(iconPrefix) && name.hasSuffix(iconSuffix) {
+                if !expectedIconNames.contains(name) {
+                    try? FileManager.default.removeItem(at: container.appendingPathComponent(name))
                 }
             }
         }
@@ -125,9 +137,10 @@ enum WidgetSnapshotStore {
     
     nonisolated private static func writeFile(_ data: Data, to url: URL) {
         do {
-            try data.write(to: url, options: [.atomic, .noFileProtection])
+            // Allow widget reads when the phone is locked after first unlock.
+            try data.write(to: url, options: [.atomic])
             try FileManager.default.setAttributes(
-                [.protectionKey: FileProtectionType.none],
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
                 ofItemAtPath: url.path
             )
         } catch {
@@ -282,10 +295,17 @@ enum WidgetSnapshotStore {
     }
     
     nonisolated private static func uint32(_ value: Any?) -> UInt32? {
-        if let number = value as? Int { return UInt32(number) }
+        if let number = value as? Int {
+            guard number >= 0 else { return nil }
+            return number <= Int(UInt32.max) ? UInt32(number) : UInt32.max
+        }
         if let number = value as? UInt32 { return number }
         if let number = value as? Int64 { return UInt32(truncatingIfNeeded: number) }
-        if let number = value as? Double { return UInt32(number) }
+        if let number = value as? Double {
+            if number.isNaN { return nil }
+            let clamped = max(0, min(number, Double(UInt32.max)))
+            return UInt32(clamped)
+        }
         return nil
     }
 }
