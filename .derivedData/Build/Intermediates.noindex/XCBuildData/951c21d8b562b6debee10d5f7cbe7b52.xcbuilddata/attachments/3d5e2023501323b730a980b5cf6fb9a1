@@ -1,4 +1,0 @@
-module Lucide {
-header "Lucide-Swift.h"
-export *
-}
