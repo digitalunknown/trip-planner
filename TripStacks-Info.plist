@@ -8,6 +8,19 @@
 	<string>TripStacks uses your location to suggest trips and places near you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>TripStacks uses your photo library so you can attach images to trips and activities.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>digitalunknown.Trip-Planner</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tripstacks</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Manrope-VariableFont_wght.ttf</string>

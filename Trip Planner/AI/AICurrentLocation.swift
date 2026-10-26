@@ -36,6 +36,35 @@ enum AICurrentLocation {
             longitude: location.coordinate.longitude
         )
     }
+    
+    /// Phrases that make the answer depend on where the user actually is.
+    /// Without this the AI has no anchor for "me" and picks a region at random.
+    static func promptNeedsOrigin(_ text: String) -> Bool {
+        let patterns = [
+            #"\bnear\s+(me|my)\b"#,
+            #"\bfrom\s+(me|here)\b"#,
+            #"\b(of|to|from)\s+me\b"#,
+            #"\baround\s+(me|here)\b"#,
+            #"\bclose\s+(to|by)\s+(me|here|home)\b"#,
+            #"\bmy\s+(area|region|city|town|neighborhood|location|place|home)\b"#,
+            #"\bnearby\b"#,
+            #"\bwhere\s+i\s+(am|live)\b"#,
+            #"\bcurrent\s+location\b"#,
+            #"\bdriving\s+distance\b"#,
+            #"\bwithin\s+(a\s+|an\s+)?\d{1,2}\s*-?\s*(hours?|hrs?|h)\b"#,
+            #"\b\d{1,2}\s*-?\s*(hours?|hrs?)\s+(drive|driving|away)\b"#,
+        ]
+        return patterns.contains { pattern in
+            text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        }
+    }
+    
+    /// Resolves the origin only when the prompt needs it and access already exists,
+    /// so a typed "near me" doesn't silently fail but ordinary asks stay location-free.
+    static func originIfNeeded(for prompt: String) async -> Place? {
+        guard promptNeedsOrigin(prompt) else { return nil }
+        return await resolve()
+    }
 }
 
 @MainActor

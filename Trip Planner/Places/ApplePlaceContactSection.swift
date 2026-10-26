@@ -28,78 +28,95 @@ struct ApplePlaceContactSection: View {
     
     var body: some View {
         Section {
-            if !address.isEmpty {
-                labeledRow("Address") {
-                    Text(address)
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
-                        .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 12) {
+                if !address.isEmpty {
+                    labeledRow("Address") {
+                        Text(address)
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(AppColor.textStrong)
+                            .multilineTextAlignment(.leading)
+                            .textSelection(.enabled)
+                    }
+                    contactDivider
                 }
-            }
-            
-            if !phone.isEmpty {
-                labeledRow("Phone") {
-                    Button {
-                        if let url = Self.telephoneURL(from: phone) {
-                            openURL(url)
+                
+                if !phone.isEmpty {
+                    labeledRow("Phone") {
+                        Button {
+                            if let url = Self.telephoneURL(from: phone) {
+                                openURL(url)
+                            }
+                        } label: {
+                            Text(phone)
+                                .font(.app(15, weight: .medium))
+                                .foregroundStyle(appAccentColor)
+                                .multilineTextAlignment(.leading)
                         }
-                    } label: {
-                        Text(phone)
-                            .foregroundStyle(appAccentColor)
-                            .multilineTextAlignment(.leading)
+                        .buttonStyle(.plain)
+                        .disabled(Self.telephoneURL(from: phone) == nil)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(Self.telephoneURL(from: phone) == nil)
+                    contactDivider
                 }
-            }
-            
-            if let websiteURL {
-                labeledRow("Website") {
-                    Button {
-                        openURL(websiteURL)
-                    } label: {
-                        Text(Self.websiteDisplayText(for: websiteURL))
-                            .foregroundStyle(appAccentColor)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
+                
+                if let websiteURL {
+                    labeledRow("Website") {
+                        Button {
+                            openURL(websiteURL)
+                        } label: {
+                            Text(Self.websiteDisplayText(for: websiteURL))
+                                .font(.app(15, weight: .medium))
+                                .foregroundStyle(appAccentColor)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(2)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    contactDivider
                 }
-            }
-            
-            Button {
-                selectedMapItem = mapItem
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(hasContactRows ? "View more details" : (mapItem.name ?? fallbackTitle))
-                            .foregroundStyle(.primary)
-                        Text("Photos, hours, ratings & more")
-                            .font(.appCaption)
-                            .foregroundStyle(.secondary)
+                
+                Button {
+                    selectedMapItem = mapItem
+                } label: {
+                    HStack(spacing: 8) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(hasContactRows ? "View More Details" : (mapItem.name ?? fallbackTitle))
+                                .font(.app(15, weight: .medium))
+                                .foregroundStyle(AppColor.textStrong)
+                            Text("Photos, hours, ratings & more")
+                                .font(.app(13, weight: .medium))
+                                .foregroundStyle(AppColor.textWeak)
+                        }
+                        Spacer(minLength: 8)
+                        AppIcon(lucide: "chevron-right", size: 24, color: AppColor.textWeak)
                     }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.app(13, weight: .semibold))
-                        .foregroundStyle(.secondary)
                 }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
         }
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .appDetailFieldBackground()
+    }
+    
+    private var contactDivider: some View {
+        Rectangle()
+            .fill(AppColor.textStrong.opacity(0.10))
+            .frame(height: 1)
     }
     
     private func labeledRow<Content: View>(
         _ label: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(label)
-                .font(.appCaption)
-                .foregroundStyle(.secondary)
+                .font(.app(13, weight: .medium))
+                .foregroundStyle(AppColor.textWeak)
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 2)
     }
     
     static func telephoneURL(from phone: String) -> URL? {

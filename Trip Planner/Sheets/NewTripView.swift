@@ -22,6 +22,7 @@ struct NewTripView: View {
     @State private var showImagePicker = false
     @State private var showUnsplashPicker = false
     @State private var showParkedIdeas: Bool = false
+    @State private var addPlaceholders: Bool = false
     
     var isValid: Bool {
         guard !name.isEmpty && !destination.isEmpty else { return false }
@@ -34,15 +35,16 @@ struct NewTripView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Group {
                 Section {
                     Label {
                         HStack {
-                            TextField("Trip Name", text: $name)
+                            TextField("Trip name", text: $name)
                             if !name.isEmpty {
                                 Button {
                                     name = ""
                                 } label: {
-                                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                                    AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -61,32 +63,43 @@ struct NewTripView: View {
                 
                 Section {
                     Toggle(isOn: $isDatesSet) {
-                        Label("Set Dates", appIcon: "calendar-range", color: .primary)
+                        Label("Set dates", appIcon: "calendar-plus", color: .primary)
                     }
                     .tint(appAccentColor)
                     
                     if isDatesSet {
-                        DatePicker(
-                            selection: $startDate,
-                            in: Date.distantPast...Date.distantFuture,
-                            displayedComponents: .date
-                        ) {
+                        HStack {
                             Label("Start date", appIcon: "calendar", color: .primary)
+                            Spacer(minLength: AppSpacing.xs)
+                            DatePicker(
+                                "",
+                                selection: $startDate,
+                                in: Date.distantPast...Date.distantFuture,
+                                displayedComponents: .date
+                            )
+                            .appCompactDateValue()
+                            .accessibilityLabel("Start date")
                         }
                         
-                        DatePicker(
-                            selection: $endDate,
-                            in: startDate...Date.distantFuture,
-                            displayedComponents: .date
-                        ) {
-                            Label("End date", appIcon: "calendar-days", color: .primary)
+                        HStack {
+                            Label("End date", appIcon: "calendar", color: .primary)
+                            Spacer(minLength: AppSpacing.xs)
+                            DatePicker(
+                                "",
+                                selection: $endDate,
+                                in: startDate...Date.distantFuture,
+                                displayedComponents: .date
+                            )
+                            .appCompactDateValue()
+                            .accessibilityLabel("End date")
                         }
                     } else {
                         Stepper(value: $unscheduledDaysCount, in: 1...30) {
                             HStack {
-                                Label("Number of Days", appIcon: "hash", color: .primary)
+                                Label("Number of days", appIcon: "hash", color: .primary)
                                 Spacer()
                                 Text("\(unscheduledDaysCount)")
+                                    .font(.app(15, weight: .medium))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -151,9 +164,9 @@ struct NewTripView: View {
                             }
                         } label: {
                             HStack {
-                                Label("Add Cover Photo", appIcon: "image-plus", color: .primary)
+                                Label("Add cover photo", appIcon: "image-plus", color: .primary)
                                 Spacer()
-                                AppIcon(systemName: "chevron.up.chevron.down", size: 14, color: .secondary)
+                                AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
                             }
                         }
                     }
@@ -161,13 +174,22 @@ struct NewTripView: View {
                 
                 Section {
                     Toggle(isOn: $showParkedIdeas) {
-                        Label("Show Ideas", appIcon: "lightbulb", color: .primary)
+                        Label("Add extra ideas column", appIcon: "lightbulb", color: .primary)
+                    }
+                    .tint(appAccentColor)
+                    
+                    Toggle(isOn: $addPlaceholders) {
+                        Label("Add placeholders", appIcon: "square-dashed-text", color: .primary)
                     }
                     .tint(appAccentColor)
                 } footer: {
-                    Text("Include an extra column for ideation not tied to a day")
+                    Text("The ideas column is not tied to a day and can be used to store activities on the side. Add placeholders starts the trip with a Packing checklist, a flight on the first and last day, and breakfast, lunch, and dinner on every day.")
                 }
+                }
+                .appDetailFieldBackground()
             }
+            .appFormPageSpacing()
+            .appDetailFormChrome()
             .navigationTitle("New Trip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -177,25 +199,7 @@ struct NewTripView: View {
                 
                 ToolbarItem(placement: .topBarTrailing) {
                     LiquidGlassIconButton(systemName: "checkmark", isEnabled: isValid) {
-                        let days: [TripDay] = {
-                            guard !isDatesSet else { return [] }
-                            let base = Calendar.current.startOfDay(for: Date())
-                            return (0..<max(1, unscheduledDaysCount)).map { idx in
-                                let d = Calendar.current.date(byAdding: .day, value: idx, to: base) ?? base
-                                return TripDay(
-                                    id: UUID(),
-                                    date: d,
-                                    events: [],
-                                    reminders: [],
-                                    checklists: [],
-                                    flights: [],
-                                    label: "Day \(idx + 1)",
-                                    order: idx + 1,
-                                    weatherIcon: "cloud.sun.fill",
-                                    temperatureF: 72
-                                )
-                            }
-                        }()
+                        let days = makeInitialDays()
                         
                         let coverData = pendingCoverImageData ?? coverImage?.jpegData(compressionQuality: 0.8)
                         
@@ -283,6 +287,108 @@ struct NewTripView: View {
             }
         }
         .tint(.primary)
+    }
+    
+    private func makeInitialDays() -> [TripDay] {
+        let calendar = Calendar.current
+        let dayCount: Int
+        let base: Date
+        if isDatesSet {
+            let start = calendar.startOfDay(for: startDate)
+            let end = calendar.startOfDay(for: max(endDate, startDate))
+            dayCount = max(1, (calendar.dateComponents([.day], from: start, to: end).day ?? 0) + 1)
+            base = start
+        } else {
+            dayCount = max(1, unscheduledDaysCount)
+            base = calendar.startOfDay(for: Date())
+        }
+        
+        guard addPlaceholders || !isDatesSet else { return [] }
+        
+        let accent = EventAccent.allCases.randomElement() ?? .cream
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateStyle = .none
+        timeFormatter.timeStyle = .short
+        
+        func clock(hour: Int, minute: Int, on day: Date) -> Date {
+            calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+        }
+        
+        func mealTime(startHour: Int, endHour: Int, on day: Date) -> String {
+            let start = clock(hour: startHour, minute: 0, on: day)
+            let end = clock(hour: endHour, minute: 0, on: day)
+            return "\(timeFormatter.string(from: start)) - \(timeFormatter.string(from: end))"
+        }
+        
+        func meal(title: String, icon: String, startHour: Int, endHour: Int, on day: Date) -> EventItem {
+            EventItem(
+                title: title,
+                description: "",
+                time: mealTime(startHour: startHour, endHour: endHour, on: day),
+                location: "",
+                latitude: nil,
+                longitude: nil,
+                icon: icon,
+                accent: accent,
+                photoData: nil
+            )
+        }
+        
+        return (0..<dayCount).map { idx in
+            let date = calendar.date(byAdding: .day, value: idx, to: base) ?? base
+            var events: [EventItem] = []
+            var checklists: [ChecklistItem] = []
+            var flights: [FlightItem] = []
+            
+            if addPlaceholders {
+                events = [
+                    meal(title: "Breakfast", icon: "coffee", startHour: 8, endHour: 9, on: date),
+                    meal(title: "Lunch", icon: "utensils", startHour: 12, endHour: 13, on: date),
+                    meal(title: "Dinner", icon: "utensils", startHour: 19, endHour: 20, on: date)
+                ]
+                if idx == 0 {
+                    checklists.append(
+                        ChecklistItem(
+                            id: UUID(),
+                            title: "Packing",
+                            items: (1...5).map { index in
+                                ChecklistEntry(id: UUID(), text: "Item \(index)", isDone: false)
+                            },
+                            createdAt: Date()
+                        )
+                    )
+                    flights.append(
+                        FlightItem(
+                            accent: accent,
+                            startTime: clock(hour: 9, minute: 0, on: date),
+                            endTime: clock(hour: 11, minute: 0, on: date)
+                        )
+                    )
+                }
+                if idx == dayCount - 1 {
+                    flights.append(
+                        FlightItem(
+                            accent: accent,
+                            startTime: clock(hour: 16, minute: 0, on: date),
+                            endTime: clock(hour: 18, minute: 0, on: date)
+                        )
+                    )
+                }
+            }
+            
+            return TripDay(
+                id: UUID(),
+                date: date,
+                events: events,
+                reminders: [],
+                checklists: checklists,
+                flights: flights,
+                label: "Day \(idx + 1)",
+                order: idx + 1,
+                weatherIcon: "cloud.sun.fill",
+                temperatureF: 72
+            )
+        }
     }
 }
 

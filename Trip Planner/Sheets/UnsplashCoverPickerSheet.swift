@@ -112,7 +112,7 @@ struct UnsplashCoverPickerSheet: View {
                     results = []
                     errorText = nil
                 } label: {
-                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                    AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
                 }
                 .buttonStyle(.plain)
             }

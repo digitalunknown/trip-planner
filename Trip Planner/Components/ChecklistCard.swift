@@ -3,96 +3,119 @@ import SwiftUI
 struct ChecklistCard: View {
     let checklist: ChecklistItem
     
+    private enum Palette {
+        static let header = Color(hex: 0xF6A800)
+        static let list = Color(hex: 0xFED353)
+        static let border = Color(hex: 0xFED353)
+        static let rowDivider = Color(hex: 0xF5C536)
+        static let ink = Color(hex: 0x0A0A0A)
+        static let stitch = Color(hex: 0x0A0A0A).opacity(0.5)
+    }
+    
+    private let iconSize: CGFloat = 20
+    private let headerHorizontalInset: CGFloat = 15
+    private let headerVerticalInset: CGFloat = 12
+    private let rowHorizontalInset: CGFloat = 12
+    private let rowVerticalInset: CGFloat = 8
+    private let rowIconGap: CGFloat = 8
+    private let cornerRadius: CGFloat = 20
+    private let previewLimit = 4
+    private let stitchWidth: CGFloat = 1.5
+    
     private var completedText: String {
         let done = checklist.items.filter(\.isDone).count
         return "\(done)/\(checklist.items.count)"
     }
     
+    private var previewRows: [(id: String, text: String, isDone: Bool)] {
+        if checklist.items.isEmpty {
+            return (0..<previewLimit).map { ("empty-\($0)", "", false) }
+        }
+        return Array(checklist.items.prefix(previewLimit)).map {
+            ($0.id.uuidString, $0.text, $0.isDone)
+        }
+    }
+    
     var body: some View {
-        let headerColor = Color(hex: 0xF9C842)
-        let listBgColor = Color(hex: 0xFAE78B)
-        let textColor = Color(hex: 0x523E0E)
-        
-        let previewItems = Array(checklist.items.prefix(3))
+        let rows = previewRows
         
         VStack(spacing: 0) {
-            ZStack {
-                Rectangle()
-                    .fill(headerColor)
-                
-                // 1px dashed stitch divider at bottom
-                GeometryReader { geo in
-                    Path { p in
-                        p.move(to: CGPoint(x: 0, y: geo.size.height - 0.5))
-                        p.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height - 0.5))
-                    }
-                    .stroke(
-                        Color(hex: 0xC9A239),
-                        style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 4])
-                    )
-                }
-                
-                HStack(alignment: .center, spacing: 6) {
-                    AppIcon(systemName: "checklist", size: 15, strokeWidth: 2, color: textColor)
-                    
-                    Text(checklist.title)
-                        .font(.app(13, weight: .semibold))
-                        .foregroundStyle(textColor)
-                        .lineLimit(1)
-                    
-                    Spacer(minLength: 0)
-                    
-                    Text(completedText)
-                        .font(.app(13, weight: .semibold))
-                        .foregroundStyle(textColor)
-                }
-                .padding(.leading, 12)
-                .padding(.trailing, 16)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            
-            let stitchColor = Color(hex: 0xC9A239)
+            header
             
             VStack(spacing: 0) {
-                ForEach(0..<3, id: \.self) { idx in
-                    let text = idx < previewItems.count ? previewItems[idx].text : ""
-                    let isDone = idx < previewItems.count ? previewItems[idx].isDone : false
-                    let hasItem = idx < previewItems.count
+                ForEach(Array(rows.enumerated()), id: \.element.id) { idx, item in
+                    itemRow(text: item.text, isDone: item.isDone)
                     
-                    HStack(spacing: 12) {
-                        AppIcon(
-                            lucide: hasItem ? (isDone ? "circle-check-big" : "circle") : "circle",
-                            size: 16,
-                            color: textColor.opacity(hasItem ? (isDone ? 0.85 : 0.55) : 0.0)
-                        )
-                        
-                        Text(text)
-                            .font(.app(13, weight: .regular))
-                            .foregroundStyle(textColor)
-                            .lineLimit(1)
-                            .strikethrough(isDone, color: textColor.opacity(0.6))
-                        
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .background(listBgColor)
-                    
-                    if idx < 2 {
+                    if idx < rows.count - 1 {
                         Rectangle()
-                            .fill(stitchColor.opacity(0.35))
+                            .fill(Palette.rowDivider)
                             .frame(height: 1)
                     }
                 }
             }
-            .background(listBgColor)
+            .background(Palette.list)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(textColor.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(Palette.border, lineWidth: 1)
         )
+    }
+    
+    private var header: some View {
+        HStack(spacing: 7) {
+            AppIcon(lucide: "list-checks", size: iconSize, color: Palette.ink)
+            
+            Text(checklist.title)
+                .font(.app(13, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+            
+            Spacer(minLength: 0)
+            
+            Text(completedText)
+                .font(.app(13, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+        }
+        .padding(.horizontal, headerHorizontalInset)
+        .padding(.vertical, headerVerticalInset)
+        .frame(maxWidth: .infinity)
+        .background(Palette.header)
+        .overlay(alignment: .bottom) {
+            GeometryReader { geo in
+                Path { path in
+                    let y = geo.size.height - stitchWidth / 2
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: geo.size.width, y: y))
+                }
+                .stroke(
+                    Palette.stitch,
+                    style: StrokeStyle(lineWidth: stitchWidth, lineCap: .round, dash: [4, 4])
+                )
+            }
+            .frame(height: stitchWidth)
+            .allowsHitTesting(false)
+        }
+    }
+    
+    private func itemRow(text: String, isDone: Bool) -> some View {
+        HStack(spacing: rowIconGap) {
+            AppIcon(
+                lucide: isDone ? "circle-check-big" : "circle",
+                size: iconSize,
+                color: Palette.ink
+            )
+            
+            Text(text)
+                .font(.app(13, weight: .medium))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+            
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, rowHorizontalInset)
+        .padding(.vertical, rowVerticalInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.list)
     }
 }

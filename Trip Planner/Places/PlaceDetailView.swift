@@ -8,8 +8,13 @@ struct PlaceDetailView: View {
     
     @Environment(PlaceStore.self) private var placeStore
     @Environment(TripStore.self) private var tripStore
+    @Environment(ExpertTipsStore.self) private var expertTips
+    @Environment(PremiumStore.self) private var premium
     @Environment(RootTabChrome.self) private var tabChrome
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.appAccentColor) private var appAccentColor
+    @Environment(\.openURL) private var openURL
     
     @State private var showDeleteConfirm = false
     @State private var appleMapItem: MKMapItem?
@@ -18,13 +23,12 @@ struct PlaceDetailView: View {
     @State private var isPreviewingAppleMaps = false
     @State private var draftNote: String = ""
     @State private var draftName: String = ""
-    @State private var draftLocation: String = ""
-    @State private var draftLatitude: Double?
-    @State private var draftLongitude: Double?
     @State private var showUnsplashPicker = false
     @State private var photosPickerPresented = false
     @State private var photoItem: PhotosPickerItem?
-    @State private var selectedTripID: UUID?
+    @State private var selectedTripDestination: PlaceTripDestination?
+    @State private var topSafeArea: CGFloat = 0
+    @State private var showAddToTripSheet = false
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isNameFocused: Bool
     
@@ -43,6 +47,11 @@ struct PlaceDetailView: View {
         }
     }
     
+    private var matchedTips: [ExpertTip] {
+        guard let place else { return [] }
+        return expertTips.tips(matching: .place(place))
+    }
+    
     private func placeTitle(for place: Place) -> String {
         PlaceNaming.displayTitle(name: place.name, location: place.location)
     }
@@ -59,265 +68,386 @@ struct PlaceDetailView: View {
         return placeTitle(for: place)
     }
     
+    private var palette: PlaceDetailPalette {
+        PlaceDetailPalette(colorScheme: colorScheme)
+    }
+    
     var body: some View {
-        Group {
-            if let place {
-                Form {
-                    Section {
-                        nameField(for: place)
-                        
-                        locationField(for: place)
-                        
-                        placeTypeMenu(for: place)
-                    }
-                    
-                    Section {
-                        HStack {
-                            Spacer(minLength: 0)
-                            Menu {
-                                if tripsForAddMenu.isEmpty {
-                                    Text("No trips yet")
-                                } else {
-                                    ForEach(tripsForAddMenu) { trip in
-                                        Button {
-                                            addPlace(place, to: trip)
-                                        } label: {
-                                            Text(trip.name)
-                                        }
-                                    }
-                                }
-                            } label: {
-                                PrimaryCapsuleLabel(title: "Add to Trip", systemImage: "suitcase.fill")
-                            }
-                            .buttonStyle(.plain)
-                            Spacer(minLength: 0)
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                    }
-                    
-                    appleMapsFormSection(for: place)
-                    
-                    ExpertTipsMatchingSection(query: .place(place))
-                    
-                    tripsSection
-                    
-                    imageSection(for: place)
-                    
-                    Section {
-                        TextField("Notes", text: $draftNote, axis: .vertical)
-                            .lineLimit(3...12)
-                            .textInputAutocapitalization(.sentences)
-                            .focused($isNotesFocused)
-                            .onChange(of: draftNote) { _, newValue in
-                                guard newValue != place.note else { return }
-                                var updated = place
-                                updated.note = newValue
-                                placeStore.update(updated, rematchMapKitIfNeeded: false)
-                            }
-                    }
-                    
-                    DetailActionButtonStack {
-                        Button {
-                            showDeleteConfirm = true
-                        } label: {
-                            Label("Delete Place", systemImage: "trash")
-                        }
-                        .buttonStyle(.destructiveCapsuleBlock)
-                        .detailActionRow()
-                    }
+        if let place {
+            placeDetail(place)
+        } else {
+            ContentUnavailableView("Place unavailable", systemImage: "mappin.slash")
+        }
+    }
+    
+    private func placeDetail(_ place: Place) -> some View {
+        applyPlaceLifecycle(to: applyPlaceNavigation(to: placeScroll(place), place: place), place: place)
+    }
+    
+    private func placeScroll(_ place: Place) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if heroImage != nil {
+                    heroPhoto(for: place)
+                        .padding(.top, -topSafeArea)
                 }
-                .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.interactively)
-                .background(Color(.systemGroupedBackground))
-                .navigationTitle(placeTitle(for: place))
-                .navigationBarTitleDisplayMode(.inline)
-                .navigationDestination(item: $selectedTripID) { tripID in
-                    tripDetail(for: tripID)
+                placeFields(place)
+            }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .scrollIndicators(.hidden)
+        .background(palette.page.ignoresSafeArea())
+        .background { topSafeAreaReader }
+    }
+    
+    private func placeFields(_ place: Place) -> some View {
+        VStack(alignment: .leading, spacing: PlaceDetailMetrics.sectionGap) {
+            if heroImage == nil {
+                heroPhoto(for: place)
+            }
+            identityCard(for: place)
+            if !matchedTips.isEmpty {
+                expertTipsCard
+            }
+            appleMapsCard(for: place)
+            tripsSection
+            notesSection(for: place)
+            actionButtons(for: place)
+        }
+        .padding(.horizontal, PlaceDetailMetrics.pagePadding)
+        .padding(.top, AppSpacing.pageTop)
+        .padding(.bottom, AppSpacing.pageBottom)
+    }
+    
+    private var topSafeAreaReader: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear { topSafeArea = geo.safeAreaInsets.top }
+                .onChange(of: geo.safeAreaInsets.top) { _, value in
+                    topSafeArea = value
                 }
-                .safeAreaInset(edge: .bottom) {
-                    if isNotesFocused || isNameFocused {
-                        Color.clear.frame(height: 36)
-                    }
+        }
+    }
+    
+    private func applyPlaceNavigation<Content: View>(to content: Content, place: Place) -> some View {
+        content
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .enableSwipeBack()
+            .toolbar(.hidden, for: .tabBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(heroImage != nil ? .dark : nil, for: .navigationBar)
+            .tint(.primary)
+            .toolbar { placeToolbar(for: place) }
+            .navigationDestination(item: $selectedTripDestination) { destination in
+                tripDetail(for: destination)
+            }
+            .safeAreaInset(edge: .bottom) {
+                if isNotesFocused || isNameFocused {
+                    Color.clear.frame(height: 36)
                 }
-                .sheet(isPresented: $showUnsplashPicker) {
-                    UnsplashCoverPickerSheet(initialQuery: unsplashQuery) { selection in
-                        setPlaceImage(selection.imageData, on: place)
-                    }
-                    .presentationDetents([.large])
-                    .tint(.primary)
-                }
-                .photosPicker(isPresented: $photosPickerPresented, selection: $photoItem, matching: .images)
-                .onChange(of: photoItem) { _, item in
-                    guard let item else { return }
-                    Task {
-                        if let data = try? await item.loadTransferable(type: Data.self),
-                           let image = UIImage(data: data),
-                           let jpeg = image.jpegData(compressionQuality: 0.8) {
-                            await MainActor.run {
-                                setPlaceImage(jpeg, on: place)
-                                photoItem = nil
-                            }
-                        }
-                    }
-                }
-                .alert("Delete Place", isPresented: $showDeleteConfirm) {
-                    Button("Delete Place", role: .destructive) {
-                        placeStore.delete(place)
-                        dismiss()
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("Are you sure you want to delete this place? This action cannot be undone.")
-                }
-                .applePlaceCardSheet(item: $selectedAppleMapItem)
-                .task(id: place.mapKitIdentifier) {
-                    await loadApplePlaceIfNeeded(for: place)
-                }
-                .onAppear {
-                    tabChrome.beginSuppressingAIAccessory()
-                    syncDrafts(from: place)
-                    // Retry unmatched places (common for AI imports without coordinates).
-                    placeStore.scheduleMapKitMatch(
-                        for: place.id,
-                        force: place.mapKitMatchStatus == .unmatched
-                    )
-                }
-                .onDisappear {
-                    tabChrome.endSuppressingAIAccessory()
-                }
-                .onChange(of: place.note) { _, newValue in
-                    if !isNotesFocused {
-                        draftNote = newValue
-                    }
-                }
-                .onChange(of: place.name) { _, _ in
-                    guard !isNameFocused else { return }
-                    draftName = editableNameDraft(for: place)
-                }
-            } else {
-                ContentUnavailableView("Place unavailable", systemImage: "mappin.slash")
+            }
+    }
+    
+    @ToolbarContentBuilder
+    private func placeToolbar(for place: Place) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            LiquidGlassIconButton(systemName: "chevron.left", accessibilityLabelText: "Back") {
+                dismiss()
+            }
+        }
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .principal) {
+                placeToolbarTitle(for: place)
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .principal) {
+                placeToolbarTitle(for: place)
             }
         }
     }
     
-    // MARK: - Form sections
+    private func applyPlaceLifecycle<Content: View>(to content: Content, place: Place) -> some View {
+        content
+            .sheet(isPresented: $showUnsplashPicker) {
+                UnsplashCoverPickerSheet(initialQuery: unsplashQuery) { selection in
+                    setPlaceImage(selection.imageData, on: place)
+                }
+                .presentationDetents([.large])
+                .tint(.primary)
+            }
+            .photosPicker(isPresented: $photosPickerPresented, selection: $photoItem, matching: .images)
+            .onChange(of: photoItem) { _, item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data),
+                       let jpeg = image.jpegData(compressionQuality: 0.8) {
+                        await MainActor.run {
+                            setPlaceImage(jpeg, on: place)
+                            photoItem = nil
+                        }
+                    }
+                }
+            }
+            .alert("Delete Place", isPresented: $showDeleteConfirm) {
+                Button("Delete Place", role: .destructive) {
+                    placeStore.delete(place)
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete this place? This action cannot be undone.")
+            }
+            .applePlaceCardSheet(item: $selectedAppleMapItem)
+            .task(id: place.mapKitIdentifier) {
+                await loadApplePlaceIfNeeded(for: place)
+            }
+            .task {
+                await expertTips.refresh()
+            }
+            .onAppear {
+                tabChrome.beginSuppressingAIAccessory()
+                syncDrafts(from: place)
+                placeStore.scheduleMapKitMatch(
+                    for: place.id,
+                    force: place.mapKitMatchStatus == .unmatched
+                )
+            }
+            .onDisappear {
+                tabChrome.endSuppressingAIAccessory()
+            }
+            .onChange(of: place.note) { _, newValue in
+                if !isNotesFocused {
+                    draftNote = newValue
+                }
+            }
+            .onChange(of: place.name) { _, _ in
+                guard !isNameFocused else { return }
+                draftName = place.name
+            }
+            .sheet(isPresented: $showAddToTripSheet) {
+                PlaceAddToTripSheet(
+                    trips: tripsForAddMenu,
+                    subtitle: tripSubtitle(for:),
+                    onSelect: { trip in
+                        addPlace(place, to: trip)
+                        showAddToTripSheet = false
+                    },
+                    onCancel: { showAddToTripSheet = false }
+                )
+                .tint(.primary)
+            }
+    }
+    
+    private func placeToolbarTitle(for place: Place) -> some View {
+        Text(placeTitle(for: place))
+            .font(.app(17, weight: .semibold))
+            .foregroundStyle(heroImage != nil ? Color.white : AppColor.textStrong)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .multilineTextAlignment(.center)
+    }
+    
+    // MARK: - Hero
     
     @ViewBuilder
-    private func nameField(for place: Place) -> some View {
-        let locationName = PlaceNaming.title(location: place.location, fallback: "Name")
-        Label {
-            HStack {
-                TextField(locationName, text: $draftName)
+    private func heroPhoto(for place: Place) -> some View {
+        Menu {
+            Button {
+                showUnsplashPicker = true
+            } label: {
+                Label("Choose from Unsplash", menuIcon: "sparkles")
+            }
+            Button {
+                photosPickerPresented = true
+            } label: {
+                Label("Choose from Photos", menuIcon: "photo.on.rectangle")
+            }
+            if heroImage != nil {
+                Button(role: .destructive) {
+                    clearPlaceImage(on: place)
+                } label: {
+                    Label("Delete Photo", menuIcon: "trash")
+                }
+            }
+        } label: {
+            if let heroImage {
+                StretchyHero {
+                    Image(uiImage: heroImage)
+                        .resizable()
+                        .scaledToFill()
+                }
+            } else {
+                ZStack {
+                    palette.card
+                    VStack(spacing: 8) {
+                        AppIcon(lucide: "image-plus", size: 24, color: palette.secondary)
+                        Text("Add Photo")
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(palette.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: PlaceDetailMetrics.heroHeight)
+                .clipShape(RoundedRectangle(cornerRadius: PlaceDetailMetrics.heroRadius, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: PlaceDetailMetrics.heroRadius, style: .continuous))
+            }
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - Actions
+    
+    private func actionButtons(for place: Place) -> some View {
+        HStack(spacing: AppSpacing.xs) {
+            DetailIconPillButton(
+                lucide: "map-plus",
+                accessibilityLabel: "Add to Trip"
+            ) {
+                showAddToTripSheet = true
+            }
+            
+            DetailIconPillButton(
+                lucide: "trash-2",
+                iconColor: AppColor.destructive,
+                fill: AppColor.destructive.opacity(colorScheme == .dark ? 0.25 : 0.14),
+                accessibilityLabel: "Delete Place"
+            ) {
+                showDeleteConfirm = true
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    // MARK: - Identity
+    
+    private func identityCard(for place: Place) -> some View {
+        PlaceDetailCard(palette: palette) {
+            HStack(spacing: PlaceDetailMetrics.iconTextGap) {
+                AppIcon(lucide: "type", size: PlaceDetailMetrics.iconSize, color: palette.primary)
+                TextField("Name", text: $draftName)
+                    .font(.app(15, weight: .medium))
+                    .foregroundStyle(palette.primary)
                     .textInputAutocapitalization(.words)
                     .focused($isNameFocused)
                     .onChange(of: draftName) { _, newValue in
                         persistName(newValue, on: place)
                     }
+            }
+            
+            PlaceDetailDivider(color: palette.divider)
+            
+            placeTypeRow(for: place)
+        }
+    }
+    
+    private func placeTypeRow(for place: Place) -> some View {
+        Menu {
+            ForEach(PlaceType.allCases) { type in
+                Button {
+                    setPlaceType(type, on: place)
+                } label: {
+                    if type == place.placeType {
+                        Label(type.title, menuIcon: "checkmark")
+                    } else {
+                        Text(type.title)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 0) {
+                HStack(spacing: PlaceDetailMetrics.iconTextGap) {
+                    AppIcon(lucide: "tag", size: PlaceDetailMetrics.iconSize, color: palette.primary)
+                    Text("Type")
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(palette.primary)
+                }
+                Spacer(minLength: 8)
+                HStack(spacing: 5) {
+                    Text(place.placeType.title)
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(palette.primary)
+                    AppIcon(lucide: "chevrons-up-down", size: PlaceDetailMetrics.iconSize, color: palette.secondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .tint(.primary)
+    }
+    
+    // MARK: - Expert tips
+    
+    @ViewBuilder
+    private var expertTipsCard: some View {
+        if premium.isPremium {
+            PlaceDetailCard(palette: palette, rowSpacing: 10) {
+                HStack(spacing: PlaceDetailMetrics.iconTextGap) {
+                    AppIcon(lucide: "user-star", size: PlaceDetailMetrics.iconSize, color: palette.expert)
+                    Text("Local insights")
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(palette.expert)
+                }
                 
-                if !draftName.isEmpty {
-                    Button {
-                        draftName = ""
-                        persistName("", on: place)
-                    } label: {
-                        AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(matchedTips) { tip in
+                        Text(tip.tip)
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(palette.primary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Clear name")
                 }
             }
-        } icon: {
-            AppIcon(lucide: "type", size: AppLucide.chromeSize, color: .primary)
-        }
-    }
-    
-    @ViewBuilder
-    private var tripsSection: some View {
-        if !relatedTrips.isEmpty {
-            Section("Trips") {
-                ForEach(relatedTrips) { trip in
-                    Button {
-                        selectedTripID = trip.id
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(trip.name)
-                                    .foregroundStyle(.primary)
-                                    .multilineTextAlignment(.leading)
-                                if let subtitle = tripSubtitle(for: trip) {
-                                    Text(subtitle)
-                                        .font(.appCaption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer(minLength: 8)
-                            Image(systemName: "chevron.right")
-                                .font(.app(13, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-    
-    private func tripSubtitle(for trip: Trip) -> String? {
-        if trip.isDatesSet {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .medium
-            formatter.timeStyle = .none
-            if Calendar.current.isDate(trip.startDate, inSameDayAs: trip.endDate) {
-                return formatter.string(from: trip.startDate)
-            }
-            return "\(formatter.string(from: trip.startDate)) – \(formatter.string(from: trip.endDate))"
-        }
-        let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
-        return destination.isEmpty ? nil : destination
-    }
-    
-    @ViewBuilder
-    private func tripDetail(for tripID: UUID) -> some View {
-        if let index = tripStore.trips.firstIndex(where: { $0.id == tripID }) {
-            TripDetailView(trip: Binding(
-                get: { tripStore.trips[index] },
-                set: { newValue in
-                    tripStore.trips[index] = newValue
-                    tripStore.save()
-                }
-            ))
+            .expertTipOutlineShine(cornerRadius: PlaceDetailMetrics.cardRadius)
         } else {
-            ContentUnavailableView("Trip unavailable", systemImage: "airplane.departure")
+            LockedLocalInsightsCard(
+                previewText: matchedTips[0].tip,
+                expertColor: palette.expert,
+                cardFill: palette.card,
+                cornerRadius: PlaceDetailMetrics.cardRadius
+            )
         }
     }
     
+    // MARK: - Apple Maps
+    
     @ViewBuilder
-    private func appleMapsFormSection(for place: Place) -> some View {
+    private func appleMapsCard(for place: Place) -> some View {
         if #available(iOS 18.0, *) {
             if isLoadingApplePlace, place.mapKitMatchStatus == .notAttempted || place.hasAppleMapsMatch {
-                Section {
+                PlaceDetailCard(palette: palette) {
                     HStack(spacing: 10) {
                         ProgressView()
                         Text("Looking up place info…")
-                            .foregroundStyle(.secondary)
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(palette.secondary)
                     }
                 }
             } else if let appleMapItem {
-                ApplePlaceContactSection(
-                    mapItem: appleMapItem,
-                    fallbackTitle: placeTitle(for: place),
-                    selectedMapItem: $selectedAppleMapItem
-                )
+                contactCard(mapItem: appleMapItem, fallbackTitle: placeTitle(for: place))
             } else {
-                Section {
+                PlaceDetailCard(palette: palette) {
                     Button {
                         Task { await previewInAppleMaps(for: place) }
                     } label: {
-                        appleMapsRow(
-                            title: "Look Up Place Info",
-                            subtitle: "Address, phone, website & more",
-                            showsProgress: isPreviewingAppleMaps
-                        )
+                        HStack(spacing: 15) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text("Look Up Place Info")
+                                    .font(.app(15, weight: .medium))
+                                    .foregroundStyle(palette.primary)
+                                Text("Address, phone, website & more")
+                                    .font(.app(13, weight: .medium))
+                                    .foregroundStyle(palette.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            if isPreviewingAppleMaps {
+                                ProgressView()
+                            } else {
+                                AppIcon(lucide: "chevron-right", size: PlaceDetailMetrics.iconSize, color: palette.secondary)
+                            }
+                        }
                     }
                     .buttonStyle(.plain)
                     .disabled(isPreviewingAppleMaps)
@@ -326,129 +456,180 @@ struct PlaceDetailView: View {
         }
     }
     
-    private func appleMapsRow(title: String, subtitle: String, showsProgress: Bool = false) -> some View {
-        HStack {
-            if showsProgress {
-                ProgressView()
-                    .padding(.trailing, 4)
+    private func contactCard(mapItem: MKMapItem, fallbackTitle: String) -> some View {
+        let address = mapItemAddressString(mapItem)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let phone = mapItem.phoneNumber?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let websiteURL = mapItem.url
+        let hasContactRows = !address.isEmpty || !phone.isEmpty || websiteURL != nil
+        
+        return PlaceDetailCard(palette: palette) {
+            if !address.isEmpty {
+                labeledValue(label: "Address", value: address, valueColor: palette.primary)
+                PlaceDetailDivider(color: palette.divider)
             }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .foregroundStyle(.primary)
-                Text(subtitle)
-                    .font(.appCaption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.app(13, weight: .semibold))
-                .foregroundStyle(.secondary)
-        }
-    }
-    
-    private func imageSection(for place: Place) -> some View {
-        Section {
-            if let heroImage {
-                ZStack(alignment: .topTrailing) {
-                    Image(uiImage: heroImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 200)
-                        .clipped()
-                        .contentShape(Rectangle())
-                        .overlay {
-                            Menu {
-                                Button {
-                                    showUnsplashPicker = true
-                                } label: {
-                                    Label("Choose from Unsplash", systemImage: "sparkles")
-                                }
-                                Button {
-                                    photosPickerPresented = true
-                                } label: {
-                                    Label("Choose from Photos", systemImage: "photo.on.rectangle")
-                                }
-                            } label: {
-                                Color.clear
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    
-                    LiquidGlassIconButton(systemName: "xmark", showsGlassBackground: true) {
-                        clearPlaceImage(on: place)
-                    }
-                    .padding(12)
-                }
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-            } else {
-                Menu {
-                    Button {
-                        showUnsplashPicker = true
-                    } label: {
-                        Label("Choose from Unsplash", systemImage: "sparkles")
-                    }
-                    Button {
-                        photosPickerPresented = true
-                    } label: {
-                        Label("Choose from Photos", systemImage: "photo.on.rectangle")
+            
+            if !phone.isEmpty {
+                Button {
+                    if let url = ApplePlaceContactSection.telephoneURL(from: phone) {
+                        openURL(url)
                     }
                 } label: {
-                    HStack {
-                        Text("Add Photo")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        AppIcon(systemName: "chevron.up.chevron.down", size: 14, color: .secondary)
+                    labeledValue(label: "Phone", value: phone, valueColor: appAccentColor)
+                }
+                .buttonStyle(.plain)
+                .disabled(ApplePlaceContactSection.telephoneURL(from: phone) == nil)
+                PlaceDetailDivider(color: palette.divider)
+            }
+            
+            if let websiteURL {
+                Button {
+                    openURL(websiteURL)
+                } label: {
+                    labeledValue(
+                        label: "Website",
+                        value: ApplePlaceContactSection.websiteDisplayText(for: websiteURL),
+                        valueColor: appAccentColor
+                    )
+                }
+                .buttonStyle(.plain)
+                PlaceDetailDivider(color: palette.divider)
+            }
+            
+            Button {
+                selectedAppleMapItem = mapItem
+            } label: {
+                HStack(spacing: 15) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(hasContactRows ? "View More Details" : (mapItem.name ?? fallbackTitle))
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(palette.primary)
+                        Text("Photos, hours, ratings & more")
+                            .font(.app(13, weight: .medium))
+                            .foregroundStyle(palette.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    AppIcon(lucide: "chevron-right", size: PlaceDetailMetrics.iconSize, color: palette.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    private func labeledValue(label: String, value: String, valueColor: Color) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(label)
+                .font(.app(13, weight: .medium))
+                .foregroundStyle(palette.secondary)
+            Text(value)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(valueColor)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+        }
+    }
+    
+    // MARK: - Trips
+    
+    @ViewBuilder
+    private var tripsSection: some View {
+        if !relatedTrips.isEmpty {
+            VStack(alignment: .leading, spacing: PlaceDetailMetrics.headerGap) {
+                AppSectionHeader("Trips", color: palette.secondary)
+                    .padding(.leading, PlaceDetailMetrics.headerIndent)
+                
+                PlaceDetailCard(palette: palette) {
+                    ForEach(Array(relatedTrips.enumerated()), id: \.element.id) { index, trip in
+                        Button {
+                            guard let place else { return }
+                            selectedTripDestination = PlaceTripDestination(
+                                tripID: trip.id,
+                                eventID: PlaceTripMembership.matchingEvent(for: place, in: trip)?.id
+                            )
+                        } label: {
+                            HStack(spacing: 15) {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(trip.name)
+                                        .font(.app(15, weight: .medium))
+                                        .foregroundStyle(palette.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    if let subtitle = tripSubtitle(for: trip) {
+                                        Text(subtitle)
+                                            .font(.app(13, weight: .medium))
+                                            .foregroundStyle(palette.secondary)
+                                    }
+                                }
+                                AppIcon(lucide: "chevron-right", size: PlaceDetailMetrics.iconSize, color: palette.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        if index < relatedTrips.count - 1 {
+                            PlaceDetailDivider(color: palette.divider)
+                        }
                     }
                 }
-                .tint(.primary)
             }
         }
     }
     
-    private func placeTypeMenu(for place: Place) -> some View {
-        Picker(
-            selection: Binding(
-                get: { place.placeType },
-                set: { setPlaceType($0, on: place) }
-            )
-        ) {
-            ForEach(PlaceType.allCases) { type in
-                Text(type.title)
-                    .tag(type)
+    private func tripSubtitle(for trip: Trip) -> String? {
+        if trip.isDatesSet {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.setLocalizedDateFormatFromTemplate("MMMd yyyy")
+            if Calendar.current.isDate(trip.startDate, inSameDayAs: trip.endDate) {
+                return formatter.string(from: trip.startDate)
             }
-        } label: {
-            Label("Type", appIcon: "tag", color: .primary, iconTitleSpacing: 4)
+            return "\(formatter.string(from: trip.startDate)) - \(formatter.string(from: trip.endDate))"
         }
-        .pickerStyle(.menu)
-        .tint(.primary)
+        let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        return destination.isEmpty ? nil : destination
     }
     
     @ViewBuilder
-    private func locationField(for place: Place) -> some View {
-        let lockedLocation = place.location.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !lockedLocation.isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Location")
-                    .font(.appCaption)
-                    .foregroundStyle(.secondary)
-                Text(lockedLocation)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Location")
-            .accessibilityValue(lockedLocation)
-        } else {
-            // Only allow setting location when none exists yet — never editing an existing one.
-            LocationSearchField(
-                text: $draftLocation,
-                latitude: $draftLatitude,
-                longitude: $draftLongitude,
-                searchRegion: nil
+    private func tripDetail(for destination: PlaceTripDestination) -> some View {
+        if let index = tripStore.trips.firstIndex(where: { $0.id == destination.tripID }) {
+            TripDetailView(
+                trip: Binding(
+                    get: { tripStore.trips[index] },
+                    set: { newValue in
+                        tripStore.trips[index] = newValue
+                        tripStore.save()
+                    }
+                ),
+                initialEventID: destination.eventID
             )
-            .onChange(of: draftLocation) { _, _ in persistLocation(on: place) }
-            .onChange(of: draftLatitude) { _, _ in persistLocation(on: place) }
-            .onChange(of: draftLongitude) { _, _ in persistLocation(on: place) }
+        } else {
+            ContentUnavailableView("Trip unavailable", systemImage: "airplane.departure")
+        }
+    }
+    
+    // MARK: - Notes
+    
+    private func notesSection(for place: Place) -> some View {
+        VStack(alignment: .leading, spacing: PlaceDetailMetrics.headerGap) {
+            AppSectionHeader("Notes", color: palette.secondary)
+                .padding(.leading, PlaceDetailMetrics.headerIndent)
+            
+            TextField("", text: $draftNote, axis: .vertical)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(palette.primary)
+                .lineLimit(3...12)
+                .textInputAutocapitalization(.sentences)
+                .focused($isNotesFocused)
+                .padding(PlaceDetailMetrics.cardPadding)
+                .frame(minHeight: PlaceDetailMetrics.notesMinHeight, alignment: .topLeading)
+                .background(palette.card, in: RoundedRectangle(cornerRadius: PlaceDetailMetrics.cardRadius, style: .continuous))
+                .onChange(of: draftNote) { _, newValue in
+                    guard newValue != place.note else { return }
+                    var updated = place
+                    updated.note = newValue
+                    placeStore.update(updated, rematchMapKitIfNeeded: false)
+                }
         }
     }
     
@@ -456,49 +637,14 @@ struct PlaceDetailView: View {
     
     private func syncDrafts(from place: Place) {
         draftNote = place.note
-        draftName = editableNameDraft(for: place)
-        draftLocation = place.location
-        draftLatitude = place.latitude
-        draftLongitude = place.longitude
-    }
-    
-    /// Empty draft when the stored name is just the location title — placeholder shows that instead.
-    private func editableNameDraft(for place: Place) -> String {
-        let stored = place.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let fromLocation = PlaceNaming.title(location: place.location, fallback: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if stored.isEmpty { return "" }
-        if !fromLocation.isEmpty, stored.compare(fromLocation, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
-            return ""
-        }
-        return place.name
+        draftName = place.name
     }
     
     private func persistName(_ raw: String, on place: Place) {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let fromLocation = PlaceNaming.title(location: place.location, fallback: "")
-        let next = trimmed.isEmpty ? fromLocation : raw
-        guard next != place.name else { return }
+        guard raw != place.name else { return }
         var updated = place
-        updated.name = next
+        updated.name = raw
         placeStore.update(updated, rematchMapKitIfNeeded: false)
-    }
-    
-    private func persistLocation(on place: Place) {
-        guard draftLocation != place.location
-                || draftLatitude != place.latitude
-                || draftLongitude != place.longitude else { return }
-        let coordsChanged = draftLatitude != place.latitude || draftLongitude != place.longitude
-        var updated = place
-        updated.location = draftLocation
-        updated.latitude = draftLatitude
-        updated.longitude = draftLongitude
-        // Keep using the location title whenever the name field is empty / not customized.
-        if draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            updated.name = PlaceNaming.title(location: draftLocation, fallback: place.name)
-        }
-        // Rematch only when MapKit picks coords — avoid clearing the match on every keystroke.
-        placeStore.update(updated, rematchMapKitIfNeeded: coordsChanged)
     }
     
     private func setPlaceType(_ type: PlaceType, on place: Place) {
@@ -589,7 +735,6 @@ struct PlaceDetailView: View {
         
         selectedAppleMapItem = mapItem
         
-        // Persist a confident match when possible so the rich row appears next time.
         if #available(iOS 18.0, *), let identifier = mapItem.identifier?.rawValue {
             var updated = place
             updated.mapKitIdentifier = identifier
@@ -604,3 +749,68 @@ struct PlaceDetailView: View {
         }
     }
 }
+
+// MARK: - Layout tokens (Figma 719:8305)
+
+private enum PlaceDetailMetrics {
+    static let pagePadding: CGFloat = AppSpacing.pageInset
+    static let sectionGap: CGFloat = AppSpacing.sectionGap
+    static let headerGap: CGFloat = 8
+    /// Matches inset-grouped Form headers, which line up with card content.
+    static let headerIndent: CGFloat = 20
+    static let cardPadding: CGFloat = AppSpacing.cardPadding
+    static let cardRadius: CGFloat = 20
+    static let cardRowGap: CGFloat = AppSpacing.pageInset
+    static let heroHeight: CGFloat = 200
+    static let heroRadius: CGFloat = 16
+    static let buttonGap: CGFloat = AppSpacing.xs
+    static let buttonRadius: CGFloat = 20
+    static let buttonIconTitleGap: CGFloat = AppSpacing.xxs
+    static let iconSize: CGFloat = AppLucide.fieldSize
+    static let iconTextGap: CGFloat = AppSpacing.sm
+    static let notesMinHeight: CGFloat = 100
+}
+
+private struct PlaceDetailPalette {
+    let page: Color
+    let card: Color
+    let primary: Color
+    let secondary: Color
+    let divider: Color
+    let expert: Color
+    
+    init(colorScheme: ColorScheme) {
+        expert = AppColor.expert
+        page = AppColor.page
+        card = AppColor.card
+        primary = AppColor.textStrong
+        secondary = AppColor.textWeak
+        divider = AppColor.divider
+    }
+}
+
+private struct PlaceDetailCard<Content: View>: View {
+    let palette: PlaceDetailPalette
+    var rowSpacing: CGFloat = PlaceDetailMetrics.cardRowGap
+    @ViewBuilder var content: () -> Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: rowSpacing) {
+            content()
+        }
+        .padding(PlaceDetailMetrics.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(palette.card, in: RoundedRectangle(cornerRadius: PlaceDetailMetrics.cardRadius, style: .continuous))
+    }
+}
+
+private struct PlaceDetailDivider: View {
+    let color: Color
+    
+    var body: some View {
+        Rectangle()
+            .fill(color)
+            .frame(height: 1)
+    }
+}
+

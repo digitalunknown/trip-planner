@@ -13,6 +13,7 @@ struct TripStacksAIClient {
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.timeoutInterval = 120
         
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -69,6 +70,7 @@ private struct AIResponseLoose: Codable {
     var items: [PlanDayItemLoose]?
     var trip: AITripDraftLoose?
     var alternatives: [AITripDraftLoose]?
+    var routing: AIRoutingLoose?
     
     func toStrict() -> AIResponse {
         AIResponse(
@@ -77,7 +79,30 @@ private struct AIResponseLoose: Codable {
             clarificationPrompt: stringValue(clarificationPrompt),
             items: (items ?? []).map { $0.toStrict() },
             trip: trip?.toStrict(),
-            alternatives: (alternatives ?? []).map { $0.toStrict() }
+            alternatives: (alternatives ?? []).map { $0.toStrict() },
+            routing: routing?.toStrict()
+        )
+    }
+}
+
+private struct AIRoutingLoose: Codable {
+    var requestedMode: StringOrNull?
+    var resolvedMode: StringOrNull?
+    var geoScope: StringOrNull?
+    var deliverable: StringOrNull?
+    var isRecommendation: BoolOrString?
+    var radiusMiles: Double?
+    var driveHours: Double?
+    
+    func toStrict() -> AIRouting {
+        AIRouting(
+            requestedMode: stringValue(requestedMode),
+            resolvedMode: stringValue(resolvedMode),
+            geoScope: stringValue(geoScope),
+            deliverable: stringValue(deliverable),
+            isRecommendation: boolValue(isRecommendation, default: false),
+            radiusMiles: radiusMiles,
+            driveHours: driveHours
         )
     }
 }
@@ -116,6 +141,8 @@ private struct PlanDayItemLoose: Codable {
     var title: StringOrNull?
     var subtitle: StringOrNull?
     var location: StringOrNull?
+    var latitude: Double?
+    var longitude: Double?
     var notes: StringOrNull?
     var startTime: StringOrNull?
     var endTime: StringOrNull?
@@ -156,6 +183,8 @@ private struct PlanDayItemLoose: Codable {
             }
         }()
         
+        let coordinate = validCoordinatePair(latitude, longitude)
+        
         return PlanDayItem(
             id: uuid,
             kind: kindValue,
@@ -166,6 +195,8 @@ private struct PlanDayItemLoose: Codable {
             title: stringValue(title),
             subtitle: stringValue(subtitle),
             location: stringValue(location),
+            latitude: coordinate?.lat,
+            longitude: coordinate?.lon,
             notes: stringValue(notes),
             startTime: parseFlexibleDate(startTime),
             endTime: parseFlexibleDate(endTime),
@@ -308,6 +339,14 @@ private func optionalInt(_ v: IntOrString?) -> Int? {
 
 private func intValue(_ v: IntOrString?, default defaultValue: Int) -> Int {
     optionalInt(v) ?? defaultValue
+}
+
+/// Rejects out-of-range and 0/0 placeholder coordinates from the model.
+private func validCoordinatePair(_ latitude: Double?, _ longitude: Double?) -> (lat: Double, lon: Double)? {
+    guard let latitude, let longitude, latitude.isFinite, longitude.isFinite else { return nil }
+    guard abs(latitude) <= 90, abs(longitude) <= 180 else { return nil }
+    guard abs(latitude) > 0.0001 || abs(longitude) > 0.0001 else { return nil }
+    return (latitude, longitude)
 }
 
 private func parseFlexibleDate(_ v: StringOrNull?) -> Date? {

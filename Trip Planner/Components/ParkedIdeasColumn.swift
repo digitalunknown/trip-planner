@@ -12,10 +12,10 @@ struct ParkedIdeasColumn: View {
     
     @Environment(\.colorScheme) private var colorScheme
     
-    private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
-    private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xD0D0D6) }
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var dayBackground: Color { AppDetailSurface.page }
+    private var columnStroke: Color { AppColor.divider }
+    private var textPrimary: Color { AppColor.textStrong }
+    private var textSecondary: Color { AppColor.textWeak }
     private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xA8A8B0) }
     private var highlightFillColor: Color { colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04) }
     
@@ -42,26 +42,26 @@ struct ParkedIdeasColumn: View {
                                     Button {
                                         moveLeft(event)
                                     } label: {
-                                        Label("Move Left", appIcon: "square.arrow.left")
+                                        Label("Move Left", menuIcon: "square.arrow.left")
                                     }
                                 }
                                 Divider()
                                 Button {
                                     onTap(event)
                                 } label: {
-                                    Label("Edit Activity", appIcon: "square.and.pencil")
+                                    Label("Edit Activity", menuIcon: "square.and.pencil")
                                 }
                                 
                                 Button {
                                     onDuplicate(event)
                                 } label: {
-                                    Label("Duplicate Activity", appIcon: "doc.on.doc")
+                                    Label("Duplicate Activity", menuIcon: "doc.on.doc")
                                 }
                                 
                                 Button(role: .destructive) {
                                     onDelete(event)
                                 } label: {
-                                    Label("Delete Activity", appIcon: "trash")
+                                    Label("Delete Activity", menuIcon: "trash")
                                 }
                             }
                     }

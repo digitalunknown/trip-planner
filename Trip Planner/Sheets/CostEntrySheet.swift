@@ -183,8 +183,8 @@ struct CostEntrySheet: View {
                                 .foregroundStyle(.primary)
                             
                             Image(systemName: "chevron.up.chevron.down")
-                                .font(.app(11, weight: .semibold))
-                                .foregroundStyle(.secondary)
+                                .font(.app(13, weight: .semibold))
+                                .foregroundStyle(AppColor.textWeak)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)

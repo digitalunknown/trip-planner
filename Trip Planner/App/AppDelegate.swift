@@ -28,20 +28,37 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
         }
         
-        let nav = UINavigationBarAppearance()
-        nav.configureWithDefaultBackground()
-        nav.titleTextAttributes = [
-            .font: AppFont.uiFont(size: 17, weight: .semibold)
-        ]
-        nav.largeTitleTextAttributes = [
-            .font: AppFont.uiFont(size: 34, weight: .semibold)
-        ]
-        
-        let navBar = UINavigationBar.appearance()
-        navBar.standardAppearance = nav
-        navBar.compactAppearance = nav
-        navBar.scrollEdgeAppearance = nav
-        navBar.compactScrollEdgeAppearance = nav
+        if #available(iOS 26.0, *) {
+            // iOS 26 large titles are drawn in the glass nav bar. Pinning
+            // `scrollEdgeAppearance` (or an opaque background) makes some tabs
+            // keep Manrope semibold while others fall back to the system Bold title.
+            let nav = UINavigationBarAppearance()
+            nav.configureWithTransparentBackground()
+            nav.titleTextAttributes = [
+                .font: AppFont.uiFont(size: 17, weight: .semibold)
+            ]
+            nav.largeTitleTextAttributes = [
+                .font: AppFont.uiFont(size: 34, weight: .semibold)
+            ]
+            let navBar = UINavigationBar.appearance()
+            navBar.standardAppearance = nav
+            navBar.compactAppearance = nav
+        } else {
+            let nav = UINavigationBarAppearance()
+            nav.configureWithDefaultBackground()
+            nav.titleTextAttributes = [
+                .font: AppFont.uiFont(size: 17, weight: .semibold)
+            ]
+            nav.largeTitleTextAttributes = [
+                .font: AppFont.uiFont(size: 34, weight: .semibold)
+            ]
+            
+            let navBar = UINavigationBar.appearance()
+            navBar.standardAppearance = nav
+            navBar.compactAppearance = nav
+            navBar.scrollEdgeAppearance = nav
+            navBar.compactScrollEdgeAppearance = nav
+        }
         
         UITabBarItem.appearance().setTitleTextAttributes(
             [.font: AppFont.uiFont(size: 10, weight: .medium)],
@@ -53,9 +70,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         )
         
         UIBarButtonItem.appearance().setTitleTextAttributes(
-            [.font: AppFont.uiFont(size: 17, weight: .regular)],
+            [.font: AppFont.uiFont(size: 17, weight: .medium)],
             for: .normal
         )
+        
+        let pickerFont = AppFont.uiFont(size: 15, weight: .medium)
+        UILabel.appearance(whenContainedInInstancesOf: [UIDatePicker.self]).font = pickerFont
+        UIDatePicker.appearance().tintColor = UIColor.label
     }
 }
 

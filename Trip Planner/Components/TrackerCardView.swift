@@ -17,7 +17,7 @@ struct TrackerProgressBar: View {
         totalCount: Int,
         totalBars: Int = 30,
         barHeight: CGFloat = 36,
-        unfilledColor: Color = Color.secondary.opacity(0.25),
+        unfilledColor: Color = AppColor.elevated,
         useLargeTitle: Bool = false
     ) {
         self.percent = percent
@@ -34,24 +34,25 @@ struct TrackerProgressBar: View {
         let pct = Int((clamped * 100).rounded())
         let filled = Int((Double(totalBars) * clamped).rounded())
         
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack(alignment: .firstTextBaseline, spacing: AppSpacing.sm) {
                 Text("\(visitedCount)/\(totalCount)")
                     .font(useLargeTitle ? .appLargeTitle : .appTitle2)
+                    .foregroundStyle(AppColor.textStrong)
                     .contentTransition(.numericText())
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                 
                 Text("\(pct)%")
                     .font(.appCaption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppColor.textWeak)
                     .contentTransition(.numericText())
                 Spacer()
             }
             .animation(.easeInOut(duration: 0.22), value: pct)
             .animation(.easeInOut(duration: 0.22), value: visitedCount)
             
-            HStack(spacing: 4) {
+            HStack(spacing: AppSpacing.xxs) {
                 ForEach(0..<totalBars, id: \.self) { idx in
                     Capsule(style: .continuous)
                         .fill(idx < filled ? accentColor : unfilledColor)
@@ -65,17 +66,14 @@ struct TrackerProgressBar: View {
 
 struct TrackerRowCard: View {
     @Environment(\.appAccentColor) private var accentColor
-    @Environment(\.colorScheme) private var colorScheme
     
     let type: TrackerType
     let visitedCount: Int
     let totalCount: Int
     
-    private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
-    private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
-    private var unfilledBarColor: Color { colorScheme == .dark ? Color(hex: 0x2A2A2E) : Color(hex: 0xD4D4D8) }
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var unfilledBarColor: Color { AppColor.elevated }
+    private var textPrimary: Color { AppColor.textStrong }
+    private var textSecondary: Color { AppColor.textWeak }
     
     private var percent: Double {
         guard totalCount > 0 else { return 0 }
@@ -83,21 +81,19 @@ struct TrackerRowCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(type.title)
-                        .font(.app(15, weight: .semibold))
-                        .foregroundStyle(textPrimary)
-                        .lineLimit(1)
-                }
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack(alignment: .top, spacing: AppSpacing.xs) {
+                Text(type.title)
+                    .font(.app(15, weight: .semibold))
+                    .foregroundStyle(textPrimary)
+                    .lineLimit(1)
                 
                 Spacer(minLength: 0)
                 
-                AppIcon(systemName: "chevron.right", size: 13, color: textSecondary)
+                AppIcon(systemName: "chevron.right", size: AppLucide.compactSize, color: textSecondary)
             }
             
-            HStack(spacing: 12) {
+            HStack(spacing: AppSpacing.sm) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(accentColor.opacity(0.18))
@@ -117,34 +113,12 @@ struct TrackerRowCard: View {
                 unfilledColor: unfilledBarColor
             )
         }
-        .padding(15)
+        .padding(AppSpacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .modifier(TrackerRowGlassBackground(fallback: dayBackground, stroke: columnStroke))
-    }
-}
-
-private struct TrackerRowGlassBackground: ViewModifier {
-    let fallback: Color
-    let stroke: Color
-    
-    private let cornerRadius: CGFloat = 20
-    
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular,
-                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                )
-        } else {
-            content
-                .background(fallback, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(stroke)
-                }
-                .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 14)
-        }
+        .background(
+            AppColor.card,
+            in: RoundedRectangle(cornerRadius: TripVisualMetrics.coverRadius, style: .continuous)
+        )
     }
 }
 
@@ -156,7 +130,7 @@ struct TrackerCardView: View {
     let totalCount: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(accentColor.opacity(0.18))
@@ -167,91 +141,68 @@ struct TrackerCardView: View {
 
             Text(type.title)
                 .font(.app(15, weight: .semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(AppColor.textStrong)
 
             Text("Visited \(visitedCount)/\(totalCount)")
                 .font(.appCaption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppColor.textWeak)
 
             Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(AppSpacing.cardPadding)
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            AppColor.card,
+            in: RoundedRectangle(cornerRadius: TripVisualMetrics.coverRadius, style: .continuous)
+        )
     }
 }
 
 struct TrackerItemCard: View {
-    @Environment(\.appAccentColor) private var accentColor
-    @Environment(\.colorScheme) private var colorScheme
-    
     let title: String
     let subtitle: String?
     let isVisited: Bool
-    let iconSystemName: String
-    
-    private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
-    private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
 
     var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isVisited ? accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
+        HStack(alignment: .center, spacing: 8) {
+            AppIcon(
+                lucide: isVisited ? "circle-check-big" : "circle",
+                size: AppLucide.fieldSize,
+                color: isVisited ? AppColor.textStrong : AppColor.textWeak
+            )
 
-                AppIcon(
-                    systemName: iconSystemName,
-                    size: 20,
-                    color: isVisited ? accentColor : .secondary
-                )
-            }
-            .frame(width: 40, height: 40)
-
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(textPrimary)
+                    .font(.app(15, weight: .medium))
+                    .foregroundStyle(isVisited ? AppColor.textStrong : AppColor.textWeak)
+                    .lineLimit(1)
 
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.appCaption)
-                        .foregroundStyle(textSecondary)
+                        .font(.app(13, weight: .medium))
+                        .foregroundStyle(AppColor.textWeak)
                         .lineLimit(1)
                 }
             }
 
             Spacer(minLength: 0)
-
-            AppIcon(
-                lucide: isVisited ? "circle-check-big" : "circle",
-                size: 20,
-                color: isVisited ? accentColor : Color.secondary
-            )
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(dayBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(accentColor.opacity(isVisited ? 0.14 : 0.0))
+        .padding(AppSpacing.fieldPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            (isVisited ? AppColor.elevated : AppColor.card),
+            in: Capsule(style: .continuous)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(columnStroke)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(isVisited ? accentColor.opacity(0.28) : Color.clear, lineWidth: 1)
-        )
+        .contentShape(Capsule(style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(isVisited ? "Visited" : "Not visited")
     }
 }
 
 #Preview {
     VStack(spacing: 12) {
         TrackerCardView(type: .countries, visitedCount: 12, totalCount: 195)
-        TrackerItemCard(title: "Arizona", subtitle: "United States", isVisited: true, iconSystemName: "map")
+        TrackerItemCard(title: "Arizona", subtitle: "United States", isVisited: true)
     }
     .padding()
 }

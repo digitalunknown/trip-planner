@@ -48,7 +48,7 @@ struct VerticalDateRangeCalendar: View {
                         LazyVGrid(columns: columns, spacing: 6) {
                             ForEach(weekdaySymbols, id: \.self) { s in
                                 Text(s.uppercased())
-                                    .font(.app(11, weight: .semibold))
+                                    .font(.app(13, weight: .semibold))
                                     .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity)
                             }
@@ -258,7 +258,7 @@ private struct DayCell: View {
                 }
                 
                 Text(dayNumber)
-                    .font(.app(16, weight: .semibold))
+                    .font(.app(15, weight: .semibold))
                     .foregroundStyle(foregroundColor)
                     .frame(width: cellSize, height: cellSize, alignment: .center)
             }

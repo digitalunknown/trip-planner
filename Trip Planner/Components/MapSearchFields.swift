@@ -34,28 +34,32 @@ struct LocationSearchField: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Label {
-                HStack {
-                    TextField("Location", text: $text)
-                        .onChange(of: text) { _, newValue in
-                            completer.searchQuery = newValue
-                            showingResults = !newValue.isEmpty
-                        }
-                    
-                    if !text.isEmpty {
-                        Button {
-                            text = ""
-                            latitude = nil
-                            longitude = nil
-                            showingResults = false
-                        } label: {
-                            AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
-                        }
-                        .buttonStyle(.plain)
+            HStack(spacing: 10) {
+                AppIcon(
+                    lucide: text.isEmpty ? "map-pin" : "map-pin-check-inside",
+                    size: AppLucide.fieldSize,
+                    color: AppColor.textStrong
+                )
+                
+                TextField("Location", text: $text)
+                    .font(.app(15, weight: .medium))
+                    .foregroundStyle(AppColor.textStrong)
+                    .onChange(of: text) { _, newValue in
+                        completer.searchQuery = newValue
+                        showingResults = !newValue.isEmpty
                     }
+                
+                if !text.isEmpty {
+                    Button {
+                        text = ""
+                        latitude = nil
+                        longitude = nil
+                        showingResults = false
+                    } label: {
+                        AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                    }
+                    .buttonStyle(.plain)
                 }
-            } icon: {
-                AppIcon(lucide: "map-pin", size: AppLucide.chromeSize, color: .primary)
             }
             
             if showingResults && !completer.results.isEmpty {
@@ -220,31 +224,35 @@ struct AirportSearchField: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Label {
-                HStack {
-                    TextField(title, text: $name)
-                        .onChange(of: name) { _, newValue in
-                            completer.searchQuery = newValue
-                            showingResults = !newValue.isEmpty
-                            scheduleFallbackSearch(for: newValue)
-                        }
-                    
-                    if !name.isEmpty {
-                        Button {
-                            name = ""
-                            code = ""
-                            city = ""
-                            latitude = nil
-                            longitude = nil
-                            showingResults = false
-                        } label: {
-                            AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
-                        }
-                        .buttonStyle(.plain)
+            HStack(spacing: 10) {
+                AppIcon(
+                    lucide: name.isEmpty ? "map-pin" : "map-pin-check-inside",
+                    size: AppLucide.fieldSize,
+                    color: AppColor.textStrong
+                )
+                
+                TextField(title, text: $name)
+                    .font(.app(15, weight: .medium))
+                    .foregroundStyle(AppColor.textStrong)
+                    .onChange(of: name) { _, newValue in
+                        completer.searchQuery = newValue
+                        showingResults = !newValue.isEmpty
+                        scheduleFallbackSearch(for: newValue)
                     }
+                
+                if !name.isEmpty {
+                    Button {
+                        name = ""
+                        code = ""
+                        city = ""
+                        latitude = nil
+                        longitude = nil
+                        showingResults = false
+                    } label: {
+                        AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                    }
+                    .buttonStyle(.plain)
                 }
-            } icon: {
-                AppIcon(lucide: "map-pin", size: AppLucide.chromeSize, color: .primary)
             }
             
             if showingResults && !filteredResults.isEmpty {
@@ -278,7 +286,7 @@ struct AirportSearchField: View {
                                         .tint(.secondary)
                                 } else if !code.isEmpty {
                                     Text(code)
-                                        .font(.app(12, weight: .semibold))
+                                        .font(.app(13, weight: .semibold))
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
@@ -327,7 +335,7 @@ struct AirportSearchField: View {
                                 let code = airportCodeCandidate(fromText: [item.name, mapItemAddressString(item)].compactMap { $0 }.joined(separator: " "))
                                 if !code.isEmpty {
                                     Text(code)
-                                        .font(.app(12, weight: .semibold))
+                                        .font(.app(13, weight: .semibold))
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)

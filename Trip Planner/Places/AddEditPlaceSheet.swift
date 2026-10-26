@@ -12,7 +12,6 @@ struct AddEditPlaceSheet: View {
     var onSave: (Place) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.appAccentColor) private var appAccentColor
     
     @State private var name: String = ""
     @State private var location: String = ""
@@ -44,7 +43,16 @@ struct AddEditPlaceSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Group {
                 Section {
+                    LocationSearchField(
+                        text: $location,
+                        latitude: $latitude,
+                        longitude: $longitude,
+                        searchRegion: nil
+                    )
+                    .id("add-place-location")
+                    
                     Label {
                         HStack {
                             TextField("Name", text: $name)
@@ -52,7 +60,7 @@ struct AddEditPlaceSheet: View {
                                 Button {
                                     name = ""
                                 } label: {
-                                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                                    AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -60,22 +68,33 @@ struct AddEditPlaceSheet: View {
                     } icon: {
                         AppIcon(lucide: "type", size: AppLucide.chromeSize, color: .primary)
                     }
-                    LocationSearchField(
-                        text: $location,
-                        latitude: $latitude,
-                        longitude: $longitude,
-                        searchRegion: nil
-                    )
+                    .id("add-place-name")
                     
-                    Picker(selection: $placeType) {
+                    Menu {
                         ForEach(PlaceType.allCases) { type in
-                            Text(type.title)
-                                .tag(type)
+                            Button {
+                                placeType = type
+                            } label: {
+                                if type == placeType {
+                                    Label(type.title, menuIcon: "checkmark")
+                                } else {
+                                    Text(type.title)
+                                }
+                            }
                         }
                     } label: {
-                        Label("Type", appIcon: "tag", color: .primary, iconTitleSpacing: 4)
+                        HStack {
+                            Label("Type", appIcon: "tag", color: .primary, iconTitleSpacing: 4)
+                            Spacer(minLength: 8)
+                            HStack(spacing: 5) {
+                                Text(placeType.title)
+                                    .font(.app(15, weight: .medium))
+                                    .foregroundStyle(.primary)
+                                AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                            }
+                        }
                     }
-                    .pickerStyle(.menu)
+                    .buttonStyle(.plain)
                     .tint(.primary)
                 }
                 
@@ -128,20 +147,41 @@ struct AddEditPlaceSheet: View {
                             }
                         } label: {
                             HStack {
-                                Label("Add Photo", appIcon: "image-plus", color: .primary)
+                                Label("Add photo", appIcon: "image-plus", color: .primary)
                                 Spacer()
-                                AppIcon(systemName: "chevron.up.chevron.down", size: 14, color: .secondary)
+                                AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
                             }
                         }
                         .tint(.primary)
                     }
                 }
+                }
+                .appDetailFieldBackground()
                 
                 Section {
-                    TextField("Notes", text: $note, axis: .vertical)
-                        .lineLimit(3...8)
+                    VStack(alignment: .leading, spacing: 8) {
+                        AppSectionHeader("Notes")
+                            .padding(.leading, 20)
+                        
+                        TextField("", text: $note, axis: .vertical)
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(AppColor.textStrong)
+                            .lineLimit(3...12)
+                            .textInputAutocapitalization(.sentences)
+                            .padding(AppSpacing.cardPadding)
+                            .frame(minHeight: 100, alignment: .topLeading)
+                            .background(
+                                AppColor.card,
+                                in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            )
+                    }
                 }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
+            .appFormPageSpacing()
+            .appDetailFormChrome()
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -167,7 +207,7 @@ struct AddEditPlaceSheet: View {
                 .tint(.primary)
             }
         }
-        .tint(appAccentColor)
+        .tint(.primary)
     }
     
     private func loadIfNeeded() {

@@ -203,8 +203,8 @@ struct AIResultReplyText: View {
     
     var body: some View {
         Text(text)
-            .font(.app(15, weight: .regular))
-            .foregroundStyle(.primary)
+            .font(.app(15, weight: .medium))
+            .foregroundStyle(AppColor.textStrong)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
@@ -227,12 +227,12 @@ struct AIResultActionCapsule: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var fill: Color { colorScheme == .dark ? Color(hex: 0x49494C) : Color(hex: 0xD1D1D6) }
-    private var foreground: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
+    private var foreground: Color { AppColor.textStrong }
     
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                AppIcon(systemName: systemImage, size: 17, color: foreground)
+                AppIcon(systemName: systemImage, size: 24, color: foreground)
                 Text(title)
                     .font(.app(15, weight: .semibold))
             }
@@ -253,7 +253,7 @@ struct AIResultMapIconButton: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var fill: Color { colorScheme == .dark ? Color(hex: 0x49494C) : Color(hex: 0xD1D1D6) }
-    private var foreground: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
+    private var foreground: Color { AppColor.textStrong }
     
     var body: some View {
         Button(action: action) {
@@ -262,7 +262,7 @@ struct AIResultMapIconButton: View {
                     ProgressView()
                         .controlSize(.small)
                 } else {
-                    AppIcon(systemName: "map", size: 17, color: foreground)
+                    AppIcon(systemName: "map", size: 24, color: foreground)
                 }
             }
             .frame(width: 40, height: 40)
@@ -283,10 +283,10 @@ struct AIResultToolbarPill: View {
         Button(action: action) {
             Text(title)
                 .font(.app(17, weight: .semibold))
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 12)
-                .frame(minHeight: LiquidGlassToolbarMetrics.iconSide)
-                .contentShape(Rectangle())
+                .foregroundStyle(AppColor.textStrong)
+                .padding(.horizontal, 15)
+                .padding(.vertical, 10)
+                .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .tint(.primary)
@@ -345,7 +345,7 @@ struct AIResultItemCard<Accessory: View>: View {
                 
                 if !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.app(15, weight: .regular))
+                        .font(.app(15, weight: .medium))
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .multilineTextAlignment(.leading)
@@ -448,31 +448,34 @@ struct AITripSummaryCard: View {
     let datesText: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: 12) {
             summaryRow(label: "Name", value: name)
             divider
             summaryRow(label: "Destination", value: destination)
             divider
             summaryRow(label: "Dates", value: datesText)
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppDetailSurface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
     
     private var divider: some View {
         Rectangle()
-            .fill(Color.primary.opacity(0.10))
+            .fill(AppColor.divider)
             .frame(height: 1)
     }
     
     private func summaryRow(label: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 15) {
             Text(label)
-                .font(.app(15, weight: .regular))
-                .foregroundStyle(.primary)
-            Spacer(minLength: 0)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(AppColor.textStrong)
             Text(value.isEmpty ? "—" : value)
-                .font(.app(15, weight: .regular))
-                .foregroundStyle(.primary.opacity(0.50))
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(AppColor.textWeak)
                 .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 }
@@ -482,10 +485,10 @@ struct AIResultsListChrome: ViewModifier {
     func body(content: Content) -> some View {
         content
             .listStyle(.insetGrouped)
-            .listSectionSpacing(15)
+            .listSectionSpacing(AppSpacing.sectionGap)
             .listRowSpacing(12)
             .scrollContentBackground(.hidden)
-            .background(Color(.systemGroupedBackground))
+            .background(AppDetailSurface.page)
     }
 }
 
@@ -509,7 +512,7 @@ private struct AIResultItemRowBackground: ViewModifier {
     
     private var cardFill: Color {
         if colorScheme == .dark {
-            return isIncluded ? Color(hex: 0x323234) : Color(hex: 0x252526)
+            return isIncluded ? AppDetailSurface.card : AppDetailSurface.page
         }
         return isIncluded ? Color(hex: 0xE8E8ED) : Color(hex: 0xF2F2F4).opacity(0.72)
     }
@@ -702,26 +705,25 @@ struct AIPlacesReviewView: View {
     }
     
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
                 AIResultReplyText(text: resolvedReply)
-                    .aiResultReplyRowBackground()
-            }
-            
-            ForEach(placeTypeSections) { type in
-                Section {
-                    ForEach(itemIndices(for: type), id: \.self) { index in
-                        placeCard(at: index)
+                
+                ForEach(placeTypeSections) { type in
+                    VStack(alignment: .leading, spacing: 12) {
+                        AppSectionHeader(sectionTitle(for: type))
+                        ForEach(itemIndices(for: type), id: \.self) { index in
+                            placeCard(at: index)
+                        }
                     }
-                } header: {
-                    Text(sectionTitle(for: type))
-                        .font(.app(15, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.none)
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, AppSpacing.pageBottom)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .aiResultsListChrome()
+        .background(AppDetailSurface.page)
         .navigationTitle("Places")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -754,27 +756,26 @@ struct AIPlacesReviewView: View {
             latitude: items[index].latitude,
             longitude: items[index].longitude
         )
-        AIResultItemCard(
+        let isSaved = items.first(where: { $0.id == itemID })?.include ?? items[index].include
+        AIRecommendationCard(
             title: items[index].title,
             subtitle: items[index].aiResultSubtitle,
             photoData: items[index].photoData,
-            primaryAction: .savePlace(isOn: Binding(
-                get: {
-                    items.first(where: { $0.id == itemID })?.include ?? false
-                },
-                set: { newValue in
-                    guard newValue,
-                          let idx = items.firstIndex(where: { $0.id == itemID }),
-                          !items[idx].include else { return }
-                    items[idx].include = true
-                    onSavePlaces([items[idx]])
-                    Haptics.bump()
-                }
-            )),
-            showsMapButton: items[index].canOpenInMaps,
-            isMapLoading: loadingMapsID == itemID,
             showsPhotoPlaceholder: true,
-            onMapTap: {
+            showsUnverifiedLocation: items[index].isLocationUnresolved,
+            isHighlighted: isSaved,
+            actionLucide: isSaved ? "map-pin-check" : "map-pin-plus",
+            actionTitle: isSaved ? "Saved to Places" : "Save to Places",
+            showsDetails: items[index].canOpenInMaps,
+            isDetailsLoading: loadingMapsID == itemID,
+            onAction: {
+                guard let idx = items.firstIndex(where: { $0.id == itemID }),
+                      !items[idx].include else { return }
+                items[idx].include = true
+                onSavePlaces([items[idx]])
+                Haptics.bump()
+            },
+            onViewDetails: {
                 Task {
                     loadingMapsID = itemID
                     defer { loadingMapsID = nil }
@@ -790,7 +791,6 @@ struct AIPlacesReviewView: View {
                 ExpertTipInlineCallout(tip: tip)
             }
         }
-        .aiResultItemRowBackground(isIncluded: true)
         .task(id: itemID) {
             await expertTips.refresh()
             await AIResultMaps.loadCoverIfNeeded(into: $items, id: itemID)
@@ -820,7 +820,7 @@ struct AICreateTripReviewView: View {
     
     var onConfirm: (AITripDraft, [PlanDayItem], [PlanDayItem]) -> Void
     
-    @Environment(ExpertTipsStore.self) private var expertTips
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedAppleMapItem: MKMapItem?
     @State private var loadingMapsID: UUID?
     
@@ -832,7 +832,8 @@ struct AICreateTripReviewView: View {
         onConfirm: @escaping (AITripDraft, [PlanDayItem], [PlanDayItem]) -> Void
     ) {
         self._trip = State(initialValue: trip)
-        self._items = State(initialValue: seedItems.map { item in
+        self._items = State(initialValue: seedItems.compactMap { item in
+            guard !item.looksLikePromptLeak else { return nil }
             var copy = item
             copy.include = true
             return copy
@@ -841,13 +842,18 @@ struct AICreateTripReviewView: View {
         self.onConfirm = onConfirm
     }
     
+    private var canCreateTrip: Bool {
+        !trip.destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !trip.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
     private var includedCount: Int {
         items.filter(\.include).count
     }
     
-    private var canCreateTrip: Bool {
-        !trip.destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !trip.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    private var createButtonTitle: String {
+        if items.isEmpty || includedCount == items.count { return "Create" }
+        return "Create (\(includedCount))"
     }
     
     private var resolvedReply: String {
@@ -870,40 +876,43 @@ struct AICreateTripReviewView: View {
     }
     
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
                 AIResultReplyText(text: resolvedReply)
-                    .aiResultReplyRowBackground()
-            }
-            
-            Section {
+                
                 AITripSummaryCard(
                     name: trip.name,
                     destination: trip.destination,
                     datesText: datesSummary
                 )
-                .aiResultItemRowBackground()
-            }
-            
-            ForEach(resultSections) { section in
-                Section {
-                    ForEach(itemIndices(for: section), id: \.self) { index in
-                        tripItemCard(for: $items[index])
+                
+                ForEach(resultSections) { section in
+                    VStack(alignment: .leading, spacing: 12) {
+                        AppSectionHeader(section.title)
+                        ForEach(itemIndices(for: section), id: \.self) { index in
+                            tripItemCard(for: $items[index])
+                        }
                     }
-                } header: {
-                    Text(section.title)
-                        .font(.app(15, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.none)
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, AppSpacing.pageBottom)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .aiResultsListChrome()
+        .background(AppDetailSurface.page)
         .navigationTitle("New Trip")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .enableSwipeBack()
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                LiquidGlassIconButton(systemName: "chevron.left", accessibilityLabelText: "Back") {
+                    dismiss()
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
-                AIResultToolbarPill(title: "Create", isEnabled: canCreateTrip) {
+                AIResultToolbarPill(title: createButtonTitle, isEnabled: canCreateTrip) {
                     finish()
                 }
             }
@@ -913,24 +922,25 @@ struct AICreateTripReviewView: View {
     
     @ViewBuilder
     private func tripItemCard(for item: Binding<PlanDayItem>) -> some View {
-        let matchedTips = expertTips.tips(
-            title: item.wrappedValue.title,
-            location: item.wrappedValue.location,
-            latitude: item.wrappedValue.latitude,
-            longitude: item.wrappedValue.longitude
-        )
-        AIResultItemCard(
+        let itemID = item.wrappedValue.id
+        AIRecommendationCard(
             title: item.wrappedValue.title,
             subtitle: itemSubtitle(for: item.wrappedValue),
             photoData: item.wrappedValue.canSaveToPlaces ? item.wrappedValue.photoData : nil,
-            primaryAction: .include(isOn: item.include),
-            showsMapButton: item.wrappedValue.canOpenInMaps,
-            isMapLoading: loadingMapsID == item.wrappedValue.id,
             showsPhotoPlaceholder: item.wrappedValue.canSaveToPlaces,
             showsUnverifiedLocation: item.wrappedValue.isLocationUnresolved,
-            onMapTap: {
+            isHighlighted: item.wrappedValue.include,
+            actionLucide: item.wrappedValue.include ? "circle-check-big" : "circle",
+            actionTitle: "Include in Trip",
+            showsDetails: item.wrappedValue.canOpenInMaps,
+            isDetailsLoading: loadingMapsID == itemID,
+            onAction: {
+                item.wrappedValue.include.toggle()
+                Haptics.bump()
+            },
+            onViewDetails: {
                 Task {
-                    loadingMapsID = item.wrappedValue.id
+                    loadingMapsID = itemID
                     defer { loadingMapsID = nil }
                     await AIResultMaps.openListing(
                         for: item.wrappedValue,
@@ -938,15 +948,9 @@ struct AICreateTripReviewView: View {
                     )
                 }
             }
-        ) {
-            if let tip = matchedTips.first {
-                ExpertTipInlineCallout(tip: tip)
-            }
-        }
-        .aiResultItemRowBackground(isIncluded: item.wrappedValue.include)
-        .task(id: item.wrappedValue.id) {
-            await expertTips.refresh()
-            await AIResultMaps.loadCoverIfNeeded(into: $items, id: item.wrappedValue.id)
+        )
+        .task(id: itemID) {
+            await AIResultMaps.loadCoverIfNeeded(into: $items, id: itemID)
         }
     }
     
@@ -977,5 +981,189 @@ struct AICreateTripReviewView: View {
         let start = trip.startDate ?? "—"
         let end = trip.endDate ?? "—"
         return "\(start) → \(end)"
+    }
+}
+
+private struct AIRecommendationCard<Accessory: View>: View {
+    let title: String
+    let subtitle: String
+    let photoData: Data?
+    var showsPhotoPlaceholder: Bool = false
+    var showsUnverifiedLocation: Bool = false
+    var isHighlighted: Bool
+    var actionLucide: String
+    var actionTitle: String
+    var showsDetails: Bool = false
+    var isDetailsLoading: Bool = false
+    var onAction: () -> Void
+    var onViewDetails: (() -> Void)? = nil
+    @ViewBuilder var accessory: () -> Accessory
+    
+    init(
+        title: String,
+        subtitle: String,
+        photoData: Data?,
+        showsPhotoPlaceholder: Bool = false,
+        showsUnverifiedLocation: Bool = false,
+        isHighlighted: Bool,
+        actionLucide: String,
+        actionTitle: String,
+        showsDetails: Bool = false,
+        isDetailsLoading: Bool = false,
+        onAction: @escaping () -> Void,
+        onViewDetails: (() -> Void)? = nil,
+        @ViewBuilder accessory: @escaping () -> Accessory
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.photoData = photoData
+        self.showsPhotoPlaceholder = showsPhotoPlaceholder
+        self.showsUnverifiedLocation = showsUnverifiedLocation
+        self.isHighlighted = isHighlighted
+        self.actionLucide = actionLucide
+        self.actionTitle = actionTitle
+        self.showsDetails = showsDetails
+        self.isDetailsLoading = isDetailsLoading
+        self.onAction = onAction
+        self.onViewDetails = onViewDetails
+        self.accessory = accessory
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title.isEmpty ? "Untitled" : title)
+                    .font(.app(17, weight: .semibold))
+                    .foregroundStyle(AppColor.textStrong)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                if showsUnverifiedLocation {
+                    Text("Unverified location")
+                        .font(.app(13, weight: .medium))
+                        .foregroundStyle(AppColor.accent)
+                }
+            }
+            
+            cover
+            
+            accessory()
+            
+            Button(action: onAction) {
+                HStack(spacing: 5) {
+                    AppIcon(
+                        lucide: actionLucide,
+                        size: 24,
+                        color: isHighlighted ? AppColor.textStrong : AppColor.textWeak
+                    )
+                    Text(actionTitle)
+                        .font(.app(15, weight: .semibold))
+                        .foregroundStyle(isHighlighted ? AppColor.textStrong : AppColor.textWeak)
+                }
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityValue(isHighlighted ? "On" : "Off")
+            
+            if showsDetails {
+                Rectangle()
+                    .fill(AppColor.textStrong.opacity(0.16))
+                    .frame(height: 1)
+                
+                Button {
+                    onViewDetails?()
+                } label: {
+                    HStack(spacing: 0) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("View More Details")
+                                .font(.app(15, weight: .medium))
+                                .foregroundStyle(AppColor.textStrong)
+                            Text("Photos, hours, ratings & more")
+                                .font(.app(13, weight: .medium))
+                                .foregroundStyle(AppColor.textWeak)
+                        }
+                        Spacer(minLength: 8)
+                        if isDetailsLoading {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            AppIcon(lucide: "chevron-right", size: 24, color: AppColor.textWeak)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(isDetailsLoading)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            isHighlighted ? AppDetailSurface.boardCard : AppDetailSurface.card,
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+        )
+        .animation(.easeOut(duration: 0.18), value: isHighlighted)
+    }
+    
+    @ViewBuilder
+    private var cover: some View {
+        if let photoData, let image = UIImage(data: photoData) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 184)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        } else if showsPhotoPlaceholder {
+            ZStack {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(AppDetailSurface.card)
+                ProgressView()
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 184)
+            .accessibilityLabel("Loading photo")
+        }
+    }
+}
+
+extension AIRecommendationCard where Accessory == EmptyView {
+    init(
+        title: String,
+        subtitle: String,
+        photoData: Data?,
+        showsPhotoPlaceholder: Bool = false,
+        showsUnverifiedLocation: Bool = false,
+        isHighlighted: Bool,
+        actionLucide: String,
+        actionTitle: String,
+        showsDetails: Bool = false,
+        isDetailsLoading: Bool = false,
+        onAction: @escaping () -> Void,
+        onViewDetails: (() -> Void)? = nil
+    ) {
+        self.init(
+            title: title,
+            subtitle: subtitle,
+            photoData: photoData,
+            showsPhotoPlaceholder: showsPhotoPlaceholder,
+            showsUnverifiedLocation: showsUnverifiedLocation,
+            isHighlighted: isHighlighted,
+            actionLucide: actionLucide,
+            actionTitle: actionTitle,
+            showsDetails: showsDetails,
+            isDetailsLoading: isDetailsLoading,
+            onAction: onAction,
+            onViewDetails: onViewDetails,
+            accessory: { EmptyView() }
+        )
     }
 }

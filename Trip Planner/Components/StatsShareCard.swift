@@ -30,7 +30,7 @@ struct StatsShareCard: View {
             
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.app(22, weight: .semibold))
+                    .font(.app(17, weight: .semibold))
                     .foregroundStyle(colorScheme == .dark ? Color.white : ink)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)

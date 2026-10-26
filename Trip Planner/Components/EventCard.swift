@@ -12,14 +12,12 @@ struct EventCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var appleCoverData: Data?
     
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var textPrimary: Color { AppColor.textStrong }
+    private var textSecondary: Color { AppColor.textWeak }
     private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
     
-    /// Lift over the day column — translucent in dark; solid white + stroke in light.
-    private var cardFill: Color {
-        colorScheme == .dark ? Color.white.opacity(0.10) : Color.white
-    }
+    /// Trip-board card fill (dark `#262626`).
+    private var cardFill: Color { AppDetailSurface.boardCard }
     
     private var cardStroke: Color {
         colorScheme == .dark ? Color.clear : Color.black.opacity(0.08)
@@ -114,7 +112,7 @@ struct EventCard: View {
         let innerStroke = colorScheme == .dark ? Color.white.opacity(0.22) : Color.black.opacity(0.14)
         return ZStack {
             shape.fill(event.accent.background)
-            AppIcon(systemName: event.icon, size: 26, strokeWidth: 2, color: event.accent.foreground)
+            AppIcon(systemName: event.icon, size: 24, strokeWidth: 2, color: event.accent.foreground)
         }
         .frame(width: 52, height: 52)
         .overlay {
@@ -125,18 +123,18 @@ struct EventCard: View {
     private var detailsBlock: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(event.title)
-                .font(.app(13, weight: .semibold))
+                .font(.app(15, weight: .semibold))
                 .foregroundStyle(textPrimary)
                 .lineLimit(2)
             if !event.location.isEmpty {
                 Text(event.location)
-                    .font(.app(13, weight: .regular))
+                    .font(.app(13, weight: .medium))
                     .foregroundStyle(textSecondary)
                     .lineLimit(1)
             }
             if !event.time.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(event.time)
-                    .font(.app(13, weight: .regular))
+                    .font(.app(13, weight: .medium))
                     .foregroundStyle(textSecondary)
             }
         }

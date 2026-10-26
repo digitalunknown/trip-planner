@@ -27,7 +27,7 @@ struct ActivityDocumentsSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: AppSpacing.sectionGap) {
                     ForEach(Array(groupedItems.enumerated()), id: \.offset) { _, group in
                         VStack(alignment: .leading, spacing: 8) {
                             Text(group.title)
@@ -54,11 +54,12 @@ struct ActivityDocumentsSheet: View {
                         .padding(12)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color(.secondarySystemGroupedBackground))
+                                .fill(AppDetailSurface.card)
                         )
                     }
                 }
-                .padding()
+                .padding(.horizontal, AppSpacing.pageInset)
+                .padding(.vertical, AppSpacing.pageTop)
             }
             .navigationTitle("Documents")
             .navigationBarTitleDisplayMode(.inline)
@@ -129,7 +130,7 @@ struct ActivityDocumentsSheet: View {
                     .fill(Color(.tertiarySystemGroupedBackground))
                     .overlay {
                         Image(systemName: "doc.fill")
-                            .font(.app(18, weight: .semibold))
+                            .font(.app(17, weight: .semibold))
                             .foregroundStyle(.secondary)
                     }
             }

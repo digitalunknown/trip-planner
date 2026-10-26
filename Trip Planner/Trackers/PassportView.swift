@@ -6,12 +6,9 @@ struct PassportView: View {
     
     private let stampWidth: CGFloat = 220
     
-    private var pageBackground: Color { colorScheme == .dark ? Color(hex: 0x0A0A0A) : Color(hex: 0xE0E0E0) }
-    private var dotColor: Color { colorScheme == .dark ? Color.white.opacity(0.09) : Color.black.opacity(0.08) }
-    private var textSecondary: Color {
-        (colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717))
-            .opacity(colorScheme == .dark ? 0.72 : 0.62)
-    }
+    private var pageBackground: Color { AppColor.page }
+    private var dotColor: Color { AppColor.divider }
+    private var textSecondary: Color { AppColor.textWeak }
     
     private var loggedCities: [String] {
         AchievementsCatalog.loggedCities(from: tripStore.trips)
@@ -24,9 +21,9 @@ struct PassportView: View {
                 .ignoresSafeArea()
             
             ScrollView(.vertical, showsIndicators: true) {
-                LazyVStack(spacing: 28) {
+                LazyVStack(spacing: AppSpacing.sectionGap) {
                     if loggedCities.isEmpty {
-                        VStack(spacing: 12) {
+                        VStack(spacing: AppSpacing.sm) {
                             Image(AchievementsCatalog.cityStampAsset)
                                 .resizable()
                                 .interpolation(.high)
@@ -42,7 +39,7 @@ struct PassportView: View {
                         .padding(.horizontal, 24)
                     } else {
                         ForEach(loggedCities, id: \.self) { city in
-                            VStack(spacing: 10) {
+                            VStack(spacing: AppSpacing.sm) {
                                 Image(AchievementsCatalog.stampAsset(forCityName: city))
                                     .resizable()
                                     .interpolation(.high)
@@ -51,16 +48,16 @@ struct PassportView: View {
                                     .shadow(color: .black.opacity(colorScheme == .dark ? 0.35 : 0.12), radius: 16, y: 10)
                                 Text(city)
                                     .font(.app(15, weight: .semibold))
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(AppColor.textStrong)
                                     .multilineTextAlignment(.center)
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
                 }
-                .padding(.top, 24)
-                .padding(.bottom, 56)
-                .padding(.horizontal, 16)
+                .padding(.top, AppSpacing.pageTop)
+                .padding(.bottom, AppSpacing.pageBottom)
+                .padding(.horizontal, AppSpacing.pageInset)
             }
         }
         .navigationTitle("Stamps")

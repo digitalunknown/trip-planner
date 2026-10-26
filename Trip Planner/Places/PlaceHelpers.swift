@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import UIKit
 
 enum PlaceNaming {
@@ -103,6 +104,12 @@ enum PlaceImageResolver {
     }
 }
 
+struct PlaceTripDestination: Hashable, Identifiable {
+    var id: UUID { tripID }
+    let tripID: UUID
+    var eventID: UUID?
+}
+
 enum PlaceTripMembership {
     /// Trips that contain a matching activity for this place (or the place’s source trip).
     static func trips(for place: Place, in trips: [Trip]) -> [Trip] {
@@ -145,6 +152,30 @@ enum PlaceTripMembership {
         }
     }
     
+    /// The activity on a trip that corresponds to this place, if any.
+    static func matchingEvent(for place: Place, in trip: Trip) -> EventItem? {
+        let events = trip.days.flatMap(\.events) + trip.parkedIdeas
+        if let sourceEventID = place.sourceEventID,
+           let match = events.first(where: { $0.id == sourceEventID }) {
+            return match
+        }
+        
+        let key = PlaceNaming.normalizedLocationKey(place.location)
+        if !key.isEmpty,
+           let match = events.first(where: { PlaceNaming.normalizedLocationKey($0.location) == key }) {
+            return match
+        }
+        
+        if let plat = place.latitude, let plon = place.longitude {
+            return events.first { event in
+                guard let elat = event.latitude, let elon = event.longitude else { return false }
+                return abs(plat - elat) < 0.002 && abs(plon - elon) < 0.002
+            }
+        }
+        
+        return nil
+    }
+    
     /// How many trips contain a matching activity for this place.
     static func tripCount(for place: Place, in trips: [Trip]) -> Int {
         Self.trips(for: place, in: trips).count
@@ -153,5 +184,77 @@ enum PlaceTripMembership {
     static func badgeText(tripCount: Int) -> String? {
         guard tripCount > 0 else { return nil }
         return tripCount == 1 ? "in 1 trip" : "in \(tripCount) trips"
+    }
+}
+
+struct PlaceAddToTripSheet: View {
+    let trips: [Trip]
+    let subtitle: (Trip) -> String?
+    let onSelect: (Trip) -> Void
+    let onCancel: () -> Void
+    
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .top) {
+                AppDetailSurface.page(for: colorScheme)
+                    .ignoresSafeArea()
+                
+                if trips.isEmpty {
+                    emptyState
+                } else {
+                    Form {
+                        Section {
+                            ForEach(trips) { trip in
+                                tripRow(trip)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 2, trailing: 0))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                            }
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                    .appFormPageSpacing()
+                    .listRowSpacing(2)
+                    .environment(\.defaultMinListRowHeight, 1)
+                }
+            }
+            .navigationTitle("Add to Trip")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    LiquidGlassIconButton(systemName: "xmark", accessibilityLabelText: "Close") {
+                        onCancel()
+                    }
+                }
+            }
+        }
+        .presentationDetents(trips.isEmpty || trips.count < 6 ? [.medium] : [.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+    
+    private func tripRow(_ trip: Trip) -> some View {
+        Button {
+            onSelect(trip)
+        } label: {
+            TripResultRow(trip: trip, subtitle: subtitle(trip))
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private var emptyState: some View {
+        VStack(spacing: AppSpacing.sm) {
+            AppIcon(lucide: "backpack", size: 32, color: AppColor.textWeak)
+            Text("No trips yet")
+                .font(.app(15, weight: .semibold))
+                .foregroundStyle(AppColor.textStrong)
+            Text("Create a trip first, then add this place to it.")
+                .font(.app(13, weight: .medium))
+                .foregroundStyle(AppColor.textWeak)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, AppSpacing.xl)
     }
 }

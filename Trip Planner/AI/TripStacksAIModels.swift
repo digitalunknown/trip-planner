@@ -129,9 +129,25 @@ extension AITripDraft {
     }
 }
 
+/// Where the user physically is, so "near me" / "within 5 hours of me" has an anchor.
+struct AIUserLocation: Codable, Hashable {
+    var label: String
+    var latitude: Double
+    var longitude: Double
+    
+    init(label: String, latitude: Double, longitude: Double) {
+        self.label = label
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+}
+
 struct AIRequest: Codable {
     var mode: AIMode
     var text: String
+    /// The user's untouched prompt. `text` carries appended count/itinerary
+    /// boilerplate, which would otherwise skew the proxy's intent classifier.
+    var rawText: String?
     var scopeHint: String
     var tripContext: PlanDayTripContext?
     var preferences: PlanDayUserPreferences?
@@ -139,20 +155,25 @@ struct AIRequest: Codable {
     var existingPlaces: [AIPlaceSummary]
     var existingTrips: [AITripSummary]
     var facts: PlanDayFacts
+    /// Only sent when the prompt actually measures distance from the user.
+    var userLocation: AIUserLocation?
     
     init(
         mode: AIMode,
         text: String,
+        rawText: String? = nil,
         scopeHint: String = "",
         tripContext: PlanDayTripContext? = nil,
         preferences: PlanDayUserPreferences? = nil,
         existingItems: [PlanDayItem] = [],
         existingPlaces: [AIPlaceSummary] = [],
         existingTrips: [AITripSummary] = [],
-        facts: PlanDayFacts = PlanDayFacts()
+        facts: PlanDayFacts = PlanDayFacts(),
+        userLocation: AIUserLocation? = nil
     ) {
         self.mode = mode
         self.text = text
+        self.rawText = rawText
         self.scopeHint = scopeHint
         self.tripContext = tripContext
         self.preferences = preferences
@@ -160,6 +181,37 @@ struct AIRequest: Codable {
         self.existingPlaces = existingPlaces
         self.existingTrips = existingTrips
         self.facts = facts
+        self.userLocation = userLocation
+    }
+}
+
+/// How the proxy read the ask. Lets the app show picks instead of an itinerary
+/// when the user asked a discovery question from the Plan Trip sheet.
+struct AIRouting: Codable, Hashable {
+    var requestedMode: String
+    var resolvedMode: String
+    var geoScope: String
+    var deliverable: String
+    var isRecommendation: Bool
+    var radiusMiles: Double?
+    var driveHours: Double?
+    
+    init(
+        requestedMode: String = "",
+        resolvedMode: String = "",
+        geoScope: String = "",
+        deliverable: String = "",
+        isRecommendation: Bool = false,
+        radiusMiles: Double? = nil,
+        driveHours: Double? = nil
+    ) {
+        self.requestedMode = requestedMode
+        self.resolvedMode = resolvedMode
+        self.geoScope = geoScope
+        self.deliverable = deliverable
+        self.isRecommendation = isRecommendation
+        self.radiusMiles = radiusMiles
+        self.driveHours = driveHours
     }
 }
 
@@ -170,6 +222,7 @@ struct AIResponse: Codable {
     var items: [PlanDayItem]
     var trip: AITripDraft?
     var alternatives: [AITripDraft]
+    var routing: AIRouting?
     
     init(
         intent: String = "",
@@ -177,7 +230,8 @@ struct AIResponse: Codable {
         clarificationPrompt: String = "",
         items: [PlanDayItem] = [],
         trip: AITripDraft? = nil,
-        alternatives: [AITripDraft] = []
+        alternatives: [AITripDraft] = [],
+        routing: AIRouting? = nil
     ) {
         self.intent = intent
         self.clarificationNeeded = clarificationNeeded
@@ -185,6 +239,7 @@ struct AIResponse: Codable {
         self.items = items
         self.trip = trip
         self.alternatives = alternatives
+        self.routing = routing
     }
 }
 

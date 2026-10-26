@@ -8,6 +8,7 @@ class TripStore {
     private let ioQueue = DispatchQueue(label: "TripStore.ioQueue", qos: .utility)
     private var presenter: ICloudFilePresenter?
     private var hasCompletedInitialLoad: Bool = false
+    private var lastTouchedTripID: UUID?
     
     private var urls: (active: URL, local: URL, iCloud: URL?) { CloudSyncPaths.tripsURL() }
     
@@ -50,6 +51,7 @@ class TripStore {
                 print("Failed to save trips: \(error)")
             }
         }
+        publishWidgetSnapshot(trips: snapshot)
     }
     
     func load() {
@@ -93,6 +95,7 @@ class TripStore {
                     self.trips = decoded
                     self.isLoadingTrips = false
                     self.hasCompletedInitialLoad = true
+                    self.publishWidgetSnapshot(trips: decoded)
                 }
             } catch {
                 print("Failed to load trips: \(error)")
@@ -143,11 +146,13 @@ class TripStore {
     }
     
     func addTrip(_ trip: Trip) {
+        lastTouchedTripID = trip.id
         trips.append(trip)
         save()
     }
     
     func updateTrip(_ trip: Trip) {
+        lastTouchedTripID = trip.id
         if let index = trips.firstIndex(where: { $0.id == trip.id }) {
             trips[index] = trip
             save()
@@ -162,6 +167,14 @@ class TripStore {
     func deleteTrip(at offsets: IndexSet) {
         trips.remove(atOffsets: offsets)
         save()
+    }
+    
+    func publishWidgetSnapshot() {
+        publishWidgetSnapshot(trips: trips)
+    }
+    
+    private func publishWidgetSnapshot(trips: [Trip]) {
+        WidgetSnapshotPublisher.publish(trips: trips, lastTouchedID: lastTouchedTripID)
     }
 }
 

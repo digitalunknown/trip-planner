@@ -39,6 +39,24 @@ enum PlaceType: String, Codable, CaseIterable, Identifiable, Hashable {
         }
     }
     
+    /// Filter-chip label (plural where it reads naturally).
+    var chipTitle: String {
+        switch self {
+        case .unspecified: return title
+        case .restaurant: return "Restaurants"
+        case .cafe: return "Cafes"
+        case .bar: return "Bars"
+        case .hotel: return "Hotels"
+        case .attraction: return "Attractions"
+        case .museum: return "Museums"
+        case .park: return "Parks"
+        case .beach: return "Beaches"
+        case .hike: return "Hikes"
+        case .viewpoint: return "Viewpoints"
+        case .shopping, .nightlife, .kids, .other: return title
+        }
+    }
+    
     var iconSystemName: String {
         switch self {
         case .unspecified: return "tag"

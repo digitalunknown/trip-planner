@@ -7,6 +7,7 @@ import QuickLook
 struct NewFlightSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appAccentColor) private var appAccentColor
+    @Environment(\.colorScheme) private var colorScheme
     
     @Binding var fromName: String
     @Binding var fromCode: String
@@ -40,6 +41,7 @@ struct NewFlightSheet: View {
     var isEditing: Bool
     var onSave: () -> Void
     var onDelete: (() -> Void)?
+    var accent: EventAccent = .cream
     
     @State private var showCostSheet = false
     @State private var showDocumentImagePicker = false
@@ -162,106 +164,32 @@ struct NewFlightSheet: View {
         }
     }
     
+    private var selectedDayTitle: String {
+        dayOptions.first(where: { $0.id == selectedDayID })?.title ?? ""
+    }
+    
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Picker(selection: $selectedDayID) {
-                        ForEach(dayOptions) { option in
-                            Text(option.title)
-                                .tag(Optional(option.id))
-                        }
-                    } label: {
-                        Label("Day", appIcon: "calendar", color: .primary)
-                    }
-                }
+            ZStack(alignment: .top) {
+                AppDetailSurface.page(for: colorScheme)
+                    .ignoresSafeArea()
                 
-                Section {
-                    Picker(selection: $travelMode) {
-                        ForEach(TravelMode.allCases, id: \.self) { mode in
-                            Label(mode.title, appIcon: mode.systemImageName)
-                                .tag(mode)
-                        }
-                    } label: {
-                        Label("Travel method", appIcon: "route", color: .primary, iconTitleSpacing: 4)
-                    }
-                    .pickerStyle(.menu)
-                    
-                    if travelMode == .drive {
-                        clearableTextField(
-                            title: "Vehicle / route",
-                            text: $flightNumber,
-                            icon: "car-front",
-                            capitalization: nil
-                        )
-                    }
-                }
+                LinearGradient(
+                    colors: [
+                        accent.background.opacity(0.28),
+                        accent.background.opacity(0.12),
+                        .clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 260)
+                .ignoresSafeArea(edges: [.top, .horizontal])
+                .allowsHitTesting(false)
                 
-                if let referenceFieldTitle, travelMode != .drive {
-                    Section {
-                        clearableTextField(
-                            title: referenceFieldTitle,
-                            text: $flightNumber,
-                            icon: referenceFieldIcon,
-                            capitalization: (travelMode == .flight || travelMode == .train) ? .characters : nil
-                        )
-                    }
-                }
-                
-                Section {
-                    locationFields(isFrom: true)
-                    DatePicker(selection: $startTime, displayedComponents: .hourAndMinute) {
-                        Label("Time", appIcon: "clock")
-                    }
-                } header: {
-                    Text("From")
-                }
-                
-                Section {
-                    locationFields(isFrom: false)
-                    DatePicker(selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute) {
-                        Label("Time", appIcon: "clock")
-                    }
-                } header: {
-                    Text("To")
-                }
-                
-                Section {
-                    Button {
-                        showCostSheet = true
-                    } label: {
-                        HStack {
-                            Label("Cost", appIcon: "wallet")
-                            Spacer()
-                            Text(CurrencyFormatting.string(for: cost, currencyCode: costCurrencyCode))
-                                .foregroundStyle(.primary)
-                                .monospacedDigit()
-                        }
-                    }
-                }
-                
-                documentsSection
-
-                Section {
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...12)
-                        .textInputAutocapitalization(.sentences)
-                }
-                
-                if isEditing {
-                    DetailActionButtonStack {
-                        Button {
-                            onDelete?()
-                            dismiss()
-                        } label: {
-                            Label("Delete \(travelMode.title)", appIcon: "trash")
-                        }
-                        .buttonStyle(.destructiveCapsuleBlock)
-                        .detailActionRow()
-                    }
-                }
+                travelForm
             }
-            .navigationTitle(isEditing ? travelMode.title : "Add Travel")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -347,6 +275,244 @@ struct NewFlightSheet: View {
                 .tint(.primary)
                 .presentationDetents([.large])
         }
+        .sheetAccentDragIndicator(accent.background)
+    }
+    
+    private var travelForm: some View {
+        Form {
+            heroSection
+            daySection
+            if let referenceFieldTitle {
+                referenceSection(title: referenceFieldTitle)
+            }
+            endpointSection(title: "From", isFrom: true)
+            endpointSection(title: "To", isFrom: false)
+            costSection
+            documentsSection
+            notesSection
+            if isEditing {
+                deleteSection
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .appFormPageSpacing()
+    }
+    
+    private var heroSection: some View {
+        Section {
+            Menu {
+                ForEach(TravelMode.allCases, id: \.self) { mode in
+                    Button {
+                        travelMode = mode
+                    } label: {
+                        if mode == travelMode {
+                            Label(mode.title, systemImage: "checkmark")
+                        } else {
+                            Text(mode.title)
+                        }
+                    }
+                }
+            } label: {
+                Text(travelMode.title)
+                    .font(.appDisplay)
+                    .foregroundStyle(AppColor.textStrong)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Choose travel method")
+            .padding(.horizontal, 18)
+            .padding(.top, 6)
+            .padding(.bottom, 10)
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+    
+    private var daySection: some View {
+        Section {
+            Menu {
+                ForEach(dayOptions) { option in
+                    Button {
+                        selectedDayID = option.id
+                    } label: {
+                        if option.id == selectedDayID {
+                            Label(option.title, systemImage: "checkmark")
+                        } else {
+                            Text(option.title)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    AppIcon(lucide: "calendar-1", size: AppLucide.fieldSize, color: AppColor.textStrong)
+                    Text("Day")
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                    Spacer(minLength: 8)
+                    HStack(spacing: 5) {
+                        Text(selectedDayTitle)
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(AppColor.textStrong)
+                            .lineLimit(1)
+                        AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                    }
+                }
+                .padding(AppSpacing.fieldPadding)
+                .background(AppColor.card, in: Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+    
+    private func referenceSection(title: String) -> some View {
+        Section {
+            clearableTextField(
+                title: title,
+                text: $flightNumber,
+                icon: referenceFieldIcon,
+                capitalization: (travelMode == .flight || travelMode == .train) ? .characters : nil
+            )
+            .padding(AppSpacing.fieldPadding)
+            .background(AppColor.card, in: Capsule(style: .continuous))
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+    
+    private func endpointSection(title: String, isFrom: Bool) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                AppSectionHeader(title)
+                    .padding(.leading, 20)
+                
+                VStack(spacing: 12) {
+                    locationFields(isFrom: isFrom)
+                    
+                    travelFieldDivider
+                    
+                    travelFieldRow(lucide: "clock", title: "Time") {
+                        DatePicker(
+                            "",
+                            selection: isFrom ? $startTime : $endTime,
+                            in: isFrom ? Date.distantPast...Date.distantFuture : startTime...Date.distantFuture,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .labelsHidden()
+                        .appDatePickerFont()
+                        .tint(AppColor.textStrong)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
+                .background(
+                    AppColor.card,
+                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                )
+            }
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+    
+    private var costSection: some View {
+        Section {
+            Button {
+                showCostSheet = true
+            } label: {
+                HStack(spacing: 10) {
+                    AppIcon(lucide: "wallet", size: AppLucide.fieldSize, color: AppColor.textStrong)
+                    Text("Cost")
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                    Spacer(minLength: 8)
+                    Text(CurrencyFormatting.string(for: cost, currencyCode: costCurrencyCode))
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                        .monospacedDigit()
+                }
+                .padding(AppSpacing.fieldPadding)
+                .background(AppColor.card, in: Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+    
+    private var notesSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                AppSectionHeader("Notes")
+                    .padding(.leading, 20)
+                
+                TextField("", text: $notes, axis: .vertical)
+                    .font(.app(15, weight: .medium))
+                    .foregroundStyle(AppColor.textStrong)
+                    .lineLimit(3...12)
+                    .textInputAutocapitalization(.sentences)
+                    .padding(AppSpacing.cardPadding)
+                    .frame(minHeight: 100, alignment: .topLeading)
+                    .background(
+                        AppColor.card,
+                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    )
+            }
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+    
+    private var deleteSection: some View {
+        Section {
+            Button {
+                onDelete?()
+                dismiss()
+            } label: {
+                DetailDualActionButton(
+                    lucide: "trash-2",
+                    title: "Delete \(travelMode.title)",
+                    foreground: .red,
+                    fill: Color.red.opacity(colorScheme == .dark ? 0.25 : 0.14)
+                )
+            }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+    
+    private func travelFieldRow<Trailing: View>(
+        lucide: String,
+        title: String,
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        HStack(spacing: 8) {
+            AppIcon(lucide: lucide, size: AppLucide.fieldSize, color: AppColor.textStrong)
+            Text(title)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(AppColor.textStrong)
+            Spacer(minLength: 8)
+            trailing()
+        }
+    }
+    
+    private var travelFieldDivider: some View {
+        Rectangle()
+            .fill(AppColor.textStrong.opacity(0.05))
+            .frame(height: 1)
     }
 
     private var documentsSection: some View {
@@ -386,8 +552,9 @@ struct NewFlightSheet: View {
                 .padding(.vertical, 2)
             }
         } header: {
-            Text("Documents")
+            AppSectionHeader("Images & Documents")
         }
+        .appDetailFieldBackground()
     }
 
     private func documentCard(_ document: EventDocument) -> some View {
@@ -403,7 +570,9 @@ struct NewFlightSheet: View {
                 Rectangle()
                     .fill(Color(.tertiarySystemGroupedBackground))
                     .overlay {
-                        AppIcon(systemName: "doc.fill", size: 18, color: .secondary)
+                        Image(systemName: "doc.fill")
+                            .font(.app(17, weight: .semibold))
+                            .foregroundStyle(AppColor.textWeak)
                     }
             }
         }
@@ -416,7 +585,9 @@ struct NewFlightSheet: View {
         return ZStack {
             Rectangle()
                 .fill(Color(.tertiarySystemGroupedBackground))
-            AppIcon(systemName: "plus", size: 16, color: .secondary)
+            Image(systemName: "plus")
+                .font(.app(15, weight: .semibold))
+                .foregroundStyle(AppColor.textWeak)
         }
         .frame(width: previewSize, height: previewSize)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -473,8 +644,11 @@ struct NewFlightSheet: View {
                 longitude: longitude,
                 searchRegion: tripLocationRegion
             )
+            travelFieldDivider
             airportCodeField(title: "Airport code", code: code, icon: "hash")
+            travelFieldDivider
             clearableTextField(title: "Terminal", text: terminal, icon: "building-2", capitalization: .characters)
+            travelFieldDivider
             clearableTextField(title: "Gate", text: gate, icon: "door-open", capitalization: .characters)
             
         case .train:
@@ -485,6 +659,7 @@ struct NewFlightSheet: View {
                 resultTypes: [.pointOfInterest, .address],
                 searchRegion: tripLocationRegion
             )
+            travelFieldDivider
             stationCodeField(title: "Station code", code: code, icon: "hash")
             
         case .drive, .walk:
@@ -500,8 +675,10 @@ struct NewFlightSheet: View {
     
     private func airportCodeField(title: String, code: Binding<String>, icon: String) -> some View {
         HStack(spacing: 10) {
-            AppIcon(lucide: icon, size: 17)
+            AppIcon(lucide: icon, size: AppLucide.fieldSize, color: AppColor.textStrong)
             TextField(title, text: code)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(AppColor.textStrong)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
                 .onChange(of: code.wrappedValue) { _, newValue in
@@ -515,7 +692,7 @@ struct NewFlightSheet: View {
                 Button {
                     code.wrappedValue = ""
                 } label: {
-                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                    AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
                 }
                 .buttonStyle(.plain)
             }
@@ -524,8 +701,10 @@ struct NewFlightSheet: View {
     
     private func stationCodeField(title: String, code: Binding<String>, icon: String) -> some View {
         HStack(spacing: 10) {
-            AppIcon(lucide: icon, size: 17)
+            AppIcon(lucide: icon, size: AppLucide.fieldSize, color: AppColor.textStrong)
             TextField(title, text: code)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(AppColor.textStrong)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
                 .onChange(of: code.wrappedValue) { _, newValue in
@@ -539,7 +718,7 @@ struct NewFlightSheet: View {
                 Button {
                     code.wrappedValue = ""
                 } label: {
-                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                    AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
                 }
                 .buttonStyle(.plain)
             }
@@ -553,8 +732,10 @@ struct NewFlightSheet: View {
         capitalization: TextInputAutocapitalization? = nil
     ) -> some View {
         HStack(spacing: 10) {
-            AppIcon(lucide: icon, size: 17)
+            AppIcon(lucide: icon, size: AppLucide.fieldSize, color: AppColor.textStrong)
             TextField(title, text: text)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(AppColor.textStrong)
                 .textInputAutocapitalization(capitalization)
                 .autocorrectionDisabled()
             
@@ -562,7 +743,7 @@ struct NewFlightSheet: View {
                 Button {
                     text.wrappedValue = ""
                 } label: {
-                    AppIcon(systemName: "xmark.circle.fill", size: 16, color: .secondary)
+                    AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
                 }
                 .buttonStyle(.plain)
             }

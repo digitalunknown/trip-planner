@@ -11,6 +11,7 @@ struct MyTripsView: View {
     
     @Environment(TripStore.self) private var tripStore
     @Environment(PlaceStore.self) private var placeStore
+    @Environment(WidgetDeepLinkRouter.self) private var widgetDeepLink
     @EnvironmentObject private var auth: AppleSignInManager
     @State private var isPresentingSignInGate: Bool = false
     @State private var showingNewTrip = false
@@ -26,6 +27,14 @@ struct MyTripsView: View {
     @State private var tripPendingDelete: Trip?
     
     private let pendingCreateTripFlagKey = "pendingCreateTripFromQuickAction"
+    
+    private func openWidgetDeepLinkIfNeeded() {
+        guard let destination = widgetDeepLink.destination else { return }
+        guard tripStore.trips.contains(where: { $0.id == destination.tripID }) else { return }
+        var path = NavigationPath()
+        path.append(destination.tripID)
+        navigationPath = path
+    }
     
     private func requestCreateTrip() {
         if auth.isSignedIn {
@@ -57,14 +66,11 @@ struct MyTripsView: View {
     }
     
     /// Year label above trip cards — keep metrics identical across segments to avoid layout jump.
-    private func tripYearHeader(_ title: String, isFirst: Bool) -> some View {
-        HStack {
-            Text(title)
-                .font(.appCaption)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .padding(.top, isFirst ? 0 : 8)
+    private func tripYearHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.app(13, weight: .medium))
+            .foregroundStyle(AppColor.textWeak)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     var body: some View {
@@ -92,18 +98,23 @@ struct MyTripsView: View {
                     tripListView
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Trips")
-            .navigationBarTitleDisplayMode(.large)
+            .background(AppDetailSurface.page)
+            .appRootNavigationTitle("Trips")
             .navigationDestination(for: UUID.self) { tripID in
                 if let index = tripStore.trips.firstIndex(where: { $0.id == tripID }) {
-                    TripDetailView(trip: Binding(
-                        get: { tripStore.trips[index] },
-                        set: { newValue in
-                            tripStore.trips[index] = newValue
-                            tripStore.save()
-                        }
-                    ))
+                    let link = widgetDeepLink.destination
+                    TripDetailView(
+                        trip: Binding(
+                            get: { tripStore.trips[index] },
+                            set: { newValue in
+                                tripStore.trips[index] = newValue
+                                tripStore.save()
+                            }
+                        ),
+                        initialEventID: link?.tripID == tripID ? link?.itemID : nil,
+                        initialDayID: link?.tripID == tripID ? link?.dayID : nil,
+                        initialOpenPlanDay: link?.tripID == tripID && (link?.opensPlanDay ?? false)
+                    )
                 }
             }
             .toolbar {
@@ -115,16 +126,14 @@ struct MyTripsView: View {
                             } label: {
                                 LiquidGlassToolbarIconLabel(systemName: "sparkles")
                             }
-                            .buttonStyle(.plain)
-                            .tint(.primary)
+                            .liquidGlassToolbarControl()
                         }
                         Button {
                             requestCreateTrip()
                         } label: {
                             LiquidGlassToolbarIconLabel(systemName: "plus")
                         }
-                        .buttonStyle(.plain)
-                        .tint(.primary)
+                        .liquidGlassToolbarControl()
                     }
                 }
             }
@@ -139,26 +148,7 @@ struct MyTripsView: View {
                 .tint(.primary)
             }
             .sheet(isPresented: $showingAICreateTrip) {
-                TripStacksAISheet(
-                    mode: .createTrip,
-                    existingTrips: tripStore.trips.map { trip in
-                        AITripSummary(
-                            name: trip.name,
-                            destination: trip.destination,
-                            startDate: trip.isDatesSet ? isoDate(trip.startDate) : nil,
-                            endDate: trip.isDatesSet ? isoDate(trip.endDate) : nil,
-                            isDatesSet: trip.isDatesSet
-                        )
-                    },
-                    onCommitTrip: commitAITrip,
-                    onCreateManually: {
-                        // Wait for the AI sheet to finish dismissing before presenting New Trip.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            requestCreateTrip()
-                        }
-                    }
-                )
-                .tint(.primary)
+                aiCreateTripSheet
             }
             .onReceive(NotificationCenter.default.publisher(for: .openNewTripSheet)) { _ in
                 openCreateTripSheetIfNeeded(force: true)
@@ -168,6 +158,13 @@ struct MyTripsView: View {
             }
             .onAppear {
                 openCreateTripSheetIfNeeded(force: false)
+                openWidgetDeepLinkIfNeeded()
+            }
+            .onChange(of: widgetDeepLink.destination) { _, _ in
+                openWidgetDeepLinkIfNeeded()
+            }
+            .onChange(of: tripStore.isLoadingTrips) { _, loading in
+                if !loading { openWidgetDeepLinkIfNeeded() }
             }
             .sheet(item: $editingTrip) { trip in
                 if let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) {
@@ -503,6 +500,50 @@ struct MyTripsView: View {
         }
     }
     
+    private var aiCreateTripSheet: some View {
+        let summaries: [AITripSummary] = tripStore.trips.map { trip in
+            AITripSummary(
+                name: trip.name,
+                destination: trip.destination,
+                startDate: trip.isDatesSet ? isoDate(trip.startDate) : nil,
+                endDate: trip.isDatesSet ? isoDate(trip.endDate) : nil,
+                isDatesSet: trip.isDatesSet
+            )
+        }
+        return TripStacksAISheet(
+            mode: .createTrip,
+            existingTrips: summaries,
+            onCommitPlaces: commitAIRecommendations,
+            onCommitTrip: commitAITrip,
+            onCreateManually: {
+                // Wait for the AI sheet to finish dismissing before presenting New Trip.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    requestCreateTrip()
+                }
+            }
+        )
+        .tint(.primary)
+    }
+    
+    /// Saves picks from a discovery ask in the Plan Trip sheet — no trip is created,
+    /// because the user asked where to go, not for an itinerary.
+    private func commitAIRecommendations(_ items: [PlanDayItem]) {
+        for item in items {
+            let name = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { continue }
+            let place = Place(
+                name: name,
+                location: item.location,
+                note: item.notes,
+                photoData: item.photoData,
+                latitude: item.latitude,
+                longitude: item.longitude,
+                placeType: PlaceType.fromAICategory(item.category)
+            )
+            placeStore.add(place)
+        }
+    }
+    
     private func applySeedItems(_ items: [PlanDayItem], to days: inout [TripDay]) {
         guard !days.isEmpty else { return }
         let now = Date()
@@ -669,24 +710,17 @@ struct MyTripsView: View {
             }
         })
         
-        return ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    Color.clear
-                        .frame(height: 1)
-                        .id("top")
-                    
-                    if segments.count > 1 {
-                        Picker("", selection: $selectedSegment) {
-                            ForEach(segments) { seg in
-                                Text(seg.rawValue).tag(seg)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.bottom, RootHomeMetrics.chromeToContent)
-                    }
-                    
-                    LazyVStack(spacing: RootHomeMetrics.chromeToContent, pinnedViews: []) {
+        return ScrollView {
+            VStack(spacing: 0) {
+                if segments.count > 1 {
+                    HomeCapsuleSegmentedControl(
+                        segments: segments,
+                        selection: $selectedSegment
+                    )
+                    .padding(.bottom, RootHomeMetrics.chromeToContent)
+                }
+                
+                LazyVStack(spacing: RootHomeMetrics.chromeToContent, pinnedViews: []) {
                     if filteredTrips.isEmpty {
                         ContentUnavailableView(
                             selectedSegment == .past ? "No Past Trips" : (selectedSegment == .unscheduled ? "No Unscheduled Trips" : "No Upcoming Trips"),
@@ -695,38 +729,29 @@ struct MyTripsView: View {
                         )
                         .frame(maxWidth: .infinity)
                         .padding(.top, 36)
+                    } else if selectedSegment == .unscheduled {
+                        ForEach(filteredTrips) { trip in
+                            tripCardRow(trip)
+                        }
                     } else {
-                        if selectedSegment == .unscheduled {
+                        ForEach(sortedYears, id: \.self) { year in
                             Section {
-                                ForEach(filteredTrips) { trip in
+                                let tripsForYear = (groupedTrips[year] ?? []).sorted { a, b in
+                                    switch selectedSegment {
+                                    case .upcoming:
+                                        return a.startDate < b.startDate
+                                    case .past:
+                                        return a.startDate > b.startDate
+                                    case .unscheduled:
+                                        return a.id.uuidString > b.id.uuidString
+                                    }
+                                }
+                                
+                                ForEach(tripsForYear) { trip in
                                     tripCardRow(trip)
                                 }
                             } header: {
-                                // Match Upcoming/Past year-header height so the list doesn't jump.
-                                tripYearHeader("0000", isFirst: true)
-                                    .opacity(0)
-                                    .accessibilityHidden(true)
-                            }
-                        } else {
-                            ForEach(sortedYears, id: \.self) { year in
-                                Section {
-                                    let tripsForYear = (groupedTrips[year] ?? []).sorted { a, b in
-                                        switch selectedSegment {
-                                        case .upcoming:
-                                            return a.startDate < b.startDate
-                                        case .past:
-                                            return a.startDate > b.startDate
-                                        case .unscheduled:
-                                            return a.id.uuidString > b.id.uuidString
-                                        }
-                                    }
-                                    
-                                    ForEach(tripsForYear) { trip in
-                                        tripCardRow(trip)
-                                    }
-                                } header: {
-                                    tripYearHeader(String(year), isFirst: year == sortedYears.first)
-                                }
+                                tripYearHeader(String(year))
                             }
                         }
                     }
@@ -751,18 +776,12 @@ struct MyTripsView: View {
             }
             .onChange(of: selectedSegment) { _, _ in
                 Haptics.bump()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    withTransaction(Transaction(animation: nil)) {
-                        proxy.scrollTo("top", anchor: .top)
-                    }
-                }
             }
-        }
     }
     
     @ViewBuilder
     private func tripCardRow(_ trip: Trip) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: TripVisualMetrics.coverRadius, style: .continuous)
         Button {
             navigationPath.append(trip.id)
         } label: {
@@ -773,14 +792,6 @@ struct MyTripsView: View {
         .contentShape(shape)
         .contextMenu {
             tripCardContextMenu(trip)
-        } preview: {
-            // Don’t clipShape the full card — corner radius would eat the
-            // bottom text line. System preview chrome already rounds the container.
-            TripCardView(trip: trip)
-                .padding(16)
-                .frame(width: 300)
-                .fixedSize(horizontal: true, vertical: true)
-                .background(Color(.systemBackground))
         }
     }
     
@@ -789,7 +800,7 @@ struct MyTripsView: View {
         Button {
             navigationPath.append(trip.id)
         } label: {
-            Label("View Trip", appIcon: "arrow.right.circle")
+            Label("View Trip", menuIcon: "arrow.right.circle")
         }
         
         Divider()
@@ -798,27 +809,27 @@ struct MyTripsView: View {
             Button {
                 tripForUnsplashCoverPicker = trip
             } label: {
-                Label("Choose from Unsplash", appIcon: "sparkles")
+                Label("Choose from Unsplash", menuIcon: "sparkles")
             }
             
             Button {
                 tripForImagePicker = trip
                 showImagePicker = true
             } label: {
-                Label("Upload from Photos", appIcon: "photo.on.rectangle")
+                Label("Upload from Photos", menuIcon: "photo.on.rectangle")
             }
         } label: {
             let hasCover = trip.coverImageData != nil
             Label(
                 hasCover ? "Update Cover Image" : "Add Cover Image",
-                appIcon: hasCover ? "photo" : "photo.badge.plus"
+                menuIcon: hasCover ? "photo" : "photo.badge.plus"
             )
         }
         
         Button {
             editingTrip = trip
         } label: {
-            Label("Edit Trip", appIcon: "square.and.pencil")
+            Label("Edit Trip", menuIcon: "square.and.pencil")
         }
         
         if auth.isSignedIn {
@@ -827,7 +838,7 @@ struct MyTripsView: View {
                     tripStore.addTrip(trip.duplicatedTrip())
                 }
             } label: {
-                Label("Duplicate Trip", appIcon: "doc.on.doc")
+                Label("Duplicate Trip", menuIcon: "doc.on.doc")
             }
             
             Divider()
@@ -835,10 +846,43 @@ struct MyTripsView: View {
             Button(role: .destructive) {
                 tripPendingDelete = trip
             } label: {
-                Label("Delete Trip", appIcon: "trash")
+                Label("Delete Trip", menuIcon: "trash")
             }
-            .tint(.red)
         }
+    }
+}
+
+private struct HomeCapsuleSegmentedControl<Segment: Identifiable & Hashable>: View
+where Segment: RawRepresentable, Segment.RawValue == String {
+    let segments: [Segment]
+    @Binding var selection: Segment
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(segments) { segment in
+                let isSelected = segment == selection
+                Button {
+                    selection = segment
+                } label: {
+                    Text(segment.rawValue)
+                        .font(.app(13, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .frame(maxWidth: .infinity)
+                        .padding(AppSpacing.xs)
+                        .background {
+                            if isSelected {
+                                Capsule(style: .continuous)
+                                    .fill(AppColor.elevated)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2)
+        .background(AppColor.card, in: Capsule(style: .continuous))
     }
 }
 
@@ -1006,15 +1050,15 @@ struct EditTripView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Group {
                 Section {
                     HStack {
-                        TextField("Trip Name", text: $name)
+                        TextField("Trip name", text: $name)
                         if !name.isEmpty {
                             Button {
                                 name = ""
                             } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
+                                AppIcon(lucide: "circle-x", size: AppLucide.fieldSize, color: AppColor.textWeak)
                             }
                             .buttonStyle(.plain)
                         }
@@ -1029,29 +1073,44 @@ struct EditTripView: View {
                 }
                 
                 Section {
-                    Toggle("Set Dates", isOn: $isDatesSet)
-                        .tint(appAccentColor)
+                    Toggle(isOn: $isDatesSet) {
+                        Label("Set dates", appIcon: "calendar-plus")
+                    }
+                    .tint(appAccentColor)
                     
                     if isDatesSet {
-                        DatePicker(
-                            "Start date",
-                            selection: $startDate,
-                            in: Date.distantPast...Date.distantFuture,
-                            displayedComponents: .date
-                        )
+                        HStack {
+                            Label("Start date", appIcon: "calendar")
+                            Spacer(minLength: AppSpacing.xs)
+                            DatePicker(
+                                "",
+                                selection: $startDate,
+                                in: Date.distantPast...Date.distantFuture,
+                                displayedComponents: .date
+                            )
+                            .appCompactDateValue()
+                            .accessibilityLabel("Start date")
+                        }
                         
-                        DatePicker(
-                            "End date",
-                            selection: $endDate,
-                            in: startDate...Date.distantFuture,
-                            displayedComponents: .date
-                        )
+                        HStack {
+                            Label("End date", appIcon: "calendar")
+                            Spacer(minLength: AppSpacing.xs)
+                            DatePicker(
+                                "",
+                                selection: $endDate,
+                                in: startDate...Date.distantFuture,
+                                displayedComponents: .date
+                            )
+                            .appCompactDateValue()
+                            .accessibilityLabel("End date")
+                        }
                     } else {
                         Stepper(value: $unscheduledDaysCount, in: 1...30) {
                             HStack {
-                                Text("Number of Days")
+                                Text("Number of days")
                                 Spacer()
                                 Text("\(unscheduledDaysCount)")
+                                    .font(.app(15, weight: .medium))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -1062,7 +1121,7 @@ struct EditTripView: View {
                             showTotalCostsSheet = true
                         } label: {
                             HStack {
-                                Text("Total Cost")
+                                Text("Total cost")
                                 Spacer()
                                 Text(totalCostSummaryText)
                                     .foregroundStyle(.primary)
@@ -1130,20 +1189,19 @@ struct EditTripView: View {
                             }
                         } label: {
                             HStack {
-                                Text("Add Cover Photo")
+                                Text("Add cover photo")
                                 Spacer()
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundStyle(.secondary)
+                                AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
                             }
                         }
                     }
                 }
                 
                 Section {
-                    Toggle("Show Ideas", isOn: $showParkedIdeas)
+                    Toggle("Add extra ideas column", isOn: $showParkedIdeas)
                         .tint(appAccentColor)
                 } footer: {
-                    Text("Include an extra column for ideation not tied to a day")
+                    Text("The ideas column is not tied to a day and can be used to store activities on the side.")
                 }
                 
                 Section {
@@ -1157,7 +1215,11 @@ struct EditTripView: View {
                         }
                     }
                 }
+                }
+                .appDetailFieldBackground()
             }
+            .appFormPageSpacing()
+            .appDetailFormChrome()
             .alert("Delete Trip", isPresented: $showDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     onDelete()
@@ -1246,19 +1308,19 @@ struct EditTripView: View {
         }
         .alert("Update trip dates", isPresented: $showDateRemapAlert) {
             Button("Cancel", role: .cancel) {}
-            Button("Keep day order") {
+            Button("Keep Day Order") {
                 saveTrip(dayRemap: .byIndex(dropTrailing: true))
                 dismiss()
             }
-            Button("Match calendar dates", role: pendingDateRemapDropsTrailing ? .destructive : nil) {
+            Button("Match Calendar Dates", role: pendingDateRemapDropsTrailing ? .destructive : nil) {
                 saveTrip(dayRemap: .byCalendarDate)
                 dismiss()
             }
         } message: {
             if pendingDateRemapDropsTrailing {
-                Text("Your dates changed. Keep day order moves Day 1, Day 2, … onto the new dates (trailing days that no longer fit will be removed). Match calendar dates only keeps activities on days that still share the same calendar date — shifting the year often clears the itinerary.")
+                Text("Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates (trailing days that no longer fit will be removed). Match Calendar Dates only keeps activities on days that still share the same calendar date — shifting the year often clears the itinerary.")
             } else {
-                Text("Your dates changed. Keep day order moves Day 1, Day 2, … onto the new dates so your itinerary stays intact. Match calendar dates only keeps activities on days that still share the same calendar date.")
+                Text("Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates so your itinerary stays intact. Match Calendar Dates only keeps activities on days that still share the same calendar date.")
             }
         }
     }
@@ -1439,5 +1501,6 @@ struct EditTripView: View {
     .environment(TripStore())
     .environment(PlaceStore())
     .environment(RootTabChrome())
+    .environment(WidgetDeepLinkRouter())
 }
 

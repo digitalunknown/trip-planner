@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FF8A110D2F6E010100000E /* TripStacksWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FF8A11002F6E0101000001 /* TripStacksWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FFB2C3D62FA1234500ABCDEF /* Sticker in Frameworks */ = {isa = PBXBuildFile; productRef = FFB2C3D52FA1234500ABCDEF /* Sticker */; };
 		FFC0DE012FA8000100ABCD03 /* Lucide in Frameworks */ = {isa = PBXBuildFile; productRef = FFC0DE012FA8000100ABCD02 /* Lucide */; };
 		FFDF4C762F1FD9B80038C817 /* Glur in Frameworks */ = {isa = PBXBuildFile; productRef = FF6A1C3B2F6A1C3B2F6A1C3C /* Glur */; };
@@ -14,6 +15,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		FF8A11082F6E0101000009 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FF997AE22EF216E400B3A68E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF8A11032F6E0101000004;
+			remoteInfo = TripStacksWidgets;
+		};
 		FF997AF82EF216E600B3A68E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = FF997AE22EF216E400B3A68E /* Project object */;
@@ -30,7 +38,22 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		FF8A11072F6E0101000008 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				FF8A110D2F6E010100000E /* TripStacksWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		FF8A11002F6E0101000001 /* TripStacksWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TripStacksWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF997AEA2EF216E400B3A68E /* TripStacks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TripStacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF997AF72EF216E600B3A68E /* Trip PlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Trip PlannerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF997B012EF216E600B3A68E /* Trip PlannerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Trip PlannerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -40,6 +63,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FF8A110E2F6E010100000F /* Exceptions for "TripStacksWidgets" folder in "TripStacksWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FF8A11032F6E0101000004 /* TripStacksWidgets */;
+		};
 		FFDF51BB2F25744B0038C817 /* Exceptions for "Trip Planner" folder in "TripStacks" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -54,6 +84,19 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		FF8A11012F6E0101000002 /* TripStacksWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FF8A110E2F6E010100000F /* Exceptions for "TripStacksWidgets" folder in "TripStacksWidgets" target */,
+			);
+			path = TripStacksWidgets;
+			sourceTree = "<group>";
+		};
+		FF8A11022F6E0101000003 /* TripStacksWidgetSupport */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TripStacksWidgetSupport;
+			sourceTree = "<group>";
+		};
 		FF997AEC2EF216E400B3A68E /* Trip Planner */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -75,6 +118,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		FF8A11052F6E0101000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FF997AE72EF216E400B3A68E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -109,6 +159,8 @@
 				FFDF51B52F2571EF0038C817 /* Fonts */,
 				FFDF4CE92F215B8A0038C817 /* TripStacksRelease.entitlements */,
 				FF997AEC2EF216E400B3A68E /* Trip Planner */,
+				FF8A11022F6E0101000003 /* TripStacksWidgetSupport */,
+				FF8A11012F6E0101000002 /* TripStacksWidgets */,
 				FF997AFA2EF216E600B3A68E /* Trip PlannerTests */,
 				FF997B042EF216E600B3A68E /* Trip PlannerUITests */,
 				FF997AEB2EF216E400B3A68E /* Products */,
@@ -119,6 +171,7 @@
 			isa = PBXGroup;
 			children = (
 				FF997AEA2EF216E400B3A68E /* TripStacks.app */,
+				FF8A11002F6E0101000001 /* TripStacksWidgets.appex */,
 				FF997AF72EF216E600B3A68E /* Trip PlannerTests.xctest */,
 				FF997B012EF216E600B3A68E /* Trip PlannerUITests.xctest */,
 			);
@@ -136,6 +189,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		FF8A11032F6E0101000004 /* TripStacksWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF8A110C2F6E010100000D /* Build configuration list for PBXNativeTarget "TripStacksWidgets" */;
+			buildPhases = (
+				FF8A11042F6E0101000005 /* Sources */,
+				FF8A11052F6E0101000006 /* Frameworks */,
+				FF8A11062F6E0101000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FF8A11012F6E0101000002 /* TripStacksWidgets */,
+				FF8A11022F6E0101000003 /* TripStacksWidgetSupport */,
+			);
+			name = TripStacksWidgets;
+			packageProductDependencies = (
+			);
+			productName = TripStacksWidgets;
+			productReference = FF8A11002F6E0101000001 /* TripStacksWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		FF997AE92EF216E400B3A68E /* TripStacks */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FF997B0B2EF216E600B3A68E /* Build configuration list for PBXNativeTarget "TripStacks" */;
@@ -143,12 +219,15 @@
 				FF997AE62EF216E400B3A68E /* Sources */,
 				FF997AE72EF216E400B3A68E /* Frameworks */,
 				FF997AE82EF216E400B3A68E /* Resources */,
+				FF8A11072F6E0101000008 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				FF8A11092F6E010100000A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				FF8A11022F6E0101000003 /* TripStacksWidgetSupport */,
 				FF997AEC2EF216E400B3A68E /* Trip Planner */,
 			);
 			name = TripStacks;
@@ -217,8 +296,21 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					FF8A11032F6E0101000004 = {
+						CreatedOnToolsVersion = 26.2;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
 					FF997AE92EF216E400B3A68E = {
 						CreatedOnToolsVersion = 26.2;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
 					};
 					FF997AF62EF216E600B3A68E = {
 						CreatedOnToolsVersion = 26.2;
@@ -250,6 +342,7 @@
 			projectRoot = "";
 			targets = (
 				FF997AE92EF216E400B3A68E /* TripStacks */,
+				FF8A11032F6E0101000004 /* TripStacksWidgets */,
 				FF997AF62EF216E600B3A68E /* Trip PlannerTests */,
 				FF997B002EF216E600B3A68E /* Trip PlannerUITests */,
 			);
@@ -257,6 +350,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		FF8A11062F6E0101000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FF997AE82EF216E400B3A68E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -282,6 +382,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		FF8A11042F6E0101000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FF997AE62EF216E400B3A68E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -306,6 +413,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		FF8A11092F6E010100000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FF8A11032F6E0101000004 /* TripStacksWidgets */;
+			targetProxy = FF8A11082F6E0101000009 /* PBXContainerItemProxy */;
+		};
 		FF997AF92EF216E600B3A68E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FF997AE92EF216E400B3A68E /* TripStacks */;
@@ -319,6 +431,74 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		FF8A110A2F6E010100000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TripStacksWidgets/TripStacksWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = JA9P4WR529;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TripStacksWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TripStacks;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "digitalunknown.Trip-Planner.widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FF8A110B2F6E010100000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TripStacksWidgets/TripStacksWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = JA9P4WR529;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TripStacksWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TripStacks;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "digitalunknown.Trip-Planner.widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		FF997B092EF216E600B3A68E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -448,7 +628,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Trip Planner/Trip Planner.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = JA9P4WR529;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -466,7 +646,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "digitalunknown.Trip-Planner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -492,7 +672,7 @@
 				CODE_SIGN_ENTITLEMENTS = TripStacksRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = JA9P4WR529;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -510,7 +690,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "digitalunknown.Trip-Planner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -615,6 +795,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		FF8A110C2F6E010100000D /* Build configuration list for PBXNativeTarget "TripStacksWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF8A110A2F6E010100000B /* Debug */,
+				FF8A110B2F6E010100000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		FF997AE52EF216E400B3A68E /* Build configuration list for PBXProject "Trip Planner" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

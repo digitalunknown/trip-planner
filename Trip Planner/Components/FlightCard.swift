@@ -5,17 +5,13 @@ struct FlightCard: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
-    private var cardFill: Color {
-        colorScheme == .dark ? Color.white.opacity(0.10) : Color.white
-    }
+    private var cardFill: Color { AppDetailSurface.boardCard }
     private var cardStroke: Color {
         colorScheme == .dark ? Color.clear : Color.black.opacity(0.08)
     }
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
-    private var separatorColor: Color {
-        colorScheme == .dark ? Color.black : Color.black.opacity(0.10)
-    }
+    private var textPrimary: Color { AppColor.textStrong }
+    private var textSecondary: Color { AppColor.textWeak }
+    private var separatorColor: Color { AppColor.divider }
     private var accentColor: Color { flight.accent.background }
     private var accentForeground: Color { flight.accent.foreground }
     private var connectorColor: Color { accentColor.opacity(colorScheme == .dark ? 0.70 : 0.45) }
@@ -23,7 +19,7 @@ struct FlightCard: View {
     /// Same badge size as activity cards (52×52, radius 12, glyph 26).
     private let iconSide: CGFloat = 52
     private var iconCornerRadius: CGFloat { 12 }
-    private var iconGlyphSize: CGFloat { 26 }
+    private var iconGlyphSize: CGFloat { 24 }
     private var iconInnerStroke: Color {
         colorScheme == .dark ? Color.white.opacity(0.22) : Color.black.opacity(0.14)
     }
@@ -134,7 +130,7 @@ struct FlightCard: View {
     private func endpointDetails(isOrigin: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(endpointTitle(isOrigin: isOrigin))
-                .font(.app(13, weight: .semibold))
+                .font(.app(15, weight: .semibold))
                 .foregroundStyle(textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -142,7 +138,7 @@ struct FlightCard: View {
             let meta = endpointMeta(isOrigin: isOrigin)
             if !meta.isEmpty {
                 Text(meta)
-                    .font(.app(13, weight: .regular))
+                    .font(.app(13, weight: .medium))
                     .foregroundStyle(textSecondary)
                     .lineLimit(2)
             }

@@ -11,17 +11,19 @@ struct ReturnKeyTextField: UIViewRepresentable {
     
     func makeUIView(context: Context) -> UITextField {
         let tf = UITextField()
-        tf.placeholder = placeholder
         tf.autocapitalizationType = autocapitalization
         tf.autocorrectionType = .default
         tf.clearButtonMode = .never
         tf.returnKeyType = .done
         tf.delegate = context.coordinator
         tf.addTarget(context.coordinator, action: #selector(Coordinator.textChanged), for: .editingChanged)
+        tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        applyTypography(tf)
         return tf
     }
     
     func updateUIView(_ uiView: UITextField, context: Context) {
+        applyTypography(uiView)
         if uiView.text != text {
             uiView.text = text
         }
@@ -35,6 +37,19 @@ struct ReturnKeyTextField: UIViewRepresentable {
     
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
+    }
+    
+    private func applyTypography(_ textField: UITextField) {
+        let font = AppFont.uiFont(size: 15, weight: .medium)
+        textField.font = font
+        textField.textColor = UIColor(AppColor.textStrong)
+        textField.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [
+                .font: font,
+                .foregroundColor: UIColor(AppColor.textWeak)
+            ]
+        )
     }
     
     final class Coordinator: NSObject, UITextFieldDelegate {

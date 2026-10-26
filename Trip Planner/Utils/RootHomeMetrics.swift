@@ -14,20 +14,40 @@ enum RootHomeMetrics {
     static let bottomInset: CGFloat = AppSpacing.pageBottom
 }
 
-/// Multi-line page title (Manrope large title). Use an empty `.navigationTitle`
-/// when the top bar should stay clear of a duplicate truncated title.
-struct PageWrappingTitle: View {
+extension View {
+    /// Home-tab large title. On iOS 26 the system title is Bold; this uses the
+    /// same Manrope semibold 34pt the nav bar appearance applies on older iOS.
+    func appRootNavigationTitle(_ title: String) -> some View {
+        modifier(RootNavigationTitle(title: title))
+    }
+}
+
+private struct RootNavigationTitle: ViewModifier {
     let title: String
     
-    var body: some View {
-        Text(title)
-            .font(.appLargeTitle)
-            .foregroundStyle(.primary)
-            .multilineTextAlignment(.leading)
-            .lineSpacing(-12)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityLabel(title)
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.large)
+            .modifier(RootLargeTitleToolbar(title: title))
+    }
+}
+
+private struct RootLargeTitleToolbar: ViewModifier {
+    let title: String
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.toolbar {
+                ToolbarItem(placement: .largeTitle) {
+                    Text(title)
+                        .font(.app(34, weight: .semibold))
+                        .foregroundStyle(AppColor.textStrong)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        } else {
+            content
+        }
     }
 }

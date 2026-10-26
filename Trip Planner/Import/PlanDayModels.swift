@@ -93,6 +93,34 @@ struct PlanDayItem: Identifiable, Hashable, Codable {
         self.category = category
         self.photoData = photoData
     }
+    
+    /// Model sometimes copies itinerary-prompt fragments into `title` (e.g. "least 8 items for this 3-day trip: 1 hotel").
+    var looksLikePromptLeak: Bool {
+        let blob = [title, location, notes, sourceSnippet]
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard !blob.isEmpty else { return false }
+        
+        let fragments = [
+            "items for this",
+            "full_itinerary",
+            "dayindex",
+            "unscheduleddayscount",
+            "never return only",
+            "seed items",
+            "kind=activity",
+            "category=hotel",
+            "valid complete json",
+            "notes under"
+        ]
+        if fragments.contains(where: { blob.contains($0) }) { return true }
+        
+        let titleKey = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if titleKey.range(of: #"^least \d+ items"#, options: .regularExpression) != nil { return true }
+        if titleKey.range(of: #"\d+-day trip"#, options: .regularExpression) != nil { return true }
+        return false
+    }
 }
 
 struct PlanDayDraft: Hashable, Codable {

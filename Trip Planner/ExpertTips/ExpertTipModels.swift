@@ -116,4 +116,12 @@ struct ExpertTipQuery: Hashable {
             mapKitIdentifier: place.mapKitIdentifier
         )
     }
+    
+    var hasMatchableIdentity: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || latitude != nil
+            || longitude != nil
+            || !(mapKitIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+    }
 }

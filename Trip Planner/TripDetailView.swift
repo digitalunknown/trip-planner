@@ -47,6 +47,7 @@ struct TripDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(PlaceStore.self) private var placeStore
     @Environment(RootTabChrome.self) private var tabChrome
+    @Environment(WidgetDeepLinkRouter.self) private var widgetDeepLink
     
     @State private var tripDays: [TripDay] = []
     @State private var isPresentingSettings: Bool = false
@@ -145,7 +146,7 @@ struct TripDetailView: View {
     @State private var pendingDateRemapDropsTrailing: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     
-    private var dayBoardBackgroundColor: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
+    private var dayBoardBackgroundColor: Color { AppDetailSurface.page }
     
     private static let parkedIdeasColumnID = UUID(uuidString: "00000000-0000-0000-0000-000000000999")!
     
@@ -161,8 +162,23 @@ struct TripDetailView: View {
         return opts
     }
     
-    init(trip: Binding<Trip>) {
+    /// When set, the matching activity sheet opens once after the trip appears.
+    private let initialEventID: UUID?
+    private let initialDayID: UUID?
+    private let initialOpenPlanDay: Bool
+    @State private var didOpenInitialEvent = false
+    @State private var didApplyInitialDay = false
+    
+    init(
+        trip: Binding<Trip>,
+        initialEventID: UUID? = nil,
+        initialDayID: UUID? = nil,
+        initialOpenPlanDay: Bool = false
+    ) {
         self._trip = trip
+        self.initialEventID = initialEventID
+        self.initialDayID = initialDayID
+        self.initialOpenPlanDay = initialOpenPlanDay
         let initialRegion: MKCoordinateRegion
         if let lat = trip.wrappedValue.latitude, let lon = trip.wrappedValue.longitude {
             let span = trip.wrappedValue.mapSpan ?? 0.1
@@ -479,128 +495,95 @@ struct TripDetailView: View {
                 dismiss()
             }
         }
-        if #available(iOS 26.0, *) {
-            ToolbarItem(placement: .principal) {
-                tripToolbarTitle
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button {
+                settingsSnapshotTrip = trip
+                settingsSnapshotTripDays = tripDays
+                isPresentingSettings = true
+            } label: {
+                LiquidGlassToolbarIconLabel(systemName: "gearshape")
             }
-            .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .principal) {
-                tripToolbarTitle
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            LiquidGlassToolbarIconPair {
+            .liquidGlassToolbarControl()
+            .accessibilityLabel("Trip settings")
+            
+            Menu {
                 Button {
-                    settingsSnapshotTrip = trip
-                    settingsSnapshotTripDays = tripDays
-                    isPresentingSettings = true
+                    let focusedIsParked = trip.showParkedIdeas && focusedDayID == Self.parkedIdeasColumnID
+                    if focusedIsParked {
+                        selectedDayID = Self.parkedIdeasColumnID
+                    } else {
+                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    }
+                    prepareNewEventDefaults()
+                    activitySheetDetent = .large
+                    isPresentingNewActivity = true
                 } label: {
-                    LiquidGlassToolbarIconLabel(systemName: "gearshape")
+                    Label("Activity", menuIcon: "calendar.badge.plus")
                 }
-                .buttonStyle(.plain)
-                .tint(.primary)
-                .accessibilityLabel("Trip settings")
                 
                 Menu {
-                    Button {
-                        let focusedIsParked = trip.showParkedIdeas && focusedDayID == Self.parkedIdeasColumnID
-                        if focusedIsParked {
-                            selectedDayID = Self.parkedIdeasColumnID
-                        } else {
+                    ForEach(TravelMode.allCases, id: \.self) { mode in
+                        Button {
                             let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
                             selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                            prepareNewFlightDefaults(mode: mode)
+                            isPresentingNewFlight = true
+                        } label: {
+                            Label(mode.title, menuIcon: mode.systemImageName)
                         }
-                        prepareNewEventDefaults()
-                        activitySheetDetent = .large
-                        isPresentingNewActivity = true
-                    } label: {
-                        Label("Activity", appIcon: "calendar.badge.plus")
-                    }
-                    
-                    Menu {
-                        ForEach(TravelMode.allCases, id: \.self) { mode in
-                            Button {
-                                let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                                selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                                prepareNewFlightDefaults(mode: mode)
-                                isPresentingNewFlight = true
-                            } label: {
-                                Label(mode.title, appIcon: mode.systemImageName)
-                            }
-                        }
-                    } label: {
-                        Label("Travel", appIcon: "arrow.left.arrow.right")
-                    }
-                    
-                    Button {
-                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                        newReminderText = ""
-                        editingReminder = nil
-                        isPresentingNewReminder = true
-                    } label: {
-                        Label("Reminder", appIcon: "pin.fill")
-                    }
-                    
-                    Button {
-                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                        checklistTitle = ""
-                        checklistDraftItems = []
-                        editingChecklist = nil
-                        isPresentingNewChecklist = true
-                    } label: {
-                        Label("Checklist", appIcon: "list-checks")
-                    }
-                    
-                    Divider()
-                    
-                    Button {
-                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                        planDayDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                        isPresentingPlanDay = true
-                    } label: {
-                        Label("Plan Day", appIcon: "sparkles")
-                    }
-                    
-                    Button {
-                        let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
-                        selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
-                        addManyDraftText = ""
-                        addManyItems = []
-                        isPresentingAddMany = true
-                    } label: {
-                        Label("Add Many", appIcon: "text.badge.plus")
                     }
                 } label: {
-                    LiquidGlassToolbarIconLabel(systemName: "plus")
+                    Label("Travel", menuIcon: "arrow.left.arrow.right")
                 }
-                .buttonStyle(.plain)
-                .tint(.primary)
-                .accessibilityLabel("Add to trip")
+                
+                Button {
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    newReminderText = ""
+                    editingReminder = nil
+                    isPresentingNewReminder = true
+                } label: {
+                    Label("Reminder", menuIcon: "pin.fill")
+                }
+                
+                Button {
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    checklistTitle = ""
+                    checklistDraftItems = []
+                    editingChecklist = nil
+                    isPresentingNewChecklist = true
+                } label: {
+                    Label("Checklist", menuIcon: "list-checks")
+                }
+                
+                Divider()
+                
+                Button {
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    planDayDefaultDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    isPresentingPlanDay = true
+                } label: {
+                    Label("Plan Day", menuIcon: "sparkles")
+                }
+                
+                Button {
+                    let focusedDayCandidate = tripDays.first(where: { $0.id == focusedDayID })?.id
+                    selectedDayID = focusedDayCandidate ?? tripDays.first(where: { Calendar.current.isDateInToday($0.date) })?.id ?? tripDays.first?.id
+                    addManyDraftText = ""
+                    addManyItems = []
+                    isPresentingAddMany = true
+                } label: {
+                    Label("Add Many", menuIcon: "text.badge.plus")
+                }
+            } label: {
+                LiquidGlassToolbarIconLabel(systemName: "plus")
             }
+            .menuIndicator(.hidden)
+            .liquidGlassToolbarControl()
+            .accessibilityLabel("Add to Trip")
         }
-    }
-    
-    private var tripToolbarTitle: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(trip.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trip" : trip.name)
-                .font(.app(17, weight: .semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Text(tripDateRangeText)
-                .font(.appCaption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        // Intrinsic width so iOS 26 doesn’t crush the title into the glass action slot.
-        .fixedSize(horizontal: true, vertical: false)
-        .frame(maxWidth: 220, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
     }
 
     private var eventSheetTripRegion: MKCoordinateRegion? {
@@ -721,95 +704,6 @@ struct TripDetailView: View {
         }
     }
 
-    private var itineraryClipboardText: String {
-        var lines: [String] = []
-        
-        let tripName = trip.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let dest = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        if !tripName.isEmpty || !dest.isEmpty {
-            let header = [tripName, dest].filter { !$0.isEmpty }.joined(separator: " — ")
-            if !header.isEmpty { lines.append(header) }
-        }
-        
-        if trip.isDatesSet {
-            let f = DateFormatter()
-            f.dateStyle = .medium
-            f.timeStyle = .none
-            lines.append("\(f.string(from: trip.startDate)) – \(f.string(from: trip.endDate))")
-        }
-        
-        lines.append("")
-        
-        let time = DateFormatter()
-        time.dateStyle = .none
-        time.timeStyle = .short
-        
-        for day in tripDays.sorted(by: { $0.order < $1.order }) {
-            let dayTitle = trip.isDatesSet ? day.displayTitle : "Day \(day.order)"
-            let subtitle = day.label.trimmingCharacters(in: .whitespacesAndNewlines)
-            lines.append(subtitle.isEmpty ? dayTitle : "\(dayTitle) — \(subtitle)")
-            
-            let events = day.events.sorted(by: { $0.startTimeMinutes < $1.startTimeMinutes })
-            for e in events {
-                let t = e.time.trimmingCharacters(in: .whitespacesAndNewlines)
-                let name = e.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                let loc = e.location.trimmingCharacters(in: .whitespacesAndNewlines)
-                let bits = [t, name].filter { !$0.isEmpty }.joined(separator: " ")
-                let line = loc.isEmpty ? bits : "\(bits) • \(loc)"
-                if !line.isEmpty { lines.append("- \(line)") }
-            }
-            
-            for r in day.reminders {
-                let text = r.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !text.isEmpty { lines.append("- \(text)") }
-            }
-            
-            for c in day.checklists {
-                let ct = c.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !ct.isEmpty { lines.append("- \(ct)") }
-                for entry in c.items {
-                    let et = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !et.isEmpty else { continue }
-                    lines.append("  - \(entry.isDone ? "✓ " : "")\(et)")
-                }
-            }
-            
-            for fItem in day.flights.sorted(by: { $0.startTime < $1.startTime }) {
-                let ref = fItem.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines)
-                let route = travelRouteText(for: fItem)
-                let start = time.string(from: fItem.startTime)
-                let end = fItem.hasEndTime ? time.string(from: fItem.endTime) : ""
-                let times = end.isEmpty ? start : "\(start) - \(end)"
-                
-                let headBits = [ref.isEmpty ? fItem.travelMode.title : ref, route].filter { !$0.isEmpty }.joined(separator: " ")
-                let flightLine = [headBits, times].filter { !$0.isEmpty }.joined(separator: " • ")
-                if !flightLine.isEmpty { lines.append("- \(flightLine)") }
-            }
-            
-            lines.append("")
-        }
-        
-        if trip.showParkedIdeas {
-            let ideas = parkedIdeas
-            if !ideas.isEmpty {
-                lines.append("Ideas")
-                for e in ideas {
-                    let t = e.time.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let name = e.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let loc = e.location.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let bits = [t, name].filter { !$0.isEmpty }.joined(separator: " ")
-                    let line = loc.isEmpty ? bits : "\(bits) • \(loc)"
-                    if !line.isEmpty { lines.append("- \(line)") }
-                }
-            }
-        }
-        
-        // Trim trailing blank lines.
-        while lines.last == "" { _ = lines.popLast() }
-        return lines.joined(separator: "\n")
-    }
-    
     private func applySheets<V: View>(to view: V) -> some View {
         view
             .sheet(isPresented: $isPresentingSettings) {
@@ -828,7 +722,6 @@ struct TripDetailView: View {
                     showParkedIdeas: $trip.showParkedIdeas,
                     costItems: settingsCostItems,
                     documentItems: settingsDocumentItems,
-                    itineraryText: itineraryClipboardText,
                     onApply: applyTripSettingsFromSheet
                 )
                 .tint(.primary)
@@ -856,19 +749,19 @@ struct TripDetailView: View {
                     tripDays = settingsSnapshotTripDays
                     showDateRemapAlert = false
                 }
-                Button("Keep day order") {
+                Button("Keep Day Order") {
                     convertCurrentTripDaysToScheduledByIndex(oldDays: pendingDateRemapOldDays)
                     showDateRemapAlert = false
                 }
-                Button("Match calendar dates", role: pendingDateRemapDropsTrailing ? .destructive : nil) {
+                Button("Match Calendar Dates", role: pendingDateRemapDropsTrailing ? .destructive : nil) {
                     updateTripDaysForDates()
                     showDateRemapAlert = false
                 }
             } message: {
                 if pendingDateRemapDropsTrailing {
-                    Text("Your dates changed. Keep day order moves Day 1, Day 2, … onto the new dates (trailing days that no longer fit will be removed). Match calendar dates only keeps activities on days that still share the same calendar date — shifting the year often clears the itinerary.")
+                    Text("Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates (trailing days that no longer fit will be removed). Match Calendar Dates only keeps activities on days that still share the same calendar date — shifting the year often clears the itinerary.")
                 } else {
-                    Text("Your dates changed. Keep day order moves Day 1, Day 2, … onto the new dates so your itinerary stays intact. Match calendar dates only keeps activities on days that still share the same calendar date.")
+                    Text("Your dates changed. Keep Day Order moves Day 1, Day 2, … onto the new dates so your itinerary stays intact. Match Calendar Dates only keeps activities on days that still share the same calendar date.")
                 }
             }
             .sheet(isPresented: $isPresentingNewActivity, onDismiss: {
@@ -972,7 +865,8 @@ struct TripDetailView: View {
                     tripLocationRegion: eventSheetTripRegion,
                     isEditing: editingFlight != nil,
                     onSave: saveFlight,
-                    onDelete: deleteHandler
+                    onDelete: deleteHandler,
+                    accent: editingFlight?.accent ?? .cream
                 )
                 .tint(.primary)
                 .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
@@ -1612,6 +1506,12 @@ struct TripDetailView: View {
         .onAppear {
             tabChrome.beginSuppressingAIAccessory()
             initializeTripDays()
+            applyInitialDayFocusIfNeeded()
+            openInitialEventIfNeeded()
+            openInitialPlanDayIfNeeded()
+            if widgetDeepLink.destination?.tripID == trip.id {
+                widgetDeepLink.destination = nil
+            }
             setMapRegion(appropriateMapRegion, animated: false)
             displayedDayIDForMarkers = nil
             markersOpacity = 1.0
@@ -1878,12 +1778,6 @@ private extension TripDetailView {
         return Double(todayIndex + 1) / Double(tripDays.count)
     }
 
-    var tripDateRangeText: String {
-        let startText = trip.startDate.formatted(Date.FormatStyle().month(.abbreviated).day())
-        let endText = trip.endDate.formatted(Date.FormatStyle().month(.abbreviated).day())
-        return "\(startText) – \(endText)"
-    }
-    
     func initializeTripDays() {
         tripDays = trip.days
         parkedIdeas = trip.parkedIdeas
@@ -1901,8 +1795,31 @@ private extension TripDetailView {
         return tripDays.first(where: { calendar.isDate($0.date, inSameDayAs: today) })?.id
     }
     
+    private func applyInitialDayFocusIfNeeded() {
+        guard !didApplyInitialDay, let dayID = initialDayID,
+              tripDays.contains(where: { $0.id == dayID }) else { return }
+        didApplyInitialDay = true
+        focusedDayID = dayID
+        selectedDayID = dayID
+        planDayDefaultDayID = dayID
+        displayedDayIDForMarkers = dayHasMapContent(dayID) ? dayID : nil
+        hasUserScrolledDays = true
+    }
+    
+    private func openInitialPlanDayIfNeeded() {
+        guard initialOpenPlanDay else { return }
+        if let dayID = initialDayID ?? tripDays.first?.id {
+            planDayDefaultDayID = dayID
+            selectedDayID = dayID
+        }
+        DispatchQueue.main.async {
+            isPresentingPlanDay = true
+        }
+    }
+    
     private func scrollToActiveDayIfNeeded(using proxy: ScrollViewProxy) {
-        guard !didScrollToActiveDay, let dayID = activeTripDayID else { return }
+        let targetDayID = initialDayID ?? activeTripDayID
+        guard !didScrollToActiveDay, let dayID = targetDayID else { return }
         didScrollToActiveDay = true
         
         DispatchQueue.main.async {
@@ -2361,6 +2278,25 @@ private extension TripDetailView {
         }
     }
 
+    private func openInitialEventIfNeeded() {
+        guard !didOpenInitialEvent, let eventID = initialEventID else { return }
+        didOpenInitialEvent = true
+        
+        if let day = tripDays.first(where: { $0.events.contains(where: { $0.id == eventID }) }),
+           let event = day.events.first(where: { $0.id == eventID }) {
+            DispatchQueue.main.async {
+                startEditing(event: event, day: day)
+            }
+            return
+        }
+        
+        if let event = parkedIdeas.first(where: { $0.id == eventID }) {
+            DispatchQueue.main.async {
+                startEditingParkedIdea(event)
+            }
+        }
+    }
+    
     func startEditing(event: EventItem, day: TripDay) {
         editingEvent = event
         selectedDayID = day.id
@@ -3015,21 +2951,21 @@ struct WeatherPill: View {
                     Image(systemName: fallbackIcon)
                         .font(.appCaption)
                     Text("\(fallbackTempF)°F")
-                        .font(.app(12, weight: .semibold))
+                        .font(.app(13, weight: .semibold))
                 }
             case .sunrise:
                 HStack(spacing: 6) {
                     Image(systemName: "sunrise.fill")
                         .font(.appCaption)
                     Text(sunrise.map { timeFormatter.string(from: $0) } ?? "—")
-                        .font(.app(12, weight: .semibold))
+                        .font(.app(13, weight: .semibold))
                 }
             case .sunset:
                 HStack(spacing: 6) {
                     Image(systemName: "sunset.fill")
                         .font(.appCaption)
                     Text(sunset.map { timeFormatter.string(from: $0) } ?? "—")
-                        .font(.app(12, weight: .semibold))
+                        .font(.app(13, weight: .semibold))
                 }
             }
         }
@@ -3063,7 +2999,7 @@ struct EventDetailView: View {
                         )
                     VStack(alignment: .leading, spacing: 10) {
                         Text(event.title)
-                            .font(.app(22, weight: .semibold))
+                            .font(.app(17, weight: .semibold))
                         Text(event.location)
                             .font(.appSubheadline)
                             .foregroundStyle(.secondary)
@@ -3186,7 +3122,7 @@ struct FloatingAddButton: View {
                     }
                 
                 Image(systemName: "plus")
-                    .font(.app(22, weight: .semibold))
+                    .font(.app(17, weight: .semibold))
                     .foregroundStyle(.primary)
             }
             .frame(width: 56, height: 56)
@@ -3766,6 +3702,34 @@ enum EventAccent: String, Codable, CaseIterable, Hashable {
     /// Alias for `background` (existing call sites).
     var color: Color { background }
     
+    var backgroundHex: UInt32 {
+        switch self {
+        case .blush: return 0xFEB3D4
+        case .burgundy: return 0x4F080C
+        case .mustard: return 0xFED130
+        case .lime: return 0xCDF545
+        case .forest: return 0x005842
+        case .tangerine: return 0xFF7701
+        case .cream: return 0xF9E2C0
+        case .ink: return 0x000000
+        case .plum: return 0x81013A
+        }
+    }
+    
+    var foregroundHex: UInt32 {
+        switch self {
+        case .blush: return 0x480A0D
+        case .burgundy: return 0xF9B8D0
+        case .mustard: return 0x450700
+        case .lime: return 0x025541
+        case .forest: return 0xCDF74D
+        case .tangerine: return 0x4F0400
+        case .cream: return 0x030000
+        case .ink: return 0xF6E2C1
+        case .plum: return 0xFBB4D6
+        }
+    }
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
@@ -3808,5 +3772,6 @@ private extension UTType {
     }
     .environment(PlaceStore())
     .environment(RootTabChrome())
+    .environment(WidgetDeepLinkRouter())
 }
 

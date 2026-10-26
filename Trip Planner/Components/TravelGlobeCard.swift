@@ -113,12 +113,16 @@ struct TravelGlobeCard: View {
         .background(Color.black)
         .onAppear {
             applyCamera(heading: heading)
+            // Preview cards sit in a scrolling page — spinning MapKit at 30fps freezes Profile.
+            if !allowsFullInteraction {
+                isAutoRotating = false
+            }
         }
         .onChange(of: showsFullGlobe) { _, _ in
             applyCamera(heading: heading)
         }
         .onReceive(Timer.publish(every: 1.0 / 30.0, on: .main, in: .common).autoconnect()) { _ in
-            guard isAutoRotating, !pins.isEmpty else { return }
+            guard allowsFullInteraction, isAutoRotating, !pins.isEmpty else { return }
             heading = (heading + Self.rotationDegreesPerTick).truncatingRemainder(dividingBy: 360)
             if heading < 0 { heading += 360 }
             applyCamera(heading: heading)

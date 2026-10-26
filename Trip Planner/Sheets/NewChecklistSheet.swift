@@ -3,7 +3,7 @@ import UIKit
 
 struct NewChecklistSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.appAccentColor) private var appAccentColor
+    @Environment(\.colorScheme) private var colorScheme
     
     @Binding var title: String
     @Binding var items: [ChecklistEntry]
@@ -15,269 +15,56 @@ struct NewChecklistSheet: View {
     
     @State private var newItemText: String = ""
     @State private var isAddFieldFocused: Bool = false
-    @State private var didCopyItems: Bool = false
+    @State private var showCopiedToast = false
+    @State private var copiedToastHideTask: Task<Void, Never>?
+    @State private var showDeleteConfirm = false
     @FocusState private var isTitleFocused: Bool
     @FocusState private var focusedItemID: UUID?
-    
-    @Environment(\.colorScheme) private var colorScheme
-    
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var pillBackground: Color { colorScheme == .dark ? Color(hex: 0x2C2C2E) : Color(hex: 0xE5E5EA) }
-    private var pillHighlight: Color { colorScheme == .dark ? Color(hex: 0x3A3A3C) : Color(hex: 0xD1D1D6) }
     
     private let maxChecklistItemLength = 40
     private let addRowID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
     
+    private var selectedDayTitle: String {
+        dayOptions.first(where: { $0.id == selectedDayID })?.title ?? ""
+    }
+    
+    private var canSave: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedDayID != nil
+    }
+    
+    private var addTextIsEmpty: Bool {
+        newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                Color(.systemGroupedBackground)
+                AppDetailSurface.page(for: colorScheme)
                     .ignoresSafeArea()
+                
+                LinearGradient(
+                    colors: [
+                        ChecklistDetailPalette.gold.opacity(0.28),
+                        ChecklistDetailPalette.gold.opacity(0.12),
+                        .clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 260)
+                .ignoresSafeArea(edges: [.top, .horizontal])
+                .allowsHitTesting(false)
                 
                 ScrollViewReader { proxy in
                     Form {
-                        Section {
-                            VStack(spacing: 12) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                        .fill(Color(hex: 0xF9C842).opacity(0.18))
-                                    AppIcon(
-                                        lucide: "list-checks",
-                                        size: 52,
-                                        color: Color(hex: 0xF9C842)
-                                    )
-                                }
-                                .frame(width: 112, height: 112)
-                                
-                                TextField(
-                                    "",
-                                    text: $title,
-                                    prompt: Text("Checklist")
-                                        .font(.app(40, weight: .semibold))
-                                        .foregroundStyle(.secondary),
-                                    axis: .vertical
-                                )
-                                .font(.app(40, weight: .semibold))
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.primary)
-                                .tint(appAccentColor)
-                                .focused($isTitleFocused)
-                                .padding(.horizontal, 18)
-                                .frame(minHeight: 72, maxHeight: 120)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 6)
-                            .padding(.bottom, 10)
-                        }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        
-                        Section {
-                            Picker(selection: $selectedDayID) {
-                                ForEach(dayOptions) { option in
-                                    Text(option.title)
-                                        .tag(Optional(option.id))
-                                }
-                            } label: {
-                                Label("Day", appIcon: "calendar", color: .primary)
-                            }
-                        }
-                        
-                        Section {
-                            ForEach(items) { item in
-                                let itemID = item.id
-                                let isDone = items.first(where: { $0.id == itemID })?.isDone ?? false
-                                let isFocused = focusedItemID == itemID
-                                
-                                Button {
-                                    guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
-                                    let wasDone = items[idx].isDone
-                                    items[idx].isDone.toggle()
-                                    if !wasDone, items[idx].isDone { Haptics.bump() }
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        AppIcon(
-                                            lucide: isDone ? "circle-check-big" : "circle",
-                                            size: 20,
-                                            color: textPrimary
-                                        )
-                                        
-                                        HStack(spacing: 0) {
-                                            TextField(
-                                                "",
-                                                text: Binding(
-                                                    get: { items.first(where: { $0.id == itemID })?.text ?? "" },
-                                                    set: { newValue in
-                                                        guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
-                                                        items[idx].text = Self.clampedChecklistItemText(
-                                                            newValue,
-                                                            maxLength: maxChecklistItemLength
-                                                        )
-                                                    }
-                                                ),
-                                                prompt: Text("Item").foregroundStyle(.secondary)
-                                            )
-                                            .foregroundStyle(textPrimary)
-                                            .focused($focusedItemID, equals: itemID)
-                                            .strikethrough(isDone, color: textPrimary.opacity(0.6))
-                                            .lineLimit(1)
-                                            .onTapGesture {
-                                                focusedItemID = itemID
-                                            }
-                                            
-                                            Spacer(minLength: 0)
-                                                .allowsHitTesting(false)
-                                        }
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    .background(
-                                        Capsule()
-                                            .fill(isDone || isFocused ? pillHighlight : pillBackground)
-                                    )
-                                    .contentShape(Capsule())
-                                }
-                                .buttonStyle(.plain)
-                                .id(itemID)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button {
-                                        guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
-                                        let wasDone = items[idx].isDone
-                                        items[idx].isDone = !wasDone
-                                        if !wasDone, items[idx].isDone { Haptics.bump() }
-                                    } label: {
-                                        ZStack {
-                                            Circle()
-                                                .fill(Color.orange)
-                                            AppIcon(
-                                                lucide: isDone ? "undo-2" : "check",
-                                                size: 18,
-                                                color: .white
-                                            )
-                                        }
-                                        .frame(width: 44, height: 44)
-                                    }
-                                    .tint(.clear)
-                                    
-                                    Button {
-                                        items.removeAll(where: { $0.id == itemID })
-                                    } label: {
-                                        ZStack {
-                                            Circle()
-                                                .fill(Color.red)
-                                            AppIcon(lucide: "trash-2", size: 18, color: .white)
-                                        }
-                                        .frame(width: 44, height: 44)
-                                    }
-                                    .tint(.clear)
-                                }
-                            }
-                            .onDelete { offsets in
-                                for offset in offsets.sorted(by: >) where offset < items.count {
-                                    items.remove(at: offset)
-                                }
-                            }
-                            
-                            Button {
-                                // No-op — only the text field / Add control focus & commit.
-                            } label: {
-                                HStack(spacing: 12) {
-                                    AppIcon(
-                                        lucide: "circle-plus",
-                                        size: 20,
-                                        color: textPrimary
-                                    )
-                                    
-                                    HStack(spacing: 0) {
-                                        ReturnKeyTextField(
-                                            placeholder: "Add item",
-                                            text: $newItemText,
-                                            isFirstResponder: $isAddFieldFocused,
-                                            autocapitalization: .sentences,
-                                            maxLength: maxChecklistItemLength
-                                        ) {
-                                            addNewChecklistItem(proxy: proxy)
-                                        }
-                                        .foregroundStyle(textPrimary)
-                                        .onTapGesture {
-                                            isAddFieldFocused = true
-                                        }
-                                        
-                                        Spacer(minLength: 0)
-                                            .allowsHitTesting(false)
-                                        
-                                        Button("Add") {
-                                            addNewChecklistItem(proxy: proxy)
-                                        }
-                                        .font(.appCaption)
-                                        .foregroundStyle(textPrimary)
-                                        .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .background(
-                                    Capsule()
-                                        .fill(pillBackground)
-                                )
-                                .contentShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .id(addRowID)
-                        }
-                        .listRowSpacing(1)
-                        
-                        DetailActionButtonStack {
-                            Button {
-                                let lines = items
-                                    .map { entry -> String in
-                                        let t = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                                        guard !t.isEmpty else { return "" }
-                                        return entry.isDone ? "✓ \(t)" : t
-                                    }
-                                    .filter { !$0.isEmpty }
-                                
-                                let payload = lines.joined(separator: "\n")
-                                UIPasteboard.general.string = payload
-                                Haptics.bump()
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    didCopyItems = true
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                                    withAnimation(.easeInOut(duration: 0.15)) {
-                                        didCopyItems = false
-                                    }
-                                }
-                            } label: {
-                                Label(
-                                    didCopyItems ? "Copied" : "Copy Items",
-                                    appIcon: didCopyItems ? "checkmark" : "doc.on.doc"
-                                )
-                            }
-                            .buttonStyle(.secondaryCapsuleBlock)
-                            .disabled(didCopyItems || items.isEmpty)
-                            .detailActionRow()
-                            
-                            if isEditing {
-                                Button {
-                                    onDelete?()
-                                    dismiss()
-                                } label: {
-                                    Label("Delete Checklist", appIcon: "trash")
-                                }
-                                .buttonStyle(.destructiveCapsuleBlock)
-                                .detailActionRow()
-                            }
-                        }
+                        heroSection
+                        daySection
+                        itemsSection(proxy: proxy)
+                        actionsSection
                     }
                     .scrollContentBackground(.hidden)
-                    .listRowSpacing(1)
+                    .appFormPageSpacing()
+                    .listRowSpacing(2)
                     .environment(\.defaultMinListRowHeight, 1)
                     .onChange(of: isAddFieldFocused) { _, newValue in
                         guard newValue else { return }
@@ -298,14 +85,303 @@ struct NewChecklistSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     LiquidGlassIconButton(
                         systemName: "checkmark",
-                        isEnabled: !(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedDayID == nil)
+                        isEnabled: canSave
                     ) {
                         onSave()
                         dismiss()
                     }
                 }
             }
+            .overlay(alignment: .bottom) {
+                if showCopiedToast {
+                    DetailToastBanner(text: "Copied to clipboard")
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: showCopiedToast)
+            .alert("Delete Checklist", isPresented: $showDeleteConfirm) {
+                Button("Delete Checklist", role: .destructive) {
+                    onDelete?()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete this checklist? This action cannot be undone.")
+            }
         }
+        .sheetAccentDragIndicator(ChecklistDetailPalette.gold)
+    }
+    
+    private var heroSection: some View {
+        Section {
+            VStack(spacing: AppSpacing.sectionGap) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 35, style: .continuous)
+                        .fill(ChecklistDetailPalette.gold)
+                    AppIcon(
+                        lucide: "list-checks",
+                        size: 48,
+                        color: ChecklistDetailPalette.ink
+                    )
+                }
+                .frame(width: 120, height: 120)
+                
+                TextField(
+                    "",
+                    text: $title,
+                    prompt: Text("Checklist")
+                        .font(.appDisplay)
+                        .foregroundStyle(AppColor.textWeak),
+                    axis: .vertical
+                )
+                .font(.appDisplay)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(AppColor.textStrong)
+                .tint(AppColor.textStrong)
+                .focused($isTitleFocused)
+                .lineLimit(1...3)
+                .scrollDisabled(true)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 18)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+    
+    private var daySection: some View {
+        Section {
+            Menu {
+                ForEach(dayOptions) { option in
+                    Button {
+                        selectedDayID = option.id
+                    } label: {
+                        if option.id == selectedDayID {
+                            Label(option.title, systemImage: "checkmark")
+                        } else {
+                            Text(option.title)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    AppIcon(lucide: "calendar-1", size: AppLucide.fieldSize, color: AppColor.textStrong)
+                    Text("Day")
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                    Spacer(minLength: 8)
+                    HStack(spacing: 5) {
+                        Text(selectedDayTitle)
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(AppColor.textStrong)
+                            .lineLimit(1)
+                        AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                    }
+                }
+                .padding(AppSpacing.fieldPadding)
+                .background(AppColor.card, in: Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+    
+    private func itemsSection(proxy: ScrollViewProxy) -> some View {
+        Section {
+            ForEach(items) { item in
+                itemRow(item)
+                    .id(item.id)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 2, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button {
+                            toggleDone(itemID: item.id)
+                        } label: {
+                            swipeActionGlyph("circle-check-big")
+                        }
+                        .tint(AppColor.page)
+                        
+                        Button {
+                            items.removeAll(where: { $0.id == item.id })
+                        } label: {
+                            swipeActionGlyph("trash-2")
+                        }
+                        .tint(AppColor.page)
+                    }
+                    }
+            
+            addItemRow(proxy: proxy)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .id(addRowID)
+        }
+        .listRowSpacing(2)
+    }
+    
+    private func itemRow(_ item: ChecklistEntry) -> some View {
+        let itemID = item.id
+        let isDone = items.first(where: { $0.id == itemID })?.isDone ?? false
+        
+        return HStack(spacing: 8) {
+            Button {
+                toggleDone(itemID: itemID)
+            } label: {
+                AppIcon(
+                    lucide: isDone ? "circle-check-big" : "circle",
+                    size: AppLucide.fieldSize,
+                    color: isDone ? AppColor.textStrong : AppColor.textWeak
+                )
+            }
+            .buttonStyle(.plain)
+            
+            TextField(
+                "",
+                text: Binding(
+                    get: { items.first(where: { $0.id == itemID })?.text ?? "" },
+                    set: { newValue in
+                        guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
+                        items[idx].text = Self.clampedChecklistItemText(
+                            newValue,
+                            maxLength: maxChecklistItemLength
+                        )
+                    }
+                ),
+                prompt: Text("Item").foregroundStyle(AppColor.textWeak)
+            )
+            .font(.app(15, weight: .medium))
+            .foregroundStyle(isDone ? AppColor.textStrong : AppColor.textWeak)
+            .focused($focusedItemID, equals: itemID)
+            .lineLimit(1)
+            .onTapGesture {
+                focusedItemID = itemID
+            }
+        }
+        .padding(AppSpacing.fieldPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            (isDone ? AppColor.elevated : AppColor.card),
+            in: Capsule(style: .continuous)
+        )
+        .contentShape(Capsule(style: .continuous))
+    }
+    
+    private func addItemRow(proxy: ScrollViewProxy) -> some View {
+        HStack(spacing: 8) {
+            AppIcon(
+                lucide: "circle-plus",
+                size: AppLucide.fieldSize,
+                color: isAddFieldFocused ? AppColor.textStrong : AppColor.textWeak
+            )
+            
+            ReturnKeyTextField(
+                placeholder: "Add item",
+                text: $newItemText,
+                isFirstResponder: $isAddFieldFocused,
+                autocapitalization: .sentences,
+                maxLength: maxChecklistItemLength
+            ) {
+                addNewChecklistItem(proxy: proxy)
+            }
+            .onTapGesture {
+                isAddFieldFocused = true
+            }
+            
+            Spacer(minLength: 0)
+                .allowsHitTesting(false)
+            
+            Button("Add") {
+                addNewChecklistItem(proxy: proxy)
+            }
+            .font(.app(15, weight: .medium))
+            .foregroundStyle(addTextIsEmpty ? AppColor.textWeak : AppColor.textStrong)
+            .disabled(addTextIsEmpty)
+        }
+        .padding(AppSpacing.fieldPadding)
+        .background(AppColor.card, in: Capsule(style: .continuous))
+        .contentShape(Capsule(style: .continuous))
+    }
+    
+    private var actionsSection: some View {
+        Section {
+            HStack(spacing: AppSpacing.xs) {
+                DetailIconPillButton(
+                    lucide: "copy",
+                    accessibilityLabel: "Copy Checklist"
+                ) {
+                    copyChecklistToClipboard()
+                }
+                
+                if isEditing {
+                    DetailIconPillButton(
+                        lucide: "trash-2",
+                        iconColor: AppColor.destructive,
+                        fill: AppColor.destructive.opacity(colorScheme == .dark ? 0.25 : 0.14),
+                        accessibilityLabel: "Delete"
+                    ) {
+                        showDeleteConfirm = true
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+    
+    private func copyChecklistToClipboard() {
+        UIPasteboard.general.string = clipboardText
+        Haptics.bump()
+        showCopiedToast = true
+        copiedToastHideTask?.cancel()
+        copiedToastHideTask = Task {
+            try? await Task.sleep(for: .seconds(1.6))
+            guard !Task.isCancelled else { return }
+            showCopiedToast = false
+        }
+    }
+    
+    private var clipboardText: String {
+        var lines: [String] = []
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTitle.isEmpty {
+            lines.append(trimmedTitle)
+        }
+        if !selectedDayTitle.isEmpty {
+            lines.append(selectedDayTitle)
+        }
+        if !lines.isEmpty {
+            lines.append("")
+        }
+        for item in items {
+            let text = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            lines.append(item.isDone ? "✓ \(text)" : text)
+        }
+        return lines.joined(separator: "\n")
+    }
+    
+    @ViewBuilder
+    private func swipeActionGlyph(_ lucide: String) -> some View {
+        if let image = AppLucide.templateImage(lucide: lucide, pointSize: AppLucide.fieldSize) {
+            Image(uiImage: image)
+                .renderingMode(.template)
+        } else {
+            Image(systemName: lucide == "trash-2" ? "trash" : "checkmark.circle")
+        }
+    }
+    
+    private func toggleDone(itemID: UUID) {
+        guard let idx = items.firstIndex(where: { $0.id == itemID }) else { return }
+        let wasDone = items[idx].isDone
+        items[idx].isDone.toggle()
+        if !wasDone, items[idx].isDone { Haptics.bump() }
     }
     
     private func addNewChecklistItem(proxy: ScrollViewProxy) {
@@ -331,3 +407,7 @@ struct NewChecklistSheet: View {
     }
 }
 
+private enum ChecklistDetailPalette {
+    static let gold = Color(hex: 0xFED353)
+    static let ink = Color(hex: 0x0A0A0A)
+}

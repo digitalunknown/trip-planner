@@ -9,8 +9,13 @@ private enum TripStatus: Equatable {
 
 /// Shared cover metrics so trip / explore / activity photos share one fixed frame.
 enum TripVisualMetrics {
-    /// Width ÷ height for cover images (landscape 4×5 → 5:4).
-    static let coverAspectRatio: CGFloat = 5.0 / 4.0
+    /// Figma home covers are 370×271.
+    static let coverAspectRatio: CGFloat = 370.0 / 271.0
+    static let coverRadius: CGFloat = 20
+    static let mapInsetSize: CGFloat = 80
+    static let mapInsetRadius: CGFloat = 15
+    static let overlayInset: CGFloat = 16
+    static let imageToTextGap: CGFloat = 8
 }
 
 /// Fixed-size cover slot. Content is fitted/cropped to the aspect frame and cannot change card height.
@@ -51,13 +56,11 @@ struct FillCroppedImage: View {
 }
 
 struct TripCardView: View {
-    @Environment(\.appAccentColor) private var accentColor
-    
     let trip: Trip
     
     private static let animationStart = Date()
     
-    private let mapInsetSize: CGFloat = 88
+    private let mapInsetSize: CGFloat = TripVisualMetrics.mapInsetSize
     
     private var hasCoverImage: Bool {
         TripMapSupport.hasCoverImage(trip)
@@ -120,15 +123,15 @@ struct TripCardView: View {
     }
     
     private var imageShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
+        RoundedRectangle(cornerRadius: TripVisualMetrics.coverRadius, style: .continuous)
     }
     
     private var mapInsetShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        RoundedRectangle(cornerRadius: TripVisualMetrics.mapInsetRadius, style: .continuous)
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: TripVisualMetrics.imageToTextGap) {
             visual
             details
         }
@@ -144,15 +147,12 @@ struct TripCardView: View {
                     VStack {
                         HStack {
                             Spacer()
-                            Text(countdownText)
-                                .font(.appCaption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .modifier(TripCountdownGlassBackground(isUrgent: isUrgent, accentColor: accentColor))
+                            CoverOverlayBadge(
+                                text: countdownText,
+                                style: isUrgent ? .accent : .muted
+                            )
                         }
-                        .padding(12)
+                        .padding(TripVisualMetrics.overlayInset)
                         Spacer()
                     }
                     .allowsHitTesting(false)
@@ -168,10 +168,9 @@ struct TripCardView: View {
                                 .clipShape(mapInsetShape)
                                 .overlay {
                                     mapInsetShape
-                                        .strokeBorder(Color.white.opacity(0.92), lineWidth: 2)
+                                        .strokeBorder(AppColor.textStrong, lineWidth: 2)
                                 }
-                                .shadow(color: .black.opacity(0.28), radius: 8, x: 0, y: 4)
-                                .padding(12)
+                                .padding(TripVisualMetrics.overlayInset)
                         }
                     }
                     .allowsHitTesting(false)
@@ -179,22 +178,20 @@ struct TripCardView: View {
             }
         }
         .clipShape(imageShape)
-        .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 8)
     }
     
     private var details: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: AppSpacing.stackMicro) {
             Text(trip.name)
-                .font(.appHeadline)
-                .fontWeight(.bold)
-                .foregroundStyle(.primary)
+                .font(.app(17, weight: .semibold))
+                .foregroundStyle(AppColor.textStrong)
                 .lineLimit(2)
             
             destinationMetadataLine
             
             Text(trip.isDatesSet ? trip.formattedDateRangeWithoutYear : "Unscheduled")
-                .font(.appCaption)
-                .foregroundStyle(.secondary)
+                .font(.app(13, weight: .medium))
+                .foregroundStyle(AppColor.textWeak)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -209,15 +206,14 @@ struct TripCardView: View {
                 Text(destination)
             }
             if !destination.isEmpty, coverAttributionName != nil {
-                Text("  ·  ")
+                Text(" ⋅ ")
             }
             if let coverAttributionName {
-                AppIcon(systemName: "camera.fill", size: 14, strokeWidth: 1.75)
-                Text(" \(coverAttributionName)")
+                Text("Photo by \(coverAttributionName)")
             }
         }
-        .font(.appCaption)
-        .foregroundStyle(.secondary)
+        .font(.app(13, weight: .medium))
+        .foregroundStyle(AppColor.textWeak)
         .lineLimit(1)
     }
     
@@ -240,23 +236,38 @@ struct TripCardView: View {
     }
 }
 
-private struct TripCountdownGlassBackground: ViewModifier {
-    let isUrgent: Bool
-    let accentColor: Color
+/// Capsule label over cover images (countdown, staff pick).
+struct CoverOverlayBadge: View {
+    enum Style {
+        case accent
+        case muted
+    }
     
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(
-                    isUrgent ? .regular.tint(accentColor) : .regular,
-                    in: Capsule(style: .continuous)
-                )
-        } else {
-            content
-                .background {
-                    Capsule(style: .continuous)
-                        .fill(isUrgent ? AnyShapeStyle(accentColor) : AnyShapeStyle(.ultraThinMaterial))
-                }
+    var lucide: String? = nil
+    let text: String
+    var style: Style = .muted
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.xxs) {
+            if let lucide {
+                AppIcon(lucide: lucide, size: 16, color: AppColor.textStrong)
+            }
+            Text(text)
+                .font(.app(13, weight: .medium))
+                .foregroundStyle(AppColor.textStrong)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, AppSpacing.xs)
+        .padding(.vertical, AppSpacing.xxs)
+        .background(fill, in: Capsule(style: .continuous))
+    }
+    
+    private var fill: Color {
+        switch style {
+        case .accent:
+            return AppColor.accent
+        case .muted:
+            return AppColor.page.opacity(0.75)
         }
     }
 }
@@ -335,5 +346,5 @@ struct MapSnapshotView: View {
         }
         .padding()
     }
-    .background(Color(.systemGroupedBackground))
+    .background(AppDetailSurface.page)
 }

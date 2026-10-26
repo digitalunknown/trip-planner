@@ -89,6 +89,20 @@ enum CloudSyncPaths {
         return (active: iCloud ?? local, local: local, iCloud: iCloud)
     }
     
+    /// Weekly AI credit counts, scoped to the Sign in with Apple user.
+    static func aiUsageURL() -> (active: URL, local: URL, iCloud: URL?) {
+        guard let userID = currentAppleUserIdentifier() else {
+            let local = localAppSupportRoot()
+                .appendingPathComponent("SignedOut", isDirectory: true)
+                .appendingPathComponent("AIUsage.json")
+            return (active: local, local: local, iCloud: nil)
+        }
+        
+        let local = accountLocalRoot(for: userID).appendingPathComponent("AIUsage.json")
+        let iCloud = accountICloudRoot(for: userID)?.appendingPathComponent("AIUsage.json")
+        return (active: iCloud ?? local, local: local, iCloud: iCloud)
+    }
+    
     /// Places are scoped to the Sign in with Apple user (local + iCloud Accounts folders).
     /// When signed out, returns a non-shared placeholder path — callers must not load/save.
     static func placesURL() -> (active: URL, local: URL, iCloud: URL?) {

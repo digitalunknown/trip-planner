@@ -6,12 +6,6 @@ struct GlobalSearchView: View {
     
     @Environment(TripStore.self) private var tripStore
     @Environment(PlaceStore.self) private var placeStore
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.appAccentColor) private var appAccentColor
-    
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
-    private var rowBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     
     private var query: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -61,39 +55,43 @@ struct GlobalSearchView: View {
                 SearchGlobeIllustration()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if matchedTrips.isEmpty && matchedPlaces.isEmpty {
-                Color.clear
+                Text("No results")
+                    .font(.app(15, weight: .medium))
+                    .foregroundStyle(AppColor.textWeak)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List {
-                    if !matchedTrips.isEmpty {
-                        Section {
-                            ForEach(matchedTrips) { trip in
-                                NavigationLink(value: SearchDestination.trip(trip.id)) {
-                                    tripRow(trip)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: AppSpacing.sectionGap) {
+                        if !matchedTrips.isEmpty {
+                            resultSection(title: "Trips") {
+                                ForEach(matchedTrips) { trip in
+                                    NavigationLink(value: SearchDestination.trip(trip.id)) {
+                                        TripResultRow(trip: trip)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        
+                        if !matchedPlaces.isEmpty {
+                            resultSection(title: "Places") {
+                                ForEach(matchedPlaces) { place in
+                                    NavigationLink(value: SearchDestination.place(place.id)) {
+                                        placeRow(place)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
                     }
-                    
-                    if !matchedPlaces.isEmpty {
-                        Section {
-                            ForEach(matchedPlaces) { place in
-                                NavigationLink(value: SearchDestination.place(place.id)) {
-                                    placeRow(place)
-                                }
-                            }
-                        }
-                    }
+                    .padding(.horizontal, RootHomeMetrics.horizontalInset)
+                    .padding(.top, RootHomeMetrics.topInset)
+                    .padding(.bottom, RootHomeMetrics.bottomInset)
                 }
-                .listStyle(.insetGrouped)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            query.isEmpty || (matchedTrips.isEmpty && matchedPlaces.isEmpty)
-                ? Color(.systemBackground)
-                : Color(.systemGroupedBackground)
-        )
+        .background(AppDetailSurface.page)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(for: SearchDestination.self) { destination in
@@ -116,82 +114,55 @@ struct GlobalSearchView: View {
         }
     }
     
-    private func tripRow(_ trip: Trip) -> some View {
-        HStack(spacing: 12) {
-            tripThumbnail(trip)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(trip.name)
-                    .font(.app(15, weight: .semibold))
-                    .foregroundStyle(textPrimary)
-                    .lineLimit(2)
-                
-                if !trip.destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(trip.destination)
-                        .font(.appCaption)
-                        .foregroundStyle(textSecondary)
-                        .lineLimit(1)
-                }
+    private func resultSection<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            AppSectionHeader(title)
+            VStack(spacing: AppSpacing.xs) {
+                content()
             }
-            
-            Spacer(minLength: 0)
         }
-        .padding(.vertical, 4)
     }
     
     private func placeRow(_ place: Place) -> some View {
         let title = PlaceNaming.title(location: place.location, fallback: place.name)
         let subtitle = PlaceNaming.subtitle(location: place.location, title: title)
         
-        return HStack(spacing: 12) {
+        return HStack(spacing: AppSpacing.sm) {
             placeThumbnail(place)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .font(.app(15, weight: .semibold))
-                    .foregroundStyle(textPrimary)
+                    .font(.app(15, weight: .medium))
+                    .foregroundStyle(AppColor.textStrong)
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.appCaption)
-                        .foregroundStyle(textSecondary)
+                        .font(.app(13, weight: .medium))
+                        .foregroundStyle(AppColor.textWeak)
                         .lineLimit(1)
                 }
                 
                 if place.placeType != .unspecified {
-                    HStack(spacing: 4) {
-                        AppIcon(systemName: place.placeType.iconSystemName, size: 11, color: textSecondary)
+                    HStack(spacing: AppSpacing.xxs) {
+                        AppIcon(systemName: place.placeType.iconSystemName, size: 16, color: AppColor.textWeak)
                         Text(place.placeType.title)
+                            .font(.app(13, weight: .medium))
+                            .foregroundStyle(AppColor.textWeak)
                     }
-                    .font(.app(11, weight: .semibold))
-                    .foregroundStyle(textSecondary)
                 }
             }
             
-            Spacer(minLength: 0)
+            AppIcon(lucide: "chevron-right", size: AppLucide.fieldSize, color: AppColor.textWeak)
         }
-        .padding(.vertical, 4)
-    }
-    
-    @ViewBuilder
-    private func tripThumbnail(_ trip: Trip) -> some View {
-        if let data = trip.coverImageData, let image = UIImage(data: data) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 52, height: 52)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        } else {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(appAccentColor.opacity(0.18))
-                Image(systemName: "suitcase.fill")
-                    .foregroundStyle(appAccentColor)
-                    .font(.app(18, weight: .semibold))
-            }
-            .frame(width: 52, height: 52)
-        }
+        .padding(AppSpacing.fieldPadding)
+        .background(AppColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
     
     @ViewBuilder
@@ -205,11 +176,11 @@ struct GlobalSearchView: View {
         } else {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(rowBackground)
+                    .fill(AppColor.elevated)
                 AppIcon(
                     systemName: place.placeType.mapIconName,
                     size: 18,
-                    color: textSecondary
+                    color: AppColor.textWeak
                 )
             }
             .frame(width: 52, height: 52)

@@ -20,6 +20,8 @@ struct TripStacksAISheet: View {
     
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AIUsageStore.self) private var aiUsage
+    @Environment(PremiumStore.self) private var premium
     @AppStorage("prefFood") private var prefFood: String = ""
     @AppStorage("prefAlcohol") private var prefAlcohol: Bool = false
     @AppStorage("prefInterests") private var prefInterests: String = ""
@@ -52,6 +54,8 @@ struct TripStacksAISheet: View {
     @State private var placeFinderBiasRegion: MKCoordinateRegion? = nil
     @State private var placeFinderAnchorLabel: String? = nil
     @FocusState private var isPromptFocused: Bool
+    @State private var showCreditsInfo = false
+    @State private var showPaywall = false
     
     private let client = TripStacksAIClient()
     private let composerFooterHeight: CGFloat = 56
@@ -60,12 +64,10 @@ struct TripStacksAISheet: View {
     private let promptEditorMinHeight: CGFloat = 58
     private let promptEditorMaxHeight: CGFloat = 132
     
-    private var chipForeground: Color {
-        colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717)
-    }
+    private var chipForeground: Color { AppColor.textStrong }
     
     private var chipFallback: Color {
-        // Must contrast with systemGroupedBackground in both schemes.
+        // Must contrast with the page wash in both schemes.
         colorScheme == .dark ? Color.white.opacity(0.12) : Color(hex: 0xE5E5EA)
     }
     
@@ -272,7 +274,7 @@ struct TripStacksAISheet: View {
                             Image(systemName: "questionmark.circle.fill")
                                 .foregroundStyle(.secondary)
                             Text(clarificationPrompt)
-                                .font(.app(14, weight: .semibold))
+                                .font(.app(15, weight: .semibold))
                                 .foregroundStyle(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -296,7 +298,7 @@ struct TripStacksAISheet: View {
                 .animation(.easeInOut(duration: 0.22), value: errorText != nil)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.systemGroupedBackground))
+            .background(AppDetailSurface.page)
             .navigationTitle(pageTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -351,8 +353,22 @@ struct TripStacksAISheet: View {
                 }
             }
             .task {
+                aiUsage.refreshWeekIfNeeded()
                 try? await Task.sleep(nanoseconds: 100_000_000)
                 isPromptFocused = true
+            }
+            .alert("Weekly AI Credits", isPresented: $showCreditsInfo) {
+                if !premium.isPremium {
+                    Button("Upgrade to TripStacks+") {
+                        showPaywall = true
+                    }
+                }
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(creditsInfoMessage)
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallSheet()
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -411,6 +427,49 @@ struct TripStacksAISheet: View {
         !isProcessing && !promptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
+    private var creditsInfoMessage: String {
+        if premium.isPremium {
+            return "TripStacks+ includes unlimited AI. One credit is no longer deducted when you generate a plan, find places, or plan a trip."
+        }
+        return "AI is limited to 15 credits each week. One credit is used whenever you generate a plan, find places, or plan a trip. Counts reset weekly. Upgrade to TripStacks+ for unlimited AI and local insights."
+    }
+    
+    private var aiCreditsMeter: some View {
+        Button {
+            if !premium.isPremium, aiUsage.isAtLimit {
+                showPaywall = true
+            } else {
+                showCreditsInfo = true
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(premium.isPremium ? "Unlimited AI" : aiUsage.meterLabel)
+                    .font(.app(13, weight: .medium))
+                    .foregroundStyle(AppColor.textWeak)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                
+                Capsule(style: .continuous)
+                    .fill(AppColor.elevated)
+                    .frame(height: 4)
+                    .overlay(alignment: .leading) {
+                        GeometryReader { geo in
+                            Capsule(style: .continuous)
+                                .fill(AppColor.accent)
+                                .frame(width: geo.size.width * (premium.isPremium ? 1 : aiUsage.progress))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.25), value: aiUsage.usedThisWeek)
+                    .animation(.easeInOut(duration: 0.25), value: premium.isPremium)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(premium.isPremium ? "Unlimited AI" : aiUsage.meterLabel)
+        .accessibilityHint(premium.isPremium ? "TripStacks+ is active" : "Shows how weekly AI credits work")
+    }
+    
     private var promptComposer: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topLeading) {
@@ -453,36 +512,21 @@ struct TripStacksAISheet: View {
             .padding(.top, 6)
             
             HStack(alignment: .center, spacing: 12) {
-                Color.clear
-                    .frame(maxWidth: .infinity, minHeight: 1)
+                aiCreditsMeter
                 
-                Button {
+                Spacer(minLength: 8)
+                
+                AIPromptSendButton(
+                    isEnabled: canSend,
+                    isProcessing: isProcessing
+                ) {
                     Haptics.bump()
                     if isProcessing {
                         stopAIRun()
                     } else {
                         runTask = Task { await run(prompt: promptText) }
                     }
-                } label: {
-                    let isActive = isProcessing || canSend
-                    let strongFill = colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717)
-                    let strongGlyph = colorScheme == .dark ? Color(hex: 0x171717) : Color.white
-                    AppIcon(
-                        systemName: isProcessing ? "stop.fill" : "arrow.up",
-                        size: isProcessing ? 13 : 18,
-                        strokeWidth: 2.25,
-                        color: isActive ? strongGlyph : Color.secondary,
-                        filled: isProcessing
-                    )
-                    .frame(width: 36, height: 36)
-                    .background {
-                        Circle()
-                            .fill(isActive ? strongFill : Color(.tertiarySystemFill))
-                    }
                 }
-                .buttonStyle(.plain)
-                .disabled(!isProcessing && !canSend)
-                .accessibilityLabel(isProcessing ? "Stop" : "Send")
             }
             .frame(height: composerFooterHeight)
             .padding(.leading, 20)
@@ -504,7 +548,7 @@ struct TripStacksAISheet: View {
         
         let inset = promptTextContainerInset
         let textWidth = max(width - inset.leading - inset.trailing, 1)
-        let font = AppFont.uiFont(size: 17, weight: .regular)
+        let font = AppFont.uiFont(size: 17, weight: .medium)
         
         let measureText = promptText.isEmpty ? placeholderText : promptText
         let bounding = (measureText as NSString).boundingRect(
@@ -546,7 +590,7 @@ struct TripStacksAISheet: View {
                 .background(chipFallback, in: Circle())
                 
                 Text(chip.title)
-                    .font(.app(16, weight: .regular))
+                    .font(.app(15, weight: .medium))
                     .foregroundStyle(.primary.opacity(0.88))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -658,12 +702,12 @@ struct TripStacksAISheet: View {
         if trimmed.range(of: #"never return only (a )?hotel"#, options: [.regularExpression, .caseInsensitive]) != nil {
             return trimmed
         }
-        let days = AIDayMapping.resolvedDayCount(for: AITripDraft(), promptText: trimmed)
-        let minItems = AIDayMapping.completableItemCount(dayCount: days)
+        let actualDays = AIDayMapping.resolvedDayCount(for: AITripDraft(), promptText: trimmed)
+        let minItems = AIDayMapping.completableItemCount(dayCount: actualDays)
         return """
         \(trimmed)
         
-        Return a full_itinerary draft with at least \(minItems) items for this \(days)-day trip: 1 hotel, a few real restaurants/cafes, activities spread across dayIndex 0…\(days - 1) (not every meal every day), 1 packing checklist, and 1–2 reminders. Include startTime/endTime (HH:mm) on venue activities. Keep notes under 12 words. Never return only a hotel.
+        Return a full_itinerary draft with at least \(minItems) items for this \(actualDays)-day trip: 1 hotel, a few real restaurants/cafes, activities spread across dayIndex 0…\(actualDays - 1) (not every meal every day), 1 packing checklist, and 1–2 reminders. Include startTime/endTime (HH:mm) on venue activities. Keep notes under 12 words. Never return only a hotel.
         """
     }
     
@@ -679,7 +723,7 @@ struct TripStacksAISheet: View {
     private func createTripFillPrompt(trip: AITripDraft, dayCount: Int, priorCount: Int, prompt: String) -> String {
         let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
         let dest = destination.isEmpty ? trip.name : destination
-        let days = max(1, min(dayCount, 10))
+        let days = max(1, dayCount)
         let minItems = AIDayMapping.completableItemCount(dayCount: days)
         let namedStay = AIDayMapping.extractNamedStay(from: prompt)
         let hotelSlot = namedStay.map {
@@ -715,7 +759,7 @@ struct TripStacksAISheet: View {
     ) -> String {
         let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
         let dest = destination.isEmpty ? trip.name : destination
-        let days = max(1, min(dayCount, 10))
+        let days = max(1, dayCount)
         let minItems = AIDayMapping.completableItemCount(dayCount: days)
         let badList = badVenueNames.isEmpty
             ? "several invented venues"
@@ -818,6 +862,16 @@ struct TripStacksAISheet: View {
     private func run(prompt: String, displayText: String? = nil, ignoreTripContext: Bool = false) async {
         let raw = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty else { return }
+        
+        let blocked = await MainActor.run { () -> Bool in
+            guard aiUsage.canGenerate(isPremium: premium.isPremium) else {
+                showPaywall = true
+                return true
+            }
+            return false
+        }
+        if blocked { return }
+        
         let visible = (displayText ?? prompt).trimmingCharacters(in: .whitespacesAndNewlines)
         
         let generation: Int = await MainActor.run {
@@ -877,21 +931,44 @@ struct TripStacksAISheet: View {
                 ?? ""
         }
         
+        // Anchor "near me" / "within X hours of me" asks to the real device location.
+        // A "near you" chip already resolved it; a typed prompt has to ask for it.
+        var origin: AIUserLocation? = await MainActor.run {
+            guard let coordinate = nearYouCoordinate else { return nil }
+            return AIUserLocation(
+                label: nearYouLabel ?? "",
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude
+            )
+        }
+        if origin == nil, let place = await AICurrentLocation.originIfNeeded(for: raw) {
+            origin = AIUserLocation(
+                label: place.label,
+                latitude: place.latitude,
+                longitude: place.longitude
+            )
+        }
+        
         let request = AIRequest(
             mode: mode,
             text: text,
+            rawText: raw,
             scopeHint: scopeHint,
             tripContext: requestTripContext,
             preferences: prefs.isEmpty ? nil : prefs,
             existingItems: mode == .planDay ? existingItems : [],
             existingPlaces: mode == .placeFinder ? existingPlaces : [],
-            existingTrips: mode == .createTrip ? existingTrips : []
+            existingTrips: mode == .createTrip ? existingTrips : [],
+            userLocation: origin
         )
         
         do {
             let response = try await client.generate(request)
             try Task.checkCancellation()
             guard await MainActor.run(body: { generation == runGeneration }) else { return }
+            await MainActor.run {
+                aiUsage.consumeCredit(isPremium: premium.isPremium)
+            }
             
             if response.clarificationNeeded {
                 await MainActor.run {
@@ -961,6 +1038,7 @@ struct TripStacksAISheet: View {
                     let fillRequest = AIRequest(
                         mode: .placeFinder,
                         text: fillText,
+                        rawText: raw,
                         tripContext: requestTripContext,
                         preferences: prefs.isEmpty ? nil : prefs,
                         existingPlaces: existingPlaces
@@ -1010,6 +1088,17 @@ struct TripStacksAISheet: View {
                 }
                 
             case .createTrip:
+                // The ask was discovery ("where should we go within 5 hours of me"),
+                // so show the picks. Forcing a one-destination itinerary here is wrong.
+                if response.routing?.isRecommendation == true {
+                    await presentRecommendations(
+                        response.items,
+                        prompt: raw,
+                        origin: origin,
+                        generation: generation
+                    )
+                    return
+                }
                 guard var trip = response.trip, !trip.destination.isEmpty || !trip.name.isEmpty else {
                     await MainActor.run {
                         guard generation == runGeneration else { return }
@@ -1050,7 +1139,9 @@ struct TripStacksAISheet: View {
                     )
                     let fillRequest = AIRequest(
                         mode: .createTrip,
+                        // Refills are always itinerary work — classify on the fill text.
                         text: fillText,
+                        rawText: fillText,
                         preferences: prefs.isEmpty ? nil : prefs,
                         existingTrips: existingTrips
                     )
@@ -1107,6 +1198,7 @@ struct TripStacksAISheet: View {
                     let locRequest = AIRequest(
                         mode: .createTrip,
                         text: locationFill,
+                        rawText: locationFill,
                         preferences: prefs.isEmpty ? nil : prefs,
                         existingTrips: existingTrips
                     )
@@ -1194,6 +1286,7 @@ struct TripStacksAISheet: View {
                         || !title.isEmpty
                 }
             }
+            .filter { !$0.looksLikePromptLeak }
             .filter { $0.kind != .place }
     }
     
@@ -1212,6 +1305,64 @@ struct TripStacksAISheet: View {
             return String(trimmed.dropFirst("Best of ".count))
         }
         return nil
+    }
+    
+    /// Shows a discovery answer as saveable picks rather than an itinerary.
+    private func presentRecommendations(
+        _ items: [PlanDayItem],
+        prompt: String,
+        origin: AIUserLocation?,
+        generation: Int
+    ) async {
+        let normalized: [PlanDayItem] = items
+            .filter { $0.kind == .place || !$0.category.isEmpty }
+            .map { item in
+                var copy = item
+                copy.kind = .place
+                copy.include = false
+                copy.startTime = nil
+                copy.endTime = nil
+                if copy.category.isEmpty { copy.category = "other" }
+                return copy
+            }
+        
+        guard !normalized.isEmpty else {
+            await MainActor.run {
+                guard generation == runGeneration else { return }
+                errorText = "No recommendations came back. Try naming a city or area."
+                isProcessing = false
+            }
+            return
+        }
+        
+        // Wide span: picks are spread across a travel radius, not one city.
+        let biasRegion: MKCoordinateRegion? = origin.map { place in
+            MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude),
+                span: MKCoordinateSpan(latitudeDelta: 6, longitudeDelta: 6)
+            )
+        } ?? searchBiasRegion()
+        
+        let refinedDraft = await PlanDayLocationResolver.refineLocations(
+            in: PlanDayDraft(items: normalized, extractedText: prompt, extractedFacts: PlanDayFacts()),
+            destination: origin?.label ?? "",
+            biasRegion: biasRegion
+        )
+        let refined = refinedDraft.items
+        guard !Task.isCancelled else { return }
+        
+        await MainActor.run {
+            guard generation == runGeneration else { return }
+            aiReplyText = AIReplyCopy.places(
+                itemCount: refined.count,
+                destinationHint: origin?.label,
+                items: refined
+            )
+            placeItems = refined
+            showPlacesPreview = true
+            isProcessing = false
+            Haptics.bump()
+        }
     }
     
     private func searchBiasRegion() -> MKCoordinateRegion? {
@@ -1240,7 +1391,7 @@ struct TripStacksAISheet: View {
                 .accessibilityHidden(true)
             
             Text("Something went wrong.")
-                .font(.app(15, weight: .regular))
+                .font(.app(15, weight: .medium))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             
@@ -1309,21 +1460,6 @@ struct TripStacksAISheet: View {
         }
         
         return "Something went wrong. Please try again."
-    }
-}
-
-private struct AIPromptFieldGlassBackground: ViewModifier {
-    let shape: RoundedRectangle
-    
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(.regular, in: shape)
-        } else {
-            content
-                .background(.ultraThinMaterial, in: shape)
-                .clipShape(shape)
-        }
     }
 }
 

@@ -7,6 +7,7 @@ import QuickLook
 struct NewActivitySheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appAccentColor) private var appAccentColor
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.openURL) private var openURL
     @Binding var title: String
     @Binding var location: String
@@ -92,6 +93,9 @@ struct NewActivitySheet: View {
     @State private var appleMapItem: MKMapItem?
     @State private var selectedAppleMapItem: MKMapItem?
     @State private var isLoadingApplePlace = false
+    @State private var showDeleteConfirm = false
+    @State private var showSavedToPlacesToast = false
+    @State private var savedToPlacesToastHideTask: Task<Void, Never>?
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
     
@@ -185,6 +189,10 @@ struct NewActivitySheet: View {
             comps.queryItems?.append(URLQueryItem(name: "destination[longitude]", value: String(lon)))
         }
         return comps.url
+    }
+    
+    private var selectedDayTitle: String {
+        dayOptions.first(where: { $0.id == selectedDayID })?.title ?? ""
     }
     
     private var durationString: String? {
@@ -401,19 +409,28 @@ struct NewActivitySheet: View {
     
     private func addToPlaces() {
         onAddToPlaces?()
+        Haptics.bump()
+        showSavedToPlacesToast = true
+        savedToPlacesToastHideTask?.cancel()
+        savedToPlacesToastHideTask = Task {
+            try? await Task.sleep(for: .seconds(1.6))
+            guard !Task.isCancelled else { return }
+            showSavedToPlacesToast = false
+        }
     }
     
     @ViewBuilder
-    private func openInButton(title: String, systemImage: String, url: URL?) -> some View {
+    private func openInButton(title: String, lucide: String, url: URL?) -> some View {
         Button {
             if let url {
                 openURL(url)
             }
         } label: {
-            Label {
+            HStack(spacing: 10) {
+                AppIcon(lucide: lucide, size: AppLucide.fieldSize, color: AppColor.textStrong)
                 Text(title)
-            } icon: {
-                AppIcon(systemName: systemImage, size: 15, color: .primary)
+                    .font(.app(13, weight: .medium))
+                    .foregroundStyle(AppColor.textStrong)
             }
         }
         .buttonStyle(.secondaryCapsule)
@@ -421,7 +438,7 @@ struct NewActivitySheet: View {
     }
     
     private var documentsSection: some View {
-        Section("Images & Documents") {
+        Section {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(documents) { document in
@@ -437,17 +454,17 @@ struct NewActivitySheet: View {
                         Button {
                             showDocumentFileImporter = true
                         } label: {
-                            Label("Upload from Files", systemImage: "folder")
+                            Label("Upload from Files", menuIcon: "folder")
                         }
                         Button {
                             showDocumentImagePicker = true
                         } label: {
-                            Label("Upload from Photos", systemImage: "photo.on.rectangle")
+                            Label("Upload from Photos", menuIcon: "photo.on.rectangle")
                         }
                         Button {
                             showDocumentCameraPicker = true
                         } label: {
-                            Label("Take Photo", systemImage: "camera")
+                            Label("Take Photo", menuIcon: "camera")
                         }
                     } label: {
                         addDocumentCard
@@ -456,6 +473,38 @@ struct NewActivitySheet: View {
                 }
                 .padding(.vertical, 2)
             }
+        } header: {
+            AppSectionHeader("Images & Documents")
+        }
+        .appDetailFieldBackground()
+    }
+    
+    private var activityActionButtons: some View {
+        Section {
+            HStack(spacing: AppSpacing.xs) {
+                DetailIconPillButton(
+                    lucide: "map-pin-plus",
+                    isEnabled: !isAlreadyInPlaces && canAddToPlaces && onAddToPlaces != nil,
+                    accessibilityLabel: isAlreadyInPlaces ? "Saved to Places" : "Save to Places"
+                ) {
+                    addToPlaces()
+                }
+                
+                if isEditing {
+                    DetailIconPillButton(
+                        lucide: "trash-2",
+                        iconColor: AppColor.destructive,
+                        fill: AppColor.destructive.opacity(colorScheme == .dark ? 0.25 : 0.14),
+                        accessibilityLabel: "Delete Activity"
+                    ) {
+                        showDeleteConfirm = true
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
     
@@ -473,8 +522,8 @@ struct NewActivitySheet: View {
                     .fill(Color(.tertiarySystemGroupedBackground))
                     .overlay {
                         Image(systemName: "doc.fill")
-                            .font(.app(18, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                            .font(.app(17, weight: .semibold))
+                            .foregroundStyle(AppColor.textWeak)
                     }
             }
         }
@@ -488,8 +537,8 @@ struct NewActivitySheet: View {
             Rectangle()
                 .fill(Color(.tertiarySystemGroupedBackground))
             Image(systemName: "plus")
-                .font(.app(16, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .font(.app(15, weight: .semibold))
+                .foregroundStyle(AppColor.textWeak)
         }
         .frame(width: previewSize, height: previewSize)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -517,14 +566,14 @@ struct NewActivitySheet: View {
                     "",
                     text: $title,
                     prompt: Text("Activity")
-                        .font(.app(40, weight: .semibold))
-                        .foregroundStyle(.secondary),
+                        .font(.appDisplay)
+                        .foregroundStyle(AppColor.textWeak),
                     axis: .vertical
                 )
-                .font(.app(40, weight: .semibold))
+                .font(.appDisplay)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.primary)
-                .tint(.primary) // caret color
+                .foregroundStyle(AppColor.textStrong)
+                .tint(AppColor.textStrong) // caret color
                 .focused($isTitleFocused)
                 .lineLimit(1...3)
                 .scrollDisabled(true)
@@ -541,42 +590,115 @@ struct NewActivitySheet: View {
     
     private var timingSection: some View {
         Section {
-            Picker(selection: $selectedDayID) {
-                ForEach(dayOptions) { option in
-                    Text(option.title)
-                        .tag(Optional(option.id))
+            VStack(spacing: 12) {
+                Menu {
+                    ForEach(dayOptions) { option in
+                        Button {
+                            selectedDayID = option.id
+                        } label: {
+                            if option.id == selectedDayID {
+                                Label(option.title, systemImage: "checkmark")
+                            } else {
+                                Text(option.title)
+                            }
+                        }
+                    }
+                } label: {
+                    activityFieldRow(lucide: "calendar-1", title: "Day") {
+                        HStack(spacing: 8) {
+                            Text(selectedDayTitle)
+                                .font(.app(15, weight: .medium))
+                                .foregroundStyle(AppColor.textStrong)
+                                .lineLimit(1)
+                            AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                        }
+                    }
                 }
-            } label: {
-                Label("Day", appIcon: "calendar", color: .primary)
-            }
-            
-            DatePicker(selection: $startTime, displayedComponents: .hourAndMinute) {
-                Label("From", appIcon: "clock")
-            }
-            
-            Toggle(isOn: $hasEndTime) {
-                Label("Add end time", appIcon: "clock-plus")
-            }
-            .tint(appAccentColor)
-            .onChange(of: hasEndTime) { _, newValue in
-                if !newValue {
-                    endTime = startTime
-                } else if endTime <= startTime {
-                    endTime = startTime.addingTimeInterval(60 * 60)
+                .buttonStyle(.plain)
+                
+                activityFieldDivider
+                
+                activityFieldRow(lucide: "clock", title: "From") {
+                    DatePicker(
+                        "",
+                        selection: $startTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .labelsHidden()
+                    .appDatePickerFont()
+                    .tint(AppColor.textStrong)
+                }
+                
+                activityFieldDivider
+                
+                activityFieldRow(lucide: "clock-plus", title: "Add end time") {
+                    Toggle("", isOn: $hasEndTime)
+                        .labelsHidden()
+                        .tint(appAccentColor)
+                }
+                .onChange(of: hasEndTime) { _, newValue in
+                    if !newValue {
+                        endTime = startTime
+                    } else if endTime <= startTime {
+                        endTime = startTime.addingTimeInterval(60 * 60)
+                    }
+                }
+                
+                if hasEndTime {
+                    activityFieldDivider
+                    
+                    activityFieldRow(lucide: "clock-arrow-down", title: "To") {
+                        DatePicker(
+                            "",
+                            selection: $endTime,
+                            in: startTime...,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .labelsHidden()
+                        .appDatePickerFont()
+                        .tint(AppColor.textStrong)
+                    }
+                }
+                
+                if let durationText = durationString {
+                    activityFieldDivider
+                    Text("Duration: \(durationText)")
+                        .font(.app(13, weight: .medium))
+                        .foregroundStyle(AppColor.textWeak)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            
-            if hasEndTime {
-                DatePicker(selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute) {
-                    Label("To", appIcon: "clock-arrow-down")
-                }
-            }
-            if let durationText = durationString {
-                Text("Duration: \(durationText)")
-                    .font(.appFootnote)
-                    .foregroundStyle(.secondary)
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
+            .background(
+                AppColor.card,
+                in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+            )
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
+    }
+    
+    private func activityFieldRow<Trailing: View>(
+        lucide: String,
+        title: String,
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        HStack(spacing: 8) {
+            AppIcon(lucide: lucide, size: AppLucide.fieldSize, color: AppColor.textStrong)
+            Text(title)
+                .font(.app(15, weight: .medium))
+                .foregroundStyle(AppColor.textStrong)
+            Spacer(minLength: 8)
+            trailing()
+        }
+    }
+    
+    private var activityFieldDivider: some View {
+        Rectangle()
+            .fill(AppColor.textStrong.opacity(0.05))
+            .frame(height: 1)
     }
     
     @ViewBuilder
@@ -591,6 +713,7 @@ struct NewActivitySheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .appDetailFieldBackground()
         } else if let appleMapItem {
             ApplePlaceContactSection(
                 mapItem: appleMapItem,
@@ -628,38 +751,36 @@ struct NewActivitySheet: View {
             titleHeaderSection
             
             Section {
-                LocationSearchField(
-                    text: $location,
-                    latitude: $latitude,
-                    longitude: $longitude,
-                    searchRegion: tripLocationRegion
-                )
-            } footer: {
-                if isEditing, !location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    // Footer sits outside the inset-grouped card (avoids clip). Pull leading
-                    // flush with the location card — Form footers are indented by default.
-                    ScrollViewReader { proxy in
+                VStack(alignment: .leading, spacing: 12) {
+                    LocationSearchField(
+                        text: $location,
+                        latitude: $latitude,
+                        longitude: $longitude,
+                        searchRegion: tripLocationRegion
+                    )
+                    .padding(AppSpacing.fieldPadding)
+                    .background(
+                        AppColor.card,
+                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    )
+                    
+                    if isEditing, !location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                Color.clear
-                                    .frame(width: 0, height: 1)
-                                    .id("openInLeading")
-                                openInButton(title: "Google Maps", systemImage: "globe", url: googleMapsURL)
-                                openInButton(title: "Apple Maps", systemImage: "map.fill", url: appleMapsURL)
-                                openInButton(title: "Lyft", systemImage: "car.fill", url: lyftURL)
-                                openInButton(title: "Uber", systemImage: "car.fill", url: uberURL)
+                                openInButton(title: "Google Maps", lucide: "map", url: googleMapsURL)
+                                openInButton(title: "Apple Maps", lucide: "map", url: appleMapsURL)
+                                openInButton(title: "Lyft", lucide: "car-front", url: lyftURL)
+                                openInButton(title: "Uber", lucide: "car-front", url: uberURL)
                             }
-                            .padding(.trailing, 20)
                         }
                         .scrollClipDisabled()
-                        .padding(.top, 6)
-                        .padding(.leading, -16)
-                        .onAppear {
-                            proxy.scrollTo("openInLeading", anchor: .leading)
-                        }
+                        .foregroundStyle(AppColor.textStrong)
                     }
                 }
             }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
             
             applePlaceInfoSection
             
@@ -678,58 +799,56 @@ struct NewActivitySheet: View {
                 Button {
                     showCostSheet = true
                 } label: {
-                    HStack {
-                        Label("Cost", appIcon: "wallet")
-                        Spacer()
+                    HStack(spacing: 10) {
+                        AppIcon(lucide: "wallet", size: AppLucide.fieldSize, color: AppColor.textStrong)
+                        Text("Cost")
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(AppColor.textStrong)
+                        Spacer(minLength: 8)
                         Text(CurrencyFormatting.string(for: cost, currencyCode: costCurrencyCode))
-                            .foregroundStyle(.primary)
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(AppColor.textStrong)
                             .monospacedDigit()
                     }
+                    .padding(AppSpacing.fieldPadding)
+                    .background(AppColor.card, in: Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
                 }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
             
             documentsSection
             
             Section {
-                TextField("Notes", text: $description, axis: .vertical)
-                    .lineLimit(3...12)
-                    .textInputAutocapitalization(.sentences)
-                    .focused($isNotesFocused)
-            }
-            
-            DetailActionButtonStack {
-                Button {
-                    addToPlaces()
-                } label: {
-                    Label {
-                        Text(isAlreadyInPlaces ? "Added to Places" : "Add to Places")
-                    } icon: {
-                        AppIcon(
-                            lucide: isAlreadyInPlaces ? "map-pin-check" : "map-pin-plus",
-                            size: 15
+                VStack(alignment: .leading, spacing: 8) {
+                    AppSectionHeader("Notes")
+                        .padding(.leading, 20)
+                    
+                    TextField("", text: $description, axis: .vertical)
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                        .lineLimit(3...12)
+                        .textInputAutocapitalization(.sentences)
+                        .focused($isNotesFocused)
+                        .padding(AppSpacing.cardPadding)
+                        .frame(minHeight: 100, alignment: .topLeading)
+                        .background(
+                            AppColor.card,
+                            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
                         )
-                    }
-                }
-                .buttonStyle(.secondaryCapsuleBlock)
-                .disabled(isAlreadyInPlaces || !canAddToPlaces || onAddToPlaces == nil)
-                .detailActionRow()
-                
-                if isEditing {
-                    Button {
-                        deleteEvent()
-                    } label: {
-                        Label {
-                            Text("Delete Activity")
-                        } icon: {
-                            AppIcon(systemName: "trash", size: 15, color: .red)
-                        }
-                    }
-                    .buttonStyle(.destructiveCapsuleBlock)
-                    .detailActionRow()
                 }
             }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            
+            activityActionButtons
         }
         .scrollContentBackground(.hidden)
+        .appFormPageSpacing()
     }
     
     @ViewBuilder
@@ -766,7 +885,7 @@ struct NewActivitySheet: View {
         ZStack(alignment: .top) {
             // Keep a true grouped page behind inset sections so white cards
             // stay visible in light mode (scroll background is hidden for the accent wash).
-            Color(.systemGroupedBackground)
+            AppDetailSurface.page(for: colorScheme)
                 .ignoresSafeArea()
             
             LinearGradient(
@@ -864,6 +983,20 @@ struct NewActivitySheet: View {
                     }
                 }
             }
+            .overlay(alignment: .bottom) {
+                if showSavedToPlacesToast {
+                    DetailToastBanner(text: "Saved to places")
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: showSavedToPlacesToast)
+            .alert("Delete Activity", isPresented: $showDeleteConfirm) {
+                Button("Delete Activity", role: .destructive) {
+                    deleteEvent()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete this activity? This action cannot be undone.")
+            }
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
                 if isNotesFocused {
@@ -921,6 +1054,7 @@ struct NewActivitySheet: View {
             .onChange(of: selectedDayID) { _, _ in if isEditing { onAdd() } }
         }
         )
+        .sheetAccentDragIndicator(accent.background)
     }
 }
 
@@ -1107,6 +1241,7 @@ private struct IconAndColorPickerSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Group {
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Color")
@@ -1162,7 +1297,11 @@ private struct IconAndColorPickerSheet: View {
                         }
                     }
                 }
+                }
+                .appDetailFieldBackground()
             }
+            .appFormPageSpacing()
+            .appDetailFormChrome()
             .navigationTitle("Icon")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

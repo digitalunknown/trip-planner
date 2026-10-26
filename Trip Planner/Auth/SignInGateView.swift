@@ -3,62 +3,43 @@ import AuthenticationServices
 
 struct SignInGateView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var auth: AppleSignInManager
-    @Environment(\.appAccentColor) private var appAccentColor
     
-    @AppStorage("exploreSampleEnabled") private var exploreSampleEnabled: Bool = false
+    @State private var page = 0
+    
+    private var buttonMaxWidth: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 400 : .infinity
+    }
     
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground)
+            AppDetailSurface.page
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                Spacer(minLength: 0)
+                SignInOnboardingPager(page: $page)
                 
-                SignInHeroAnimation()
-                    .padding(.horizontal, 20)
-
-                Spacer(minLength: 40)
+                SignInOnboardingPageDots(
+                    count: SignInOnboardingPage.allCases.count,
+                    current: page
+                )
+                .padding(.top, AppSpacing.xs)
+                .padding(.bottom, AppSpacing.md)
                 
-                VStack(spacing: 10) {
-                    Text("Start organizing your travel today")
-                        .font(.app(34, weight: .semibold))
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 36)
-                
-                Spacer(minLength: 0)
-                
-                VStack(spacing: 12) {
-                    SignInWithAppleButton(.signIn) { request in
-                        // Name/email are only returned the first time the user authorizes this app.
-                        request.requestedScopes = [.fullName, .email]
-                    } onCompletion: { result in
-                        auth.handleAuthorizationResult(result)
-                        if auth.isSignedIn {
-                            exploreSampleEnabled = false
-                            dismiss()
-                        }
-                    }
-                    .frame(height: 50)
-                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 400 : .infinity)
-                    .signInWithAppleButtonStyle(.black)
-                    
-                    Button {
-                        exploreSampleEnabled = true
+                SignInWithAppleButton(.signIn) { request in
+                    // Name/email are only returned the first time the user authorizes this app.
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    auth.handleAuthorizationResult(result)
+                    if auth.isSignedIn {
                         dismiss()
-                    } label: {
-                        Text("Explore Sample Trip")
-                            .font(.appHeadline)
-                            .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 400 : .infinity)
-                            .frame(height: 52)
-                            .foregroundStyle(appAccentColor)
                     }
-                    .buttonStyle(.plain)
-                    .contentShape(Rectangle())
                 }
+                .frame(height: 50)
+                .frame(maxWidth: buttonMaxWidth)
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .clipShape(Capsule(style: .continuous))
                 .padding(.horizontal, 32)
                 .padding(.bottom, 22)
             }
@@ -67,10 +48,8 @@ struct SignInGateView: View {
         .tint(.primary)
         .onChange(of: auth.isSignedIn) { _, newValue in
             if newValue {
-                exploreSampleEnabled = false
                 dismiss()
             }
         }
     }
 }
-

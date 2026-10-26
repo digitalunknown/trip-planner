@@ -51,17 +51,20 @@ struct PlacesHomeView: View {
         var leftHeight: CGFloat = 0
         var rightHeight: CGFloat = 0
         
-        // Match `.padding(16)` + `HStack` spacing `12` in the grid below.
-        let columnWidth = max((UIScreen.main.bounds.width - 32 - 12) / 2, 140)
+        // Match page inset + `itemSpacing` between columns in the grid below.
+        let columnWidth = max(
+            (UIScreen.main.bounds.width - RootHomeMetrics.horizontalInset * 2 - PlaceCardMetrics.itemSpacing) / 2,
+            140
+        )
         
         for place in places {
             let estimate = PlaceCardMetrics.estimatedHeight(for: place, columnWidth: columnWidth)
             if leftHeight <= rightHeight {
                 left.append(place)
-                leftHeight += estimate + 12
+                leftHeight += estimate + PlaceCardMetrics.itemSpacing
             } else {
                 right.append(place)
-                rightHeight += estimate + 12
+                rightHeight += estimate + PlaceCardMetrics.itemSpacing
             }
         }
         return (left, right)
@@ -97,13 +100,13 @@ struct PlacesHomeView: View {
                         }
                         
                         let columns = masonryColumns
-                        HStack(alignment: .top, spacing: 12) {
-                            LazyVStack(spacing: 12) {
+                        HStack(alignment: .top, spacing: PlaceCardMetrics.itemSpacing) {
+                            LazyVStack(spacing: PlaceCardMetrics.itemSpacing) {
                                 ForEach(columns.left) { place in
                                     placeButton(place)
                                 }
                             }
-                            LazyVStack(spacing: 12) {
+                            LazyVStack(spacing: PlaceCardMetrics.itemSpacing) {
                                 ForEach(columns.right) { place in
                                     placeButton(place)
                                 }
@@ -116,9 +119,8 @@ struct PlacesHomeView: View {
                 }
             }
         }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Places")
-        .navigationBarTitleDisplayMode(.large)
+        .background(AppDetailSurface.page)
+        .appRootNavigationTitle("Places")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 LiquidGlassToolbarIconPair {
@@ -128,14 +130,14 @@ struct PlacesHomeView: View {
                         } label: {
                             LiquidGlassToolbarIconLabel(systemName: "sparkles")
                         }
-                        .buttonStyle(.plain)
+                        .liquidGlassToolbarControl()
                     }
                     Button {
                         showAddPlace = true
                     } label: {
                         LiquidGlassToolbarIconLabel(systemName: "plus")
                     }
-                    .buttonStyle(.plain)
+                    .liquidGlassToolbarControl()
                 }
             }
         }
@@ -234,10 +236,10 @@ struct PlacesHomeView: View {
     
     private var filterChipsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: AppSpacing.xs) {
                 if let selectedPlaceType {
                     PlaceTypeFilterChip(
-                        title: selectedPlaceType.title,
+                        title: selectedPlaceType.chipTitle,
                         iconSystemName: selectedPlaceType.iconSystemName,
                         isSelected: true
                     ) {
@@ -248,7 +250,7 @@ struct PlacesHomeView: View {
                 } else {
                     ForEach(activePlaceTypes) { type in
                         PlaceTypeFilterChip(
-                            title: type.title,
+                            title: type.chipTitle,
                             iconSystemName: type.iconSystemName,
                             isSelected: false
                         ) {
@@ -264,11 +266,10 @@ struct PlacesHomeView: View {
     }
     
     private func placeButton(_ place: Place) -> some View {
-        let tripCount = PlaceTripMembership.tripCount(for: place, in: tripStore.trips)
         return Button {
             selectedPlaceID = place.id
         } label: {
-            PlaceCardView(place: place, tripCount: tripCount)
+            PlaceCardView(place: place)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -286,7 +287,7 @@ struct PlacesHomeView: View {
                     }
                 }
             } label: {
-                Label("Add to Trip", appIcon: "suitcase")
+                Label("Add to Trip", menuIcon: "map-plus")
             }
             
             Menu {
@@ -294,25 +295,25 @@ struct PlacesHomeView: View {
                     placeForImageUpdate = place
                     showUnsplashPicker = true
                 } label: {
-                    Label("Choose from Unsplash", appIcon: "sparkles")
+                    Label("Choose from Unsplash", menuIcon: "sparkles")
                 }
                 Button {
                     placeForImageUpdate = place
                     photosPickerPresented = true
                 } label: {
-                    Label("Upload from Photos", appIcon: "photo.on.rectangle")
+                    Label("Upload from Photos", menuIcon: "photo.on.rectangle")
                 }
             } label: {
                 Label(
                     place.hasPhoto ? "Update Image" : "Add Image",
-                    appIcon: place.hasPhoto ? "photo" : "photo.badge.plus"
+                    menuIcon: place.hasPhoto ? "photo" : "photo.badge.plus"
                 )
             }
             
             Button {
                 placeToEdit = place
             } label: {
-                Label("Edit", appIcon: "square.and.pencil")
+                Label("Edit Place", menuIcon: "square.and.pencil")
             }
             
             Divider()
@@ -320,7 +321,7 @@ struct PlacesHomeView: View {
             Button(role: .destructive) {
                 placePendingDelete = place
             } label: {
-                Label("Delete", appIcon: "trash")
+                Label("Delete Place", menuIcon: "trash")
             }
         }
     }
@@ -449,52 +450,36 @@ private struct PlaceTypeFilterChip: View {
     let isSelected: Bool
     let action: () -> Void
     
-    @Environment(\.colorScheme) private var colorScheme
+    private var contentColor: Color { AppColor.textStrong }
     
-    private var foreground: Color {
-        colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717)
-    }
-    
-    private var fallback: Color {
-        colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0)
+    private var fillColor: Color {
+        isSelected ? AppColor.elevated : AppColor.card
     }
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                if isSelected {
-                    AppIcon(systemName: "xmark", size: 10, color: foreground)
-                }
+            HStack(spacing: AppSpacing.xxs) {
                 AppIcon(
                     systemName: iconSystemName,
-                    size: 12,
-                    color: foreground.opacity(isSelected ? 1 : 0.78)
+                    size: 16,
+                    color: contentColor
                 )
                 Text(title)
-                    .font(.app(13, weight: .semibold))
+                    .font(.app(13, weight: .medium))
+                    .foregroundStyle(contentColor)
+                if isSelected {
+                    AppIcon(lucide: "x", size: 12, color: contentColor)
+                }
             }
-            .foregroundStyle(foreground.opacity(isSelected ? 1 : 0.78))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .modifier(PlaceChipGlassBackground(fallback: fallback))
+            .padding(.horizontal, AppSpacing.sm)
+            .padding(.vertical, AppSpacing.xs)
+            .background(
+                fillColor,
+                in: Capsule(style: .continuous)
+            )
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct PlaceChipGlassBackground: ViewModifier {
-    let fallback: Color
-    private let shape = Capsule(style: .continuous)
-    
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(.regular, in: shape)
-                .clipShape(shape)
-        } else {
-            content
-                .background(fallback, in: shape)
-                .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
-        }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint(isSelected ? "Clears the filter and shows all places" : "Filters places by this type")
     }
 }

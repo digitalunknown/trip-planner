@@ -31,9 +31,9 @@ struct ExploreHomeView: View {
                         .navigationLinkIndicatorVisibility(.hidden)
                         .listRowInsets(
                             EdgeInsets(
-                                top: RootHomeMetrics.chromeToContent / 2,
+                                top: 0,
                                 leading: RootHomeMetrics.horizontalInset,
-                                bottom: RootHomeMetrics.chromeToContent / 2,
+                                bottom: 0,
                                 trailing: RootHomeMetrics.horizontalInset
                             )
                         )
@@ -43,14 +43,16 @@ struct ExploreHomeView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                .listRowSpacing(AppSpacing.sectionGap)
+                .contentMargins(.top, RootHomeMetrics.topInset, for: .scrollContent)
+                .contentMargins(.bottom, RootHomeMetrics.bottomInset, for: .scrollContent)
                 .refreshable {
                     await refreshFeed(hapticOnSuccess: true)
                 }
             }
         }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Explore")
-        .navigationBarTitleDisplayMode(.large)
+        .background(AppDetailSurface.page)
+        .appRootNavigationTitle("Explore")
         .navigationDestination(for: ExploreStaffPick.self) { pick in
             ExploreDetailView(pick: pick)
         }
@@ -128,7 +130,7 @@ struct ExploreHomeView: View {
 struct ExploreFeedCard: View {
     let pick: ExploreStaffPick
     
-    private let mapInsetSize: CGFloat = 88
+    private let mapInsetSize: CGFloat = TripVisualMetrics.mapInsetSize
     
     private var remoteCoverURL: URL? {
         guard let raw = pick.coverImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -141,15 +143,15 @@ struct ExploreFeedCard: View {
     }
     
     private var imageShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
+        RoundedRectangle(cornerRadius: TripVisualMetrics.coverRadius, style: .continuous)
     }
     
     private var mapInsetShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        RoundedRectangle(cornerRadius: TripVisualMetrics.mapInsetRadius, style: .continuous)
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: TripVisualMetrics.imageToTextGap) {
             visual
             details
         }
@@ -164,18 +166,13 @@ struct ExploreFeedCard: View {
                 VStack {
                     HStack {
                         Spacer()
-                        HStack(spacing: 5) {
-                            AppIcon(systemName: "star.fill", size: 11, strokeWidth: 2, color: .white, filled: true)
-                            Text(pick.badge)
-                                .font(.appCaption)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .modifier(ExploreBadgeGlassBackground())
+                        CoverOverlayBadge(
+                            lucide: "star",
+                            text: pick.badge,
+                            style: .muted
+                        )
                     }
-                    .padding(12)
+                    .padding(TripVisualMetrics.overlayInset)
                     Spacer()
                 }
                 .allowsHitTesting(false)
@@ -190,10 +187,9 @@ struct ExploreFeedCard: View {
                                 .clipShape(mapInsetShape)
                                 .overlay {
                                     mapInsetShape
-                                        .strokeBorder(Color.white.opacity(0.92), lineWidth: 2)
+                                        .strokeBorder(AppColor.textStrong, lineWidth: 2)
                                 }
-                                .shadow(color: .black.opacity(0.28), radius: 8, x: 0, y: 4)
-                                .padding(12)
+                                .padding(TripVisualMetrics.overlayInset)
                         }
                     }
                     .allowsHitTesting(false)
@@ -201,7 +197,6 @@ struct ExploreFeedCard: View {
             }
         }
         .clipShape(imageShape)
-        .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 8)
     }
     
     @ViewBuilder
@@ -238,10 +233,10 @@ struct ExploreFeedCard: View {
     }
     
     private var details: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: AppSpacing.stackMicro) {
             Text(pick.title)
-                .font(.appHeadline)
-                .foregroundStyle(.primary)
+                .font(.app(17, weight: .semibold))
+                .foregroundStyle(AppColor.textStrong)
                 .lineLimit(3)
             
             ExploreMetadataLine(
@@ -260,8 +255,8 @@ struct ExploreDetailView: View {
     
     @Environment(TripStore.self) private var tripStore
     @Environment(PlaceStore.self) private var placeStore
-    @Environment(ExpertTipsStore.self) private var expertTips
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(RootTabChrome.self) private var tabChrome
+    @Environment(\.dismiss) private var dismiss
     
     @State private var openedTripID: UUID?
     @State private var showCreateTripReview = false
@@ -269,9 +264,19 @@ struct ExploreDetailView: View {
     @State private var coverByActivityID: [UUID: Data] = [:]
     @State private var loadingMapsID: UUID?
     @State private var selectedAppleMapItem: MKMapItem?
+    @State private var activityPendingTripAdd: EventItem?
+    @State private var topSafeArea: CGFloat = 0
     
-    private var placeCardFill: Color {
-        colorScheme == .dark ? Color(hex: 0x323234) : Color(hex: 0xE8E8ED)
+    private var tripsForAddMenu: [Trip] {
+        tripStore.trips.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+    
+    private var remoteCoverURL: URL? {
+        guard let raw = pick.coverImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else { return nil }
+        return URL(string: raw)
     }
     
     private var createTripDraft: AITripDraft {
@@ -307,47 +312,83 @@ struct ExploreDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                PageWrappingTitle(title: pick.title)
+            VStack(alignment: .leading, spacing: 0) {
+                heroImage
+                    .padding(.top, -topSafeArea)
                 
-                ExploreMetadataLine(
-                    destination: pick.destination,
-                    publisher: pick.publisher,
-                    itemCount: pick.activities.count
-                )
-                
-                Button {
-                    showCreateTripReview = true
-                } label: {
-                    Label("Create Trip", appIcon: "luggage")
-                }
-                .buttonStyle(.primaryCapsule)
-                
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(Array(pick.paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                        Text(paragraph)
-                            .font(.appBody)
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: ExploreDetailMetrics.sectionGap) {
+                    header
+                    
+                    Button {
+                        showCreateTripReview = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            AppIcon(lucide: "map-plus", size: 20, color: AppColor.page)
+                            Text("Create Trip")
+                                .font(.app(17, weight: .semibold))
+                        }
+                        .foregroundStyle(AppColor.page)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppColor.textStrong, in: Capsule(style: .continuous))
                     }
-                }
-                
-                VStack(alignment: .leading, spacing: 12) {
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Create Trip")
+                    
+                    if !pick.paragraphs.isEmpty {
+                        VStack(alignment: .leading, spacing: ExploreDetailMetrics.paragraphGap) {
+                            ForEach(Array(pick.paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                                Text(paragraph)
+                                    .font(.appBody)
+                                    .foregroundStyle(AppColor.textStrong)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    
                     ForEach(pick.activities) { activity in
-                        activityRow(activity)
+                        explorePlaceCard(activity)
                     }
                 }
+                .padding(.horizontal, ExploreDetailMetrics.pagePadding)
+                .padding(.top, AppSpacing.pageTop)
+                .padding(.bottom, AppSpacing.pageBottom)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, RootHomeMetrics.horizontalInset)
-            .padding(.top, RootHomeMetrics.topInset)
-            .padding(.bottom, 100)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(Color(.systemGroupedBackground))
+        .scrollIndicators(.hidden)
+        .background(AppDetailSurface.page.ignoresSafeArea())
+        .background { topSafeAreaReader }
         .tint(.primary)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .enableSwipeBack()
+        .toolbar(.hidden, for: .tabBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                LiquidGlassIconButton(systemName: "chevron.left", accessibilityLabelText: "Back") {
+                    dismiss()
+                }
+            }
+        }
+        .onAppear { tabChrome.beginSuppressingAIAccessory() }
+        .onDisappear { tabChrome.endSuppressingAIAccessory() }
         .applePlaceCardSheet(item: $selectedAppleMapItem)
+        .sheet(item: $activityPendingTripAdd) { activity in
+            PlaceAddToTripSheet(
+                trips: tripsForAddMenu,
+                subtitle: tripSubtitle(for:),
+                onSelect: { trip in
+                    addActivity(activity, to: trip)
+                    activityPendingTripAdd = nil
+                },
+                onCancel: { activityPendingTripAdd = nil }
+            )
+            .tint(.primary)
+        }
         .sheet(isPresented: $showCreateTripReview) {
             NavigationStack {
                 AICreateTripReviewView(
@@ -384,7 +425,63 @@ struct ExploreDetailView: View {
         }
     }
     
-    private func activityRow(_ activity: EventItem) -> some View {
+    private var header: some View {
+        VStack(alignment: .leading, spacing: ExploreDetailMetrics.titleMetaGap) {
+            Text(pick.title)
+                .font(.appDisplay)
+                .foregroundStyle(AppColor.textStrong)
+                .multilineTextAlignment(.leading)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            
+            ExploreMetadataLine(
+                destination: pick.destination,
+                publisher: pick.publisher,
+                itemCount: pick.activities.count
+            )
+        }
+    }
+    
+    private var topSafeAreaReader: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear { topSafeArea = geo.safeAreaInsets.top }
+                .onChange(of: geo.safeAreaInsets.top) { _, value in
+                    topSafeArea = value
+                }
+        }
+    }
+    
+    private var heroImage: some View {
+        StretchyHero {
+            if let url = remoteCoverURL {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        MapSnapshotView(region: pick.mapRegion)
+                    case .empty:
+                        ZStack {
+                            AppDetailSurface.card
+                            ProgressView()
+                        }
+                    @unknown default:
+                        MapSnapshotView(region: pick.mapRegion)
+                    }
+                }
+            } else {
+                MapSnapshotView(region: pick.mapRegion)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+    
+    private func explorePlaceCard(_ activity: EventItem) -> some View {
         let placeKey = placeIdentityKey(for: activity)
         let coverData = coverByActivityID[activity.id] ?? activity.photoData
         let subtitle: String = {
@@ -392,44 +489,101 @@ struct ExploreDetailView: View {
             if !notes.isEmpty { return notes }
             return activity.location.trimmingCharacters(in: .whitespacesAndNewlines)
         }()
-        let matchedTips = expertTips.tips(
-            title: activity.title,
-            location: activity.location,
-            latitude: activity.latitude,
-            longitude: activity.longitude
-        )
+        let isSaved = savedPlaceKeys.contains(placeKey) || placeAlreadySaved(activity)
         
-        return AIResultItemCard(
-            title: activity.title,
-            subtitle: subtitle,
-            photoData: coverData,
-            primaryAction: .savePlace(isOn: Binding(
-                get: {
-                    savedPlaceKeys.contains(placeKey) || placeAlreadySaved(activity)
-                },
-                set: { newValue in
-                    if newValue {
-                        addActivityToPlaces(activity)
+        return VStack(alignment: .leading, spacing: ExploreDetailMetrics.cardStackGap) {
+            VStack(alignment: .leading, spacing: ExploreDetailMetrics.cardTitleGap) {
+                Text(activity.title.isEmpty ? "Untitled" : activity.title)
+                    .font(.app(17, weight: .semibold))
+                    .foregroundStyle(AppColor.textStrong)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.app(15, weight: .medium))
+                        .foregroundStyle(AppColor.textStrong)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            
+            placeCover(data: coverData)
+            
+            HStack(spacing: ExploreDetailMetrics.actionGap) {
+                Button {
+                    guard !isSaved else { return }
+                    addActivityToPlaces(activity)
+                } label: {
+                    ExplorePlaceTextAction(
+                        lucide: isSaved ? "map-pin-check" : "map-pin-plus",
+                        title: isSaved ? "Saved to Places" : "Save to Places"
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isSaved)
+                
+                Button {
+                    activityPendingTripAdd = activity
+                } label: {
+                    ExplorePlaceTextAction(lucide: "map-plus", title: "Add to Trip")
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Rectangle()
+                .fill(AppColor.divider)
+                .frame(height: 1)
+            
+            Button {
+                Task { await openAppleMapsListing(for: activity) }
+            } label: {
+                HStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("View More Details")
+                            .font(.app(15, weight: .medium))
+                            .foregroundStyle(AppColor.textStrong)
+                        Text("Photos, hours, ratings & more")
+                            .font(.app(13, weight: .medium))
+                            .foregroundStyle(AppColor.textWeak)
+                    }
+                    Spacer(minLength: 8)
+                    if loadingMapsID == activity.id {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        AppIcon(lucide: "chevron-right", size: 24, color: AppColor.textWeak)
                     }
                 }
-            )),
-            showsMapButton: true,
-            isMapLoading: loadingMapsID == activity.id,
-            showsPhotoPlaceholder: coverData == nil,
-            onMapTap: {
-                Task { await openAppleMapsListing(for: activity) }
             }
-        ) {
-            if let tip = matchedTips.first {
-                ExpertTipInlineCallout(tip: tip)
-            }
+            .buttonStyle(.plain)
+            .disabled(loadingMapsID == activity.id)
         }
-        .padding(20)
+        .padding(ExploreDetailMetrics.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(ExploreDetailCardGlassBackground(fallback: placeCardFill))
+        .background(AppDetailSurface.card, in: RoundedRectangle(cornerRadius: ExploreDetailMetrics.cardRadius, style: .continuous))
         .task(id: activity.id) {
-            await expertTips.refresh()
             await loadAppleMapsCoverIfNeeded(for: activity)
+        }
+    }
+    
+    @ViewBuilder
+    private func placeCover(data: Data?) -> some View {
+        if let data, let image = UIImage(data: data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: ExploreDetailMetrics.cardImageHeight)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: ExploreDetailMetrics.imageRadius, style: .continuous))
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: ExploreDetailMetrics.imageRadius, style: .continuous)
+                    .fill(AppDetailSurface.boardCard)
+                ProgressView()
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: ExploreDetailMetrics.cardImageHeight)
+            .accessibilityLabel("Loading photo")
         }
     }
     
@@ -474,6 +628,41 @@ struct ExploreDetailView: View {
             longitude: activity.longitude,
             selectedMapItem: $selectedAppleMapItem
         )
+    }
+    
+    private func addActivity(_ activity: EventItem, to trip: Trip) {
+        guard let index = tripStore.trips.firstIndex(where: { $0.id == trip.id }) else { return }
+        let event = EventItem(
+            title: activity.title,
+            description: activity.description,
+            time: activity.time,
+            location: activity.location,
+            latitude: activity.latitude,
+            longitude: activity.longitude,
+            icon: activity.icon,
+            accent: activity.accent,
+            photoData: coverByActivityID[activity.id] ?? activity.photoData
+        )
+        var updatedTrip = tripStore.trips[index]
+        updatedTrip.showParkedIdeas = true
+        updatedTrip.parkedIdeas.insert(event, at: 0)
+        tripStore.trips[index] = updatedTrip
+        tripStore.save()
+        Haptics.bump()
+    }
+    
+    private func tripSubtitle(for trip: Trip) -> String? {
+        if trip.isDatesSet {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.setLocalizedDateFormatFromTemplate("MMMd yyyy")
+            if Calendar.current.isDate(trip.startDate, inSameDayAs: trip.endDate) {
+                return formatter.string(from: trip.startDate)
+            }
+            return "\(formatter.string(from: trip.startDate)) - \(formatter.string(from: trip.endDate))"
+        }
+        let destination = trip.destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        return destination.isEmpty ? nil : destination
     }
     
     private func addActivityToPlaces(_ activity: EventItem) {
@@ -680,50 +869,50 @@ private struct ExploreMetadataLine: View {
                 Text(destination)
             }
             if !destination.isEmpty, !publisher.isEmpty {
-                Text("  ·  ")
+                Text(" ⋅ ")
             }
             if !publisher.isEmpty {
                 Text("by \(publisher)")
             }
             if !destination.isEmpty || !publisher.isEmpty {
-                Text("  ·  ")
+                Text(" ⋅ ")
             }
             Text(itemCountText)
         }
-        .font(.appCaption)
-        .foregroundStyle(.secondary)
+        .font(.app(13, weight: .medium))
+        .foregroundStyle(AppColor.textWeak)
         .lineLimit(1)
     }
 }
 
-private struct ExploreBadgeGlassBackground: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(.regular, in: Capsule(style: .continuous))
-        } else {
-            content
-                .background {
-                    Capsule(style: .continuous)
-                        .fill(.ultraThinMaterial)
-                }
-        }
-    }
+private enum ExploreDetailMetrics {
+    static let pagePadding: CGFloat = 20
+    static let sectionGap: CGFloat = AppSpacing.sectionGap
+    static let titleMetaGap: CGFloat = AppSpacing.sm
+    static let paragraphGap: CGFloat = AppSpacing.md
+    static let cardPadding: CGFloat = AppSpacing.cardPadding
+    static let cardRadius: CGFloat = 20
+    static let cardStackGap: CGFloat = AppSpacing.sm
+    static let cardTitleGap: CGFloat = AppSpacing.xs
+    static let cardImageHeight: CGFloat = 184
+    static let imageRadius: CGFloat = 15
+    static let actionGap: CGFloat = AppSpacing.md
 }
 
-private struct ExploreDetailCardGlassBackground: ViewModifier {
-    let fallback: Color
-    private let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+private struct ExplorePlaceTextAction: View {
+    let lucide: String
+    let title: String
     
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(.regular, in: shape)
-                .clipShape(shape)
-        } else {
-            content
-                .background(fallback, in: shape)
+    var body: some View {
+        HStack(spacing: 5) {
+            AppIcon(lucide: lucide, size: 24, color: AppColor.textStrong)
+            Text(title)
+                .font(.app(15, weight: .semibold))
+                .foregroundStyle(AppColor.textStrong)
+                .lineLimit(1)
         }
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
     }
 }
 
@@ -734,4 +923,6 @@ private struct ExploreDetailCardGlassBackground: ViewModifier {
     .environment(TripStore())
     .environment(PlaceStore())
     .environment(ExpertTipsStore())
+    .environment(PremiumStore())
+    .environment(RootTabChrome())
 }

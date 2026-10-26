@@ -19,7 +19,7 @@ struct NewManySheet: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 Form {
-                    Section("Items") {
+                    Section {
                         ForEach(items) { item in
                             TextField(
                                 "Activity",
@@ -55,8 +55,13 @@ struct NewManySheet: View {
                             .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
                         .id(addRowID)
+                    } header: {
+                        AppSectionHeader("Items")
                     }
+                    .appDetailFieldBackground()
                 }
+                .appFormPageSpacing()
+                .appDetailFormChrome()
                 .onChange(of: isAddFieldFocused) { _, newValue in
                     guard newValue else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {

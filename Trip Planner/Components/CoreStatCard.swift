@@ -13,8 +13,8 @@ struct CoreStatCard: View {
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var textPrimary: Color { AppColor.textStrong }
+    private var textSecondary: Color { AppColor.textWeak }
     
     private var percent: Double {
         guard total > 0 else { return 0 }
@@ -39,7 +39,7 @@ struct CoreStatCard: View {
                     .foregroundStyle(textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                AppIcon(systemName: "chevron.right", size: 13, color: textSecondary)
+                AppIcon(systemName: "chevron.right", size: 20, color: textSecondary)
             }
             
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -109,8 +109,8 @@ struct CollectionStatRow: View {
     
     private var dayBackground: Color { colorScheme == .dark ? Color(hex: 0x171717) : Color(hex: 0xF0F0F0) }
     private var columnStroke: Color { colorScheme == .dark ? Color(hex: 0x252525) : Color(hex: 0xFFFFFF) }
-    private var textPrimary: Color { colorScheme == .dark ? Color(hex: 0xEFEFF2) : Color(hex: 0x171717) }
-    private var textSecondary: Color { textPrimary.opacity(colorScheme == .dark ? 0.72 : 0.62) }
+    private var textPrimary: Color { AppColor.textStrong }
+    private var textSecondary: Color { AppColor.textWeak }
     
     private var percent: Double {
         guard totalCount > 0 else { return 0 }
@@ -144,7 +144,7 @@ struct CollectionStatRow: View {
                     .foregroundStyle(textSecondary)
             }
             
-            AppIcon(systemName: "chevron.right", size: 13, color: textSecondary)
+            AppIcon(systemName: "chevron.right", size: 20, color: textSecondary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

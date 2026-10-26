@@ -2,12 +2,12 @@ import SwiftUI
 
 private enum CapsuleButtonMetrics {
     /// Tighter than default `Label` spacing (~8).
-    static let iconTitleSpacing: CGFloat = 5
+    static let iconTitleSpacing: CGFloat = 10
     
     // Compact chips (AI / Open In)
     static let chipFontSize: CGFloat = 13
     static let chipHorizontalPadding: CGFloat = 12
-    static let chipVerticalPadding: CGFloat = 7
+    static let chipVerticalPadding: CGFloat = 8
     
     // Full-width Maps-style footer actions
     static let blockFontSize: CGFloat = 15
@@ -122,21 +122,15 @@ struct SecondaryCapsuleButtonStyle: ButtonStyle {
         
         configuration.label
             .labelStyle(CapsuleButtonLabelStyle(centered: fillsWidth))
-            .font(.app(fontSize, weight: .semibold))
-            .foregroundStyle(.primary)
+            .font(.app(fontSize, weight: fillsWidth ? .semibold : .medium))
+            .foregroundStyle(AppColor.textStrong)
             .frame(maxWidth: fillsWidth ? .infinity : nil)
             .padding(.horizontal, hPad)
             .padding(.vertical, vPad)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color(.secondarySystemFill))
+                    .fill(AppDetailSurface.card)
             )
-            .overlay {
-                if !fillsWidth {
-                    Capsule(style: .continuous)
-                        .strokeBorder(Color(.separator).opacity(0.45), lineWidth: 1)
-                }
-            }
             .opacity({
                 if !isEnabled { return 0.45 }
                 return configuration.isPressed ? 0.82 : 1
@@ -183,6 +177,80 @@ struct PrimaryCapsuleLabel: View {
     }
 }
 
+enum DetailDualActionMetrics {
+    static let buttonGap: CGFloat = 10
+    static let buttonRadius: CGFloat = 20
+    static let iconTitleGap: CGFloat = 5
+    static let iconSize: CGFloat = 24
+}
+
+/// Compact icon-only footer pill (copy / save / delete on detail sheets).
+struct DetailIconPillButton: View {
+    let lucide: String
+    var iconColor: Color = AppColor.textStrong
+    var fill: Color = AppColor.elevated
+    var isEnabled: Bool = true
+    let accessibilityLabel: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            AppIcon(lucide: lucide, size: AppLucide.fieldSize, color: iconColor)
+                .padding(.horizontal, AppSpacing.xl)
+                .padding(.vertical, AppSpacing.md)
+                .background(fill, in: Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.45)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+struct DetailToastBanner: View {
+    let text: String
+    
+    var body: some View {
+        Text(text)
+            .font(.app(15, weight: .medium))
+            .foregroundStyle(AppColor.textStrong)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
+            .background(AppColor.elevated, in: Capsule(style: .continuous))
+            .padding(.bottom, AppSpacing.xl)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+    }
+}
+
+/// Icon-above-label footer action used on place and activity detail.
+struct DetailDualActionButton: View {
+    let lucide: String
+    let title: String
+    let foreground: Color
+    let fill: Color
+    
+    var body: some View {
+        VStack(spacing: DetailDualActionMetrics.iconTitleGap) {
+            AppIcon(lucide: lucide, size: DetailDualActionMetrics.iconSize, color: foreground)
+            Text(title)
+                .font(.app(15, weight: .semibold))
+                .foregroundStyle(foreground)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
+        .padding(.leading, 10)
+        .padding(.trailing, 15)
+        .background(
+            fill,
+            in: RoundedRectangle(cornerRadius: DetailDualActionMetrics.buttonRadius, style: .continuous)
+        )
+    }
+}
+
 /// Marks a Form row as a full-width footer action matching inset-grouped field cards.
 struct DetailActionRowModifier: ViewModifier {
     func body(content: Content) -> some View {
@@ -210,6 +278,6 @@ struct DetailActionButtonStack<Content: View>: View {
         }
         .listRowSpacing(6)
         // Match default Form section spacing (was 10 — too tight vs Notes / Cost / Documents).
-        .listSectionSpacing(24)
+        .listSectionSpacing(AppSpacing.sectionGap)
     }
 }

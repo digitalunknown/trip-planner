@@ -1,11 +1,12 @@
 import SwiftUI
 import AuthenticationServices
+import StoreKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appAccentColor) private var appAccentColor
+    @Environment(PremiumStore.self) private var premium
     @EnvironmentObject private var auth: AppleSignInManager
-    @AppStorage("exploreSampleEnabled") private var exploreSampleEnabled: Bool = false
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @AppStorage("hapticsEnabled") private var hapticsEnabled: Bool = true
     @AppStorage("parallaxEffectsEnabled") private var parallaxEffectsEnabled: Bool = true
@@ -14,6 +15,8 @@ struct SettingsView: View {
     @AppStorage("prefInterests") private var prefInterests: String = ""
     @AppStorage("currencyCode") private var currencyCode: String = "USD"
     @State private var displayNameDraft: String = ""
+    @State private var showPaywall = false
+    @State private var showManageSubscriptions = false
     
     private var mapStylePreference: Binding<AppMapStylePreference> {
         Binding(
@@ -45,12 +48,14 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Group {
                 Section {
                     if auth.isSignedIn {
                         HStack {
                             Label("Account", appIcon: "user-round", color: .primary)
                             Spacer()
                             Text(auth.displayName ?? "Apple ID")
+                                .font(.app(15, weight: .medium))
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.trailing)
                         }
@@ -58,16 +63,13 @@ struct SettingsView: View {
                         Button(role: .destructive) {
                             auth.signOut()
                         } label: {
-                            Label("Sign out", appIcon: "log-out", color: .red)
+                            Label("Sign Out", appIcon: "log-out", color: .red)
                         }
                     } else {
                         SignInWithAppleButton(.signIn) { request in
                             request.requestedScopes = [.fullName, .email]
                         } onCompletion: { result in
                             auth.handleAuthorizationResult(result)
-                            if auth.isSignedIn {
-                                exploreSampleEnabled = false
-                            }
                         }
                         .frame(height: 44)
                         .signInWithAppleButtonStyle(.black)
@@ -79,7 +81,7 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Account")
+                    AppSectionHeader("Account")
                 } footer: {
                     Text(
                         auth.isSignedIn
@@ -91,41 +93,152 @@ struct SettingsView: View {
                 }
                 
                 Section {
+                    if premium.isPremium {
+                        HStack {
+                            Label("TripStacks+", appIcon: "sparkles", color: .primary)
+                            Spacer()
+                            Text("Active")
+                                .font(.app(15, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                        Button {
+                            showManageSubscriptions = true
+                        } label: {
+                            HStack {
+                                Label("Manage subscription", appIcon: "credit-card", color: .primary)
+                                Spacer()
+                                AppIcon(lucide: "chevron-right", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                            }
+                        }
+                        .foregroundStyle(.primary)
+                    } else {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                Label("Upgrade to TripStacks+", appIcon: "sparkles", color: .primary)
+                                Spacer()
+                                AppIcon(lucide: "chevron-right", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                            }
+                        }
+                        .foregroundStyle(.primary)
+                    }
+                    
+                    Button {
+                        Task { await premium.restore() }
+                    } label: {
+                        Label("Restore purchases", appIcon: "rotate-ccw", color: .primary)
+                    }
+                    .foregroundStyle(.primary)
+                    
+                    if let error = premium.errorMessage, premium.isPremium || !premium.offeredProducts.isEmpty {
+                        Text(error)
+                            .font(.appFootnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    AppSectionHeader("TripStacks+")
+                } footer: {
+                    Text(
+                        premium.isPremium
+                        ? "Unlimited AI and local insights are included with your subscription."
+                        : "Unlock unlimited AI and local insights."
+                    )
+                    .font(.appFootnote)
+                    .foregroundStyle(.secondary)
+                }
+                
+                Section {
                     Label {
-                        TextField("Display Name", text: $displayNameDraft)
+                        TextField("Display name", text: $displayNameDraft)
+                            .font(.app(15, weight: .medium))
                             .textContentType(.name)
                             .textInputAutocapitalization(.words)
                     } icon: {
                         AppIcon(lucide: "user-round", size: AppLucide.chromeSize, color: .primary)
                     }
                     
-                    Picker(selection: $currencyCode) {
+                    Menu {
                         ForEach(popularCurrencies) { option in
-                            Text(option.label).tag(option.code)
+                            Button {
+                                currencyCode = option.code
+                            } label: {
+                                if option.code == currencyCode {
+                                    Label(option.label, menuIcon: "checkmark")
+                                } else {
+                                    Text(option.label)
+                                }
+                            }
                         }
                     } label: {
-                        Label("Home Currency", appIcon: "circle-dollar-sign", color: .primary)
+                        HStack {
+                            Label("Home currency", appIcon: "circle-dollar-sign", color: .primary)
+                            Spacer(minLength: 8)
+                            HStack(spacing: 5) {
+                                Text(currencyCode)
+                                    .font(.app(15, weight: .medium))
+                                    .foregroundStyle(.primary)
+                                AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                 } header: {
-                    Text("Personal")
+                    AppSectionHeader("Personal")
                 }
                 
                 Section {
-                    Picker(selection: $appearanceMode) {
+                    Menu {
                         ForEach(AppearanceMode.allCases) { mode in
-                            Text(mode.title).tag(mode)
+                            Button {
+                                appearanceMode = mode
+                            } label: {
+                                if mode == appearanceMode {
+                                    Label(mode.title, menuIcon: "checkmark")
+                                } else {
+                                    Text(mode.title)
+                                }
+                            }
                         }
                     } label: {
-                        Label("Appearance", appIcon: "sun-moon", color: .primary)
+                        HStack {
+                            Label("Appearance", appIcon: "sun-moon", color: .primary)
+                            Spacer(minLength: 8)
+                            HStack(spacing: 5) {
+                                Text(appearanceMode.title)
+                                    .font(.app(15, weight: .medium))
+                                    .foregroundStyle(.primary)
+                                AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                     
-                    Picker(selection: mapStylePreference) {
+                    Menu {
                         ForEach(AppMapStylePreference.allCases) { style in
-                            Text(style.title).tag(style)
+                            Button {
+                                mapStylePreference.wrappedValue = style
+                            } label: {
+                                if style == mapStylePreference.wrappedValue {
+                                    Label(style.title, menuIcon: "checkmark")
+                                } else {
+                                    Text(style.title)
+                                }
+                            }
                         }
                     } label: {
-                        Label("Map Style", appIcon: "map", color: .primary)
+                        HStack {
+                            Label("Map style", appIcon: "map", color: .primary)
+                            Spacer(minLength: 8)
+                            HStack(spacing: 5) {
+                                Text(mapStylePreference.wrappedValue.title)
+                                    .font(.app(15, weight: .medium))
+                                    .foregroundStyle(.primary)
+                                AppIcon(lucide: "chevrons-up-down", size: AppLucide.fieldSize, color: AppColor.textWeak)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                     
                     Toggle(isOn: $hapticsEnabled) {
                         Label("Haptics", appIcon: "vibrate", color: .primary)
@@ -133,7 +246,7 @@ struct SettingsView: View {
                     .tint(appAccentColor)
                     
                     Toggle(isOn: $parallaxEffectsEnabled) {
-                        Label("Parallax Effects", appIcon: "move-3d", color: .primary)
+                        Label("Parallax effects", appIcon: "move-3d", color: .primary)
                     }
                     .tint(appAccentColor)
                     
@@ -141,7 +254,7 @@ struct SettingsView: View {
                         HStack {
                             Label("Review TripStacks", appIcon: "star", color: .primary)
                             Spacer()
-                            AppIcon(systemName: "arrow.up.right", size: 14, color: .secondary)
+                            AppIcon(lucide: "chevron-right", size: AppLucide.fieldSize, color: AppColor.textWeak)
                         }
                     }
                     .foregroundStyle(.primary)
@@ -149,13 +262,19 @@ struct SettingsView: View {
                     HStack {
                         Label("Version", appIcon: "info", color: .primary)
                         Spacer()
-                        Text("1.2")
+                        Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0")
+                            .font(.app(15, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("App Settings")
+                    AppSectionHeader("App Settings")
                 }
+                }
+                .appDetailFieldBackground()
             }
+            .appFormPageSpacing()
+            .appDetailFormChrome()
+            .environment(\.font, .app(15, weight: .medium))
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -169,6 +288,10 @@ struct SettingsView: View {
         }
         .preferredColorScheme(appearanceMode.preferredColorScheme)
         .tint(.primary)
+        .sheet(isPresented: $showPaywall) {
+            PaywallSheet()
+        }
+        .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
         .onChange(of: appearanceMode) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: hapticsEnabled) { _, _ in saveSettingsToICloudIfNeeded() }
         .onChange(of: parallaxEffectsEnabled) { _, _ in saveSettingsToICloudIfNeeded() }
@@ -269,5 +392,7 @@ extension EnvironmentValues {
 
 #Preview {
     SettingsView()
+        .environment(PremiumStore())
+        .environmentObject(AppleSignInManager())
 }
 

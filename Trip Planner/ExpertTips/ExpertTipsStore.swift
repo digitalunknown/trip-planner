@@ -54,7 +54,7 @@ final class ExpertTipsStore {
     }
     
     func tips(matching query: ExpertTipQuery) -> [ExpertTip] {
-        guard !tips.isEmpty else { return [] }
+        guard !tips.isEmpty, query.hasMatchableIdentity else { return [] }
         let scored = tips.compactMap { tip -> (ExpertTip, Int)? in
             guard let score = matchScore(tip: tip, query: query) else { return nil }
             return (tip, score)
@@ -118,9 +118,7 @@ final class ExpertTipsStore {
         
         for candidate in candidates {
             for alias in aliasKeys {
-                if candidate == alias { return true }
-                if candidate.contains(alias) || alias.contains(candidate) { return true }
-                if tokenOverlap(candidate, alias) >= 0.5 { return true }
+                if namesMatch(candidate, alias) { return true }
             }
         }
         return false
@@ -145,10 +143,38 @@ final class ExpertTipsStore {
         guard !tipName.isEmpty, !candidates.isEmpty else { return false }
         
         for candidate in candidates {
-            if candidate.contains(tipName) || tipName.contains(candidate) { return true }
-            if tokenOverlap(candidate, tipName) >= 0.4 { return true }
+            if namesMatch(candidate, tipName) { return true }
         }
         return false
+    }
+    
+    /// Whole-token matching only — substring checks false-positive ("AGO" ⊂ "Chicago").
+    private func namesMatch(_ query: String, _ alias: String) -> Bool {
+        if query == alias { return true }
+        
+        let queryTokens = significantTokens(query)
+        let aliasTokens = significantTokens(alias)
+        guard !queryTokens.isEmpty, !aliasTokens.isEmpty else { return false }
+        
+        if aliasTokens.count == 1 {
+            return queryTokens.contains(aliasTokens[aliasTokens.startIndex])
+        }
+        if queryTokens.count == 1 {
+            return aliasTokens.count == 1
+                && aliasTokens.contains(queryTokens[queryTokens.startIndex])
+        }
+        if aliasTokens.isSubset(of: queryTokens) { return true }
+        if queryTokens.isSubset(of: aliasTokens) { return true }
+        return false
+    }
+    
+    private func significantTokens(_ value: String) -> Set<String> {
+        let stop: Set<String> = ["the", "a", "an", "and", "of", "at", "in", "on", "to", "for"]
+        return Set(
+            value.split(separator: " ")
+                .map(String.init)
+                .filter { $0.count > 1 && !stop.contains($0) }
+        )
     }
     
     private func queryMatchCandidates(_ query: ExpertTipQuery) -> [String] {
@@ -178,16 +204,5 @@ final class ExpertTipsStore {
             .replacingOccurrences(of: #"[:\-\|]"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
-    private func tokenOverlap(_ a: String, _ b: String) -> Double {
-        let stop: Set<String> = ["the", "a", "an", "and", "of", "at", "in", "on", "to", "for"]
-        let tokensA = Set(a.split(separator: " ").map(String.init).filter { $0.count > 1 && !stop.contains($0) })
-        let tokensB = Set(b.split(separator: " ").map(String.init).filter { $0.count > 1 && !stop.contains($0) })
-        guard !tokensA.isEmpty, !tokensB.isEmpty else { return 0 }
-        let intersection = tokensA.intersection(tokensB).count
-        let union = tokensA.union(tokensB).count
-        guard union > 0 else { return 0 }
-        return Double(intersection) / Double(union)
     }
 }

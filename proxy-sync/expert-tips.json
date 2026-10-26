@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-31T00:00:00Z",
+  "updatedAt": "2026-09-01T00:00:00Z",
   "tips": [
     {
       "id": "musee-orsay-kids-timing",
@@ -49,6 +49,56 @@
       "tip": "Skip the classic counter line if you can — the cafe a block away takes walks-ins and has the same smoked fish, plus coffee. Order the super heebster and a chocolate egg cream; share plates so you can try more.",
       "author": "Piotr",
       "updatedAt": "2026-08-31T00:00:00Z"
+    },
+    {
+      "id": "terminal-3-etobicoke-iced-coffee",
+      "placeName": "Terminal 3",
+      "aliases": [
+        "Terminal 3",
+        "Terminal 3 Roasters",
+        "Terminal 3 Coffee Roasters",
+        "3337 Lake Shore Blvd W, Etobicoke",
+        "3337 Lake Shore Blvd W"
+      ],
+      "latitude": 43.5961,
+      "longitude": -79.5253944,
+      "mapKitIdentifier": null,
+      "tip": "The iced coffee is especially amazing. They put a huge block of ice in it and it just hits the spot in the summertime. Grab a beverage for yourself and an ice pop or pastry for the kids and head over to one of the nearby parks on the lake to enjoy them.",
+      "author": "Piotr",
+      "updatedAt": "2026-09-01T00:00:00Z"
+    },
+    {
+      "id": "meadows-lake-saint-louis-farmers-market",
+      "placeName": "The Meadows at Lake Saint Louis",
+      "aliases": [
+        "The Meadows at Lake Saint Louis",
+        "The Meadows",
+        "The Meadows Lake St Louis",
+        "10 Meadow Cir Dr, Lake St Louis",
+        "10 Meadow Cir Dr"
+      ],
+      "latitude": 38.7809,
+      "longitude": -90.7883,
+      "mapKitIdentifier": null,
+      "tip": "There’s an amazing farmers market every Saturday between April 4 and October 31 from 8AM to noon. There’s vendors that sell produce, home made crafts, and food you can eat on the spot. There’s a playground too.",
+      "author": "Piotr",
+      "updatedAt": "2026-09-01T00:00:00Z"
+    },
+    {
+      "id": "cn-tower-observation-and-roundhouse",
+      "placeName": "CN Tower",
+      "aliases": [
+        "CN Tower",
+        "CN Tower Toronto",
+        "290 Bremner Blvd, Toronto",
+        "290 Bremner Blvd"
+      ],
+      "latitude": 43.6426,
+      "longitude": -79.3871,
+      "mapKitIdentifier": null,
+      "tip": "The latest updates to the tower experience are great. Floor to ceiling windows, open air observation area, and the glass floor. There are two observation areas, the main one and the smaller observation deck above that. Dining at the 360 restaurant gives you access to the observation deck as well. The food isn’t bad but you might just consider getting a drink and enjoying the view.\n\nWhen you’re in the area, walk over to Roundhouse Park to see historic trains and then have lunch at Steam Whistle Brewery.",
+      "author": "Piotr",
+      "updatedAt": "2026-09-01T00:00:00Z"
     }
   ]
 }

@@ -10,7 +10,6 @@ struct ContentView: View {
     }
     
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
-    @AppStorage("exploreSampleEnabled") private var exploreSampleEnabled: Bool = false
     @AppStorage("sampleTripCoverImageData") private var sampleTripCoverImageData: Data = Data()
     @State private var selectedTab: RootTab = .myTrips
     @State private var lastNonSearchTab: RootTab = .myTrips
@@ -19,16 +18,22 @@ struct ContentView: View {
     @State private var tripStore = TripStore()
     @State private var placeStore = PlaceStore()
     @State private var expertTipsStore = ExpertTipsStore()
+    @State private var aiUsageStore = AIUsageStore()
+    @State private var premiumStore = PremiumStore()
     @State private var tabChrome = RootTabChrome()
+    @State private var widgetDeepLink = WidgetDeepLinkRouter()
     @StateObject private var auth = AppleSignInManager()
-    @State private var isPresentingSignInGate: Bool = false
     @State private var isFetchingSampleCover: Bool = false
+    @State private var didSeedOnboardingSampleThisSession: Bool = false
+    @Environment(\.scenePhase) private var scenePhase
     
     private let accentColor: Color = .orange
     
     var body: some View {
         Group {
-            if #available(iOS 18.0, *) {
+            if auth.hasResolvedInitialAuthState && !auth.isSignedIn {
+                SignInGateView()
+            } else if #available(iOS 18.0, *) {
                 modernTabView
             } else {
                 legacyTabView
@@ -37,7 +42,10 @@ struct ContentView: View {
         .environment(tripStore)
         .environment(placeStore)
         .environment(expertTipsStore)
+        .environment(aiUsageStore)
+        .environment(premiumStore)
         .environment(tabChrome)
+        .environment(widgetDeepLink)
         .environmentObject(auth)
         // Tab bar stays monochrome; orange is only for in-app accents via environment.
         .tint(.primary)
@@ -48,31 +56,27 @@ struct ContentView: View {
             CoverAttributionSync.shared.start()
             Task { await auth.refreshCredentialState() }
             Task { await expertTipsStore.refresh() }
-            updateSignInGatePresentation()
-            injectSampleTripIfNeeded()
+            seedOnboardingSampleTripIfNeeded()
+            AppLucide.scheduleSearchChromePatch()
+            publishWidgetsIfReady()
         }
-        .onChange(of: auth.hasResolvedInitialAuthState) { _, _ in
-            updateSignInGatePresentation()
-        }
-        .onChange(of: auth.isSignedIn) { _, newValue in
-            if newValue {
-                exploreSampleEnabled = false
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                publishWidgetsIfReady()
             }
-            updateSignInGatePresentation()
         }
-        .onChange(of: exploreSampleEnabled) { _, _ in
-            updateSignInGatePresentation()
-            injectSampleTripIfNeeded()
+        .onChange(of: auth.isSignedIn) { _, _ in
+            seedOnboardingSampleTripIfNeeded()
         }
-        .onChange(of: tripStore.isLoadingTrips) { _, _ in
-            injectSampleTripIfNeeded()
+        .onChange(of: tripStore.isLoadingTrips) { _, loading in
+            seedOnboardingSampleTripIfNeeded()
+            if !loading {
+                publishWidgetsIfReady()
+            }
         }
         .onChange(of: tripStore.trips.count) { _, _ in
-            injectSampleTripIfNeeded()
-        }
-        .fullScreenCover(isPresented: $isPresentingSignInGate) {
-            SignInGateView()
-                .environmentObject(auth)
+            seedOnboardingSampleTripIfNeeded()
+            publishWidgetsIfReady()
         }
         .onChange(of: selectedTab) { _, newTab in
             Haptics.tabSelectionChanged()
@@ -91,21 +95,19 @@ struct ContentView: View {
                 if selectedTab == .search {
                     selectedTab = lastNonSearchTab
                 }
-            } else {
-                // System rebuilds the liquid-glass Close control after presentation.
-                Task { @MainActor in
-                    for delayNs in [50_000_000, 200_000_000, 450_000_000] as [UInt64] {
-                        try? await Task.sleep(nanoseconds: delayNs)
-                        AppLucide.patchSearchDismissButtons()
-                    }
-                }
             }
+            AppLucide.scheduleSearchChromePatch()
         }
         .onReceive(NotificationCenter.default.publisher(for: .quickActionCreateNewTrip)) { _ in
             selectedTab = .myTrips
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                 NotificationCenter.default.post(name: .openNewTripSheet, object: nil)
             }
+        }
+        .onOpenURL { url in
+            guard let link = WidgetDeepLink.parse(url) else { return }
+            selectedTab = .myTrips
+            widgetDeepLink.destination = link
         }
     }
     
@@ -121,7 +123,7 @@ struct ContentView: View {
             Tab(value: RootTab.myTrips) {
                 MyTripsView()
             } label: {
-                LucideTabLabel(title: "Trips", lucideName: "backpack")
+                LucideTabLabel(title: "Trips", lucideName: "map")
             }
             
             Tab(value: RootTab.places) {
@@ -169,7 +171,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             MyTripsView()
                 .tabItem {
-                    LucideTabLabel(title: "Trips", lucideName: "backpack")
+                    LucideTabLabel(title: "Trips", lucideName: "map")
                 }
                 .tag(RootTab.myTrips)
             
@@ -212,38 +214,63 @@ struct ContentView: View {
         }
     }
     
-    private func updateSignInGatePresentation() {
-        // Wait until cached auth is restored so signed-in launches don't flash the gate.
-        guard auth.hasResolvedInitialAuthState else {
-            isPresentingSignInGate = false
-            return
-        }
-        // If user is signed out and not exploring sample, gate the app.
-        isPresentingSignInGate = (!auth.isSignedIn && !exploreSampleEnabled)
+    private func onboardingSampleSeedKey(for userID: String?) -> String {
+        "didSeedOnboardingSampleTrip.\(userID ?? "signed-in")"
     }
     
-    private func injectSampleTripIfNeeded() {
-        guard exploreSampleEnabled, !auth.isSignedIn else { return }
+    private var hasSeededOnboardingSample: Bool {
+        UserDefaults.standard.bool(forKey: onboardingSampleSeedKey(for: auth.userIdentifier))
+    }
+    
+    private func markOnboardingSampleSeeded() {
+        UserDefaults.standard.set(true, forKey: onboardingSampleSeedKey(for: auth.userIdentifier))
+    }
+    
+    /// First signed-in session with an empty trip list gets the Tokyo sample as a real trip.
+    /// Existing accounts (or anyone who already dismissed/deleted it) are left alone.
+    private func publishWidgetsIfReady() {
+        tripStore.publishWidgetSnapshot()
+    }
+    
+    private func seedOnboardingSampleTripIfNeeded() {
+        guard auth.isSignedIn else { return }
         guard !tripStore.isLoadingTrips else { return }
-
-        // IMPORTANT: Do not save the sample trip to disk.
-        // Explore mode is for browsing; users must sign in to create real trips.
-        let sample = makeSampleTripTokyoJuly2026()
-        tripStore.trips = [sample]
         
-        // Best-effort: fetch a cover image once and cache it.
+        if tripStore.trips.contains(where: { $0.id == Self.sampleTripID }) {
+            markOnboardingSampleSeeded()
+            applyCachedSampleCoverIfNeeded()
+            Task { await fetchSampleCoverIfNeeded() }
+            return
+        }
+        
+        if !tripStore.trips.isEmpty {
+            markOnboardingSampleSeeded()
+            return
+        }
+        
+        if hasSeededOnboardingSample, !didSeedOnboardingSampleThisSession {
+            return
+        }
+        
+        var sample = makeSampleTripTokyoJuly2026()
+        if !sampleTripCoverImageData.isEmpty {
+            sample.coverImageData = sampleTripCoverImageData
+        }
+        tripStore.addTrip(sample)
+        didSeedOnboardingSampleThisSession = true
+        markOnboardingSampleSeeded()
         Task { await fetchSampleCoverIfNeeded() }
     }
     
-    private func isSampleTripList(_ trips: [Trip]) -> Bool {
-        guard trips.count == 1 else { return false }
-        let t = trips[0]
-        if t.id == Self.sampleTripID { return true }
-        if t.name == "Sample Trip" { return true }
-        // Legacy sample that may have been saved during earlier builds.
-        if t.name == "Portugal Adventure", t.destination == "Lisbon" { return true }
-        return false
+    private func applyCachedSampleCoverIfNeeded() {
+        guard !sampleTripCoverImageData.isEmpty else { return }
+        guard let index = tripStore.trips.firstIndex(where: { $0.id == Self.sampleTripID }) else { return }
+        guard tripStore.trips[index].coverImageData == nil else { return }
+        var trip = tripStore.trips[index]
+        trip.coverImageData = sampleTripCoverImageData
+        tripStore.updateTrip(trip)
     }
+    
 }
 
 // MARK: - Sample trip generation
@@ -287,11 +314,18 @@ private struct SampleDestination {
 }
 
 private extension ContentView {
-    static let sampleTripID = UUID(uuidString: "00000000-0000-0000-0000-000000000777")!
+    static let sampleTripID = WidgetKnownTripID.onboardingSample
 
     func makeSampleTripTokyoJuly2026() -> Trip {
         let cal = Calendar(identifier: .gregorian)
-        let start = cal.date(from: DateComponents(year: 2026, month: 7, day: 14)) ?? Date()
+        // Keep the sample in Upcoming: next July 14 that is at least a month away.
+        let now = Date()
+        var year = cal.component(.year, from: now)
+        var start = cal.date(from: DateComponents(year: year, month: 7, day: 14)) ?? now
+        if let soon = cal.date(byAdding: .day, value: 30, to: cal.startOfDay(for: now)), start < soon {
+            year += 1
+            start = cal.date(from: DateComponents(year: year, month: 7, day: 14)) ?? start
+        }
         let day1Date = cal.startOfDay(for: start)
         let day2Date = cal.date(byAdding: .day, value: 1, to: day1Date) ?? day1Date
         let day3Date = cal.date(byAdding: .day, value: 2, to: day1Date) ?? day1Date
@@ -732,8 +766,12 @@ private extension ContentView {
     
     @MainActor
     func fetchSampleCoverIfNeeded() async {
-        guard exploreSampleEnabled, !auth.isSignedIn else { return }
-        guard sampleTripCoverImageData.isEmpty else { return }
+        guard auth.isSignedIn else { return }
+        guard tripStore.trips.contains(where: { $0.id == Self.sampleTripID }) else { return }
+        guard sampleTripCoverImageData.isEmpty else {
+            applyCachedSampleCoverIfNeeded()
+            return
+        }
         guard !isFetchingSampleCover else { return }
         isFetchingSampleCover = true
         defer { isFetchingSampleCover = false }
@@ -757,11 +795,10 @@ private extension ContentView {
             sampleTripCoverImageData = data
             TripCoverAttribution.setName(photo.user.name, for: Self.sampleTripID)
             
-            // Refresh the in-memory sample trip so the UI updates immediately.
-            if isSampleTripList(tripStore.trips) {
-                var t = makeSampleTripTokyoJuly2026()
-                t.coverImageData = data
-                tripStore.trips = [t]
+            if let index = tripStore.trips.firstIndex(where: { $0.id == Self.sampleTripID }) {
+                var trip = tripStore.trips[index]
+                trip.coverImageData = data
+                tripStore.updateTrip(trip)
             }
         } catch {
             // Best-effort only; silently fail.
