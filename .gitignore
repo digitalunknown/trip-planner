@@ -1,5 +1,9 @@
 
 # Xcode generated
 DerivedData/
+.derivedData/
+xcuserdata/
+*.xcuserstate
+build/
 .vercel
 .env*

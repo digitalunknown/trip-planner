@@ -1,4 +1,0 @@
-module Glur {
-header "Glur-Swift.h"
-export *
-}

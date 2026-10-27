@@ -1,4 +1,0 @@
-module Sticker {
-header "Sticker-Swift.h"
-export *
-}
