@@ -14,14 +14,7 @@ struct EventCard: View {
     
     private var textPrimary: Color { AppColor.textStrong }
     private var textSecondary: Color { AppColor.textWeak }
-    private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
-    
-    /// Trip-board card fill (dark `#262626`).
-    private var cardFill: Color { AppDetailSurface.boardCard }
-    
-    private var cardStroke: Color {
-        colorScheme == .dark ? Color.clear : Color.black.opacity(0.08)
-    }
+    private let cornerRadius: CGFloat = 16
     
     private var displayEvent: EventItem {
         if event.photoData != nil || appleCoverData == nil { return event }
@@ -54,15 +47,7 @@ struct EventCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            cardShape
-                .fill(cardFill)
-        }
-        .overlay {
-            cardShape.strokeBorder(cardStroke, lineWidth: 1)
-        }
-        .clipShape(cardShape)
-        .contentShape(cardShape)
+        .boardCardChrome(cornerRadius: cornerRadius)
         .task(id: event.id) {
             await loadAppleMapsCoverIfNeeded()
         }
