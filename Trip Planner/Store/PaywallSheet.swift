@@ -161,14 +161,9 @@ struct PaywallSheet: View {
         HStack(spacing: AppSpacing.sm) {
             AppIcon(lucide: "circle-check-big", size: AppLucide.fieldSize, color: AppColor.accent)
             
-            VStack(alignment: .leading, spacing: 0) {
-                Text("\(displayPrice) monthly")
-                    .font(.app(17, weight: .semibold))
-                    .foregroundStyle(AppColor.textStrong)
-                Text("Special launch price ends soon")
-                    .font(.app(13, weight: .medium))
-                    .foregroundStyle(AppColor.textWeak)
-            }
+            Text("\(displayPrice) monthly")
+                .font(.app(17, weight: .semibold))
+                .foregroundStyle(AppColor.textStrong)
             
             Spacer(minLength: 0)
         }

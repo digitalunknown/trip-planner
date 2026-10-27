@@ -44,7 +44,10 @@ struct DayColumn: View {
     private var highlightStrokeColor: Color { colorScheme == .dark ? Color(hex: 0x5A5A5A) : Color(hex: 0xA8A8B0) }
     private var highlightFillColor: Color { colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.04) }
     private var inactiveSegmentColor: Color { colorScheme == .dark ? Color(hex: 0x3A3A3A) : Color(hex: 0xD0D0D6) }
-    private var headerDividerColor: Color { AppColor.divider }
+    /// Stronger than `AppColor.divider` so the line stays visible on glass DayColumn chrome.
+    private var headerDividerColor: Color {
+        colorScheme == .dark ? Color(hex: 0x4A4A4A) : Color(hex: 0xD0D0D6)
+    }
     
     private var dayBreakdown: DayBreakdown { DayBreakdown.make(from: day) }
     

@@ -139,13 +139,11 @@ struct SettingsView: View {
                 } header: {
                     AppSectionHeader("TripStacks+")
                 } footer: {
-                    Text(
-                        premium.isPremium
-                        ? "Unlimited AI and local insights are included with your subscription."
-                        : "Unlock unlimited AI and local insights."
-                    )
-                    .font(.appFootnote)
-                    .foregroundStyle(.secondary)
+                    if premium.isPremium {
+                        Text("Unlimited AI and local insights are included with your subscription.")
+                            .font(.appFootnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 
                 Section {
