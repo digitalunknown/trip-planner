@@ -143,12 +143,10 @@ struct DayColumn: View {
                     .zIndex(0)
             }
             
-            if showHeaderDivider {
-                Rectangle()
-                    .fill(headerDividerColor)
-                    .frame(height: 1)
-                    .transition(.opacity)
-            }
+            // Consistent divider separating the header/breakdown from the list below (always visible).
+            Rectangle()
+                .fill(headerDividerColor)
+                .frame(height: 1)
         }
         .clipped()
     }

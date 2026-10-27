@@ -6,8 +6,8 @@ enum AppColor {
     static let page = Color.adaptive(light: 0xF4F5F5, dark: 0x0A0A0A)
     /// Field / grouped card. Dark `#171717`.
     static let card = Color.adaptive(light: 0xFFFFFF, dark: 0x171717)
-    /// Nested control / board card. Dark `#262626`.
-    static let elevated = Color.adaptive(light: 0xFFFFFF, dark: 0x262626)
+    /// Nested control / board card. Dark `#2C2C2C` (slightly lighter than before for clearer separation).
+    static let elevated = Color.adaptive(light: 0xFFFFFF, dark: 0x2C2C2C)
     
     /// Primary copy. Dark `#F4F5F5`.
     static let textStrong = Color.adaptive(light: 0x0A0A0A, dark: 0xF4F5F5)

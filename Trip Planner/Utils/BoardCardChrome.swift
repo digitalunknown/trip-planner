@@ -7,9 +7,7 @@ struct BoardCardChrome: ViewModifier {
     let cornerRadius: CGFloat
     @Environment(\.colorScheme) private var colorScheme
     
-    private var strokeColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
-    }
+    private var strokeColor: Color { Color.black.opacity(0.08) } // light mode only
     
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -18,7 +16,11 @@ struct BoardCardChrome: ViewModifier {
                 shape.fill(AppDetailSurface.boardCard)
             }
             .overlay {
-                shape.strokeBorder(strokeColor, lineWidth: 1)
+                Group {
+                    if colorScheme == .light {
+                        shape.strokeBorder(strokeColor, lineWidth: 1)
+                    }
+                }
             }
             .clipShape(shape)
             .contentShape(shape)
