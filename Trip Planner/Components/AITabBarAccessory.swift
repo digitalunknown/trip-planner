@@ -9,22 +9,13 @@ final class RootTabChrome {
     var suppressBottomAIAccessory: Bool {
         aiAccessorySuppressCount > 0
     }
-    
-    /// Plays the AI glow on tab accessories once per process lifetime.
-    var hasPlayedAIAccessoryGlow = false
-    
+
     func beginSuppressingAIAccessory() {
         aiAccessorySuppressCount += 1
     }
     
     func endSuppressingAIAccessory() {
         aiAccessorySuppressCount = max(0, aiAccessorySuppressCount - 1)
-    }
-    
-    func consumeAIAccessoryGlowIfNeeded() -> Bool {
-        guard !hasPlayedAIAccessoryGlow else { return false }
-        hasPlayedAIAccessoryGlow = true
-        return true
     }
 }
 
@@ -42,21 +33,13 @@ struct AITabBarAccessory: View {
     let action: () -> Void
     
     @Environment(RootTabChrome.self) private var tabChrome
-    @State private var shouldPlayGlow = false
     
     var body: some View {
         Group {
             if #available(iOS 26.0, *), chrome == .systemTabAccessory {
                 SystemAITabAccessoryLabel(title: title, action: action)
-                    .aiIntroGlow(plays: shouldPlayGlow)
             } else {
                 floatingLabel
-                    .aiIntroGlow(plays: shouldPlayGlow)
-            }
-        }
-        .onAppear {
-            if tabChrome.consumeAIAccessoryGlowIfNeeded() {
-                shouldPlayGlow = true
             }
         }
     }
