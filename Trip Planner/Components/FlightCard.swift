@@ -4,11 +4,7 @@ struct FlightCard: View {
     let flight: FlightItem
     @Environment(\.colorScheme) private var colorScheme
     
-    private var cardShape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
-    private var cardFill: Color { AppDetailSurface.boardCard }
-    private var cardStroke: Color {
-        colorScheme == .dark ? Color.clear : Color.black.opacity(0.08)
-    }
+    private let cornerRadius: CGFloat = 16
     private var textPrimary: Color { AppColor.textStrong }
     private var textSecondary: Color { AppColor.textWeak }
     private var separatorColor: Color { AppColor.divider }
@@ -42,14 +38,7 @@ struct FlightCard: View {
             
             endpointRow(isOrigin: false)
         }
-        .background {
-            cardShape.fill(cardFill)
-        }
-        .overlay {
-            cardShape.strokeBorder(cardStroke, lineWidth: 1)
-        }
-        .clipShape(cardShape)
-        .contentShape(cardShape)
+        .boardCardChrome(cornerRadius: cornerRadius)
     }
     
     private func endpointRow(isOrigin: Bool) -> some View {
